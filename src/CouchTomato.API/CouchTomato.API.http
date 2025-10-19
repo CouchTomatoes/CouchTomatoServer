@@ -1,0 +1,6 @@
+@CouchTomato.API_HostAddress = http://localhost:5133
+
+GET {{CouchTomato.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
