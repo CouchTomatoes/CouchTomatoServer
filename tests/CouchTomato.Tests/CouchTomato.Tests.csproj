@@ -22,4 +22,9 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\CouchTomato.Core\CouchTomato.Core.csproj" />
+    <ProjectReference Include="..\..\src\CouchTomato.Data\CouchTomato.Data.csproj" />
+  </ItemGroup>
+
 </Project>
