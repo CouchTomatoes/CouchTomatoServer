@@ -1,7 +1,12 @@
+using AutoMapper;
 using Serilog;
 using CouchTomato.Data;
 using CouchTomato.Core.Config;
 using Microsoft.EntityFrameworkCore;
+using CouchTomato.Core.Infrastructure;
+using CouchTomato.Core.Interfaces;
+using CouchTomato.Core.Mapping;
+using CouchTomato.Core.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +27,24 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<CouchTomatoContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Clean AutoMapper setup (no extra BuildServiceProvider)
+builder.Services.AddSingleton<IMapper>(sp =>
+{
+    var loggerFactory = sp.GetRequiredService<ILoggerFactory>();
+
+    var config = new MapperConfiguration(cfg =>
+    {
+        cfg.AddProfile<MappingProfile>();
+    }, loggerFactory);
+
+    return config.CreateMapper();
+});
+
+// Repositories & UoW
+builder.Services.AddScoped(typeof(IEntityBaseRepository<>), typeof(EntityBaseRepository<>));
+builder.Services.AddScoped<MovieRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 var app = builder.Build();
 
