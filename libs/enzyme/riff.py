@@ -292,7 +292,7 @@ class Riff(core.AVContainer):
         r = float(r >> 16) / (r & 0xFFFF)
         retval['FrameAspectRatio'] = r
         if self.video:
-            list(map(lambda v: setattr(v, 'aspect', r), self.video))
+            list([setattr(v, 'aspect', r) for v in self.video])
         return (retval, v[0])
 
 

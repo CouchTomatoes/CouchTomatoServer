@@ -47,9 +47,9 @@ from pyutil import benchutil
 for i in (data_strings, data_floats, data_Decimals):
     for e in (ud, ue, jd, je):
     # for e in (ue,):
-        print("i: %s, e: %s" % (i, e,))
+        print(("i: %s, e: %s" % (i, e,)))
         try:
             benchutil.bench(e, initfunc=i, TOPXP=5, profile=False)
         except TypeError as e:
-            print("skipping due to %s" % (e,))
+            print(("skipping due to %s" % (e,)))
 benchutil.print_bench_footer()

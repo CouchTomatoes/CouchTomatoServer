@@ -98,7 +98,7 @@ class LRUCache:
     def __repr_n__(self, n=None):
         s = ["{",]
         try:
-            iter = iter(self.items())
+            iter = iter(list(self.items()))
             x = next(iter)
             s.append(str(x[0])); s.append(": "); s.append(str(x[1]))
             i = 1
@@ -121,7 +121,7 @@ class LRUCache:
         _assert((len(self.d) > 2) == (self.d[self.hs][2] is not self.ts) == (self.d[self.ts][1] is not self.hs), "Head and tail point to something other than each other if and only if there is at least one element in the dictionary.", self.hs, self.ts, len(self.d))
         foundprevsentinel = 0
         foundnextsentinel = 0
-        for (k, (v, p, n,)) in self.d.items():
+        for (k, (v, p, n,)) in list(self.d.items()):
             _assert(v not in (self.hs, self.ts,))
             _assert(p is not self.ts, "A reference to the tail sentinel may not appear in prev.", k, v, p, n)
             _assert(n is not self.hs, "A reference to the head sentinel may not appear in next.", k, v, p, n)
@@ -137,7 +137,7 @@ class LRUCache:
         _assert(foundnextsentinel == 2, "A reference to the tail sentinel is required appear as a next (plus a self-referential reference).")
 
         count = 0
-        for (k, v,) in self.items():
+        for (k, v,) in list(self.items()):
             _assert(k not in (self.hs, self.ts,))
             count += 1
         _assert(count == len(self.d)-2, count, len(self.d)) # -2 for the sentinels
@@ -267,7 +267,7 @@ class LRUCache:
             self.clear()
             assert self._assert_invariants()
 
-            i = iter(otherdict.items())
+            i = iter(list(otherdict.items()))
             try:
                 while len(self.d) < self.m:
                     (k, v,) = next(i)
@@ -279,7 +279,7 @@ class LRUCache:
                 _assert(False, "Internal error -- this should never have happened since the while loop should have terminated first.")
                 return self
 
-        for (k, v,) in otherdict.items():
+        for (k, v,) in list(otherdict.items()):
             assert self._assert_invariants()
             self[k] = v
             assert self._assert_invariants()
@@ -313,7 +313,7 @@ class LRUCache:
     def keys(self):
         res = [None] * len(self)
         i = 0
-        for k in self.keys():
+        for k in list(self.keys()):
             res[i] = k
             i += 1
         return res
@@ -329,7 +329,7 @@ class LRUCache:
     def values(self):
         res = [None] * len(self)
         i = 0
-        for v in self.values():
+        for v in list(self.values()):
             res[i] = v
             i += 1
         return res
@@ -337,7 +337,7 @@ class LRUCache:
     def items(self):
         res = [None] * len(self)
         i = 0
-        for it in self.items():
+        for it in list(self.items()):
             res[i] = it
             i += 1
         return res
@@ -532,7 +532,7 @@ class SmallLRUCache(dict):
                 while len(self) > self._maxsize:
                     dict.popitem(self)
             else:
-                for k, v, in otherdict.items():
+                for k, v, in list(otherdict.items()):
                     if len(self) == self._maxsize:
                         break
                     dict.__setitem__(self, k, v)
@@ -540,7 +540,7 @@ class SmallLRUCache(dict):
             assert self._assert_invariants()
             return self
 
-        for k in otherdict.keys():
+        for k in list(otherdict.keys()):
             if dict.has_key(self, k):
                 self._lru.remove(k)
         self._lru.extend(list(otherdict.keys()))
@@ -606,14 +606,14 @@ class LinkedListLRUCache:
         self.d = {}
         self.first = None
         self.last = None
-        for key, value in initialdata.items():
+        for key, value in list(initialdata.items()):
             self[key] = value
     def clear(self):
         self.d = {}
         self.first = None
         self.last = None
     def update(self, otherdict):
-        for (k, v,) in otherdict.items():
+        for (k, v,) in list(otherdict.items()):
             self[k] = v
     def setdefault(self, key, default=None):
         if key not in self:
@@ -640,7 +640,7 @@ class LinkedListLRUCache:
             return False
         for k in lliterkeys(self):
             _assert(k in self.d, "Each key in the linked list is required to be in the dict.", k)
-        for k in self.d.keys():
+        for k in list(self.d.keys()):
             _assert(llhaskey(self, k), "Each key in the dict is required to be in the linked list.", k)
         _assert(lllen(self) == len(self.d), "internal consistency", self, self.d)
         _assert(len(self.d) <= self._maxsize, "Size is required to be <= maxsize.")
@@ -718,11 +718,11 @@ class LinkedListLRUCache:
     def iterkeys(self):
         return iter(self.d)
     def itervalues(self):
-        for i,j in self.items():
+        for i,j in list(self.items()):
             yield j
     def values(self):
         l = []
-        for v in self.values():
+        for v in list(self.values()):
             l.append(v)
         return l
     def keys(self):

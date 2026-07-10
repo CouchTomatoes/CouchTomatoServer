@@ -16,7 +16,7 @@
 """KQueue-based IOLoop implementation for BSD/Mac systems."""
 
 
-import select
+from . import select
 
 from tornado.ioloop import IOLoop, PollIOLoop
 

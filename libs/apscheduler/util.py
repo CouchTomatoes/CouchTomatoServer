@@ -219,8 +219,8 @@ def to_unicode(string, encoding='ascii'):
 
 
 if sys.version_info < (3, 0):  # pragma: nocover
-    iteritems = lambda d: iter(d.items())
-    itervalues = lambda d: iter(d.values())
+    iteritems = lambda d: iter(list(d.items()))
+    itervalues = lambda d: iter(list(d.values()))
     xrange = xrange
     str = str
 else:  # pragma: nocover

@@ -43,20 +43,20 @@ _state_vars = {}
 
 def _declare_state(vartype, **kw):
     g = globals()
-    for name, val in kw.items():
+    for name, val in list(kw.items()):
         g[name] = val
         _state_vars[name] = vartype
 
 def __getstate__():
     state = {}
     g = globals()
-    for k, v in _state_vars.items():
+    for k, v in list(_state_vars.items()):
         state[k] = g['_sget_'+v](g[k])
     return state
 
 def __setstate__(state):
     g = globals()
-    for k, v in state.items():
+    for k, v in list(state.items()):
         g['_sset_'+_state_vars[k]](k, g[k], v)
     return state
 

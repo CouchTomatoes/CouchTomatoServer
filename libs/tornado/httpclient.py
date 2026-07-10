@@ -640,9 +640,9 @@ def main():
             else:
                 raise
         if options.print_headers:
-            print(response.headers)
+            print((response.headers))
         if options.print_body:
-            print(native_str(response.body))
+            print((native_str(response.body)))
     client.close()
 
 if __name__ == "__main__":

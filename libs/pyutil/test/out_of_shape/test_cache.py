@@ -46,7 +46,7 @@ class Bencher:
         MAXSIZE=n/2
         d2 = self.klass(maxsize=MAXSIZE)
         assert len(d2) == 0
-        for k, v, in self.d.items():
+        for k, v, in list(self.d.items()):
             d2[k] = v
         assert len(d2) == min(len(self.d), MAXSIZE)
         return True
@@ -64,7 +64,7 @@ class Bencher:
         MAXSIZE=n/2
         d2 = self.klass(initialdata=self.d, maxsize=MAXSIZE)
         assert len(d2) == min(len(self.d), MAXSIZE)
-        for k in self.d.keys():
+        for k in list(self.d.keys()):
             if k in d2:
                 del d2[k]
         return True
@@ -73,7 +73,7 @@ class Bencher:
         MAXSIZE=n/2
         d2 = self.klass(initialdata=self.d, maxsize=MAXSIZE)
         assert len(d2) == min(len(self.d), MAXSIZE)
-        for k in self.d.keys():
+        for k in list(self.d.keys()):
             d2.remove(k, strictkey=False)
         return True
 
@@ -85,7 +85,7 @@ class Bencher:
             if len(func) > max:
                 max = len(func)
         for func in funcs:
-            print(func + " " * (max + 1 - len(func)))
+            print((func + " " * (max + 1 - len(func))))
             for BSIZE in BSIZES:
                 f = getattr(self, func)
                 benchutil.rep_bench(f, BSIZE, self._generic_benchmarking_init, MAXREPS=self.MAXREPS, MAXTIME=self.MAXTIME)
@@ -201,7 +201,7 @@ class Testy(unittest.TestCase):
 
     def _test_iterate_items(self, C):
         c = C({"a": 1})
-        i = iter(c.items())
+        i = iter(list(c.items()))
         x = next(i)
         self.assertTrue(x == ("a", 1,))
         try:
@@ -212,7 +212,7 @@ class Testy(unittest.TestCase):
 
     def _test_iterate_keys(self, C):
         c = C({"a": 1})
-        i = iter(c.keys())
+        i = iter(list(c.keys()))
         x = next(i)
         self.assertTrue(x == "a")
         try:
@@ -223,7 +223,7 @@ class Testy(unittest.TestCase):
 
     def _test_iterate_values(self, C):
         c = C({"a": 1})
-        i = iter(c.values())
+        i = iter(list(c.values()))
         x = next(i)
         self.assertTrue(x == 1)
         try:

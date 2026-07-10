@@ -238,7 +238,7 @@ class HTTPHeaderDict(dict):
         other = args[0] if len(args) >= 1 else ()
         
         if isinstance(other, HTTPHeaderDict):
-            for key, val in other.items():
+            for key, val in list(other.items()):
                 self.add(key, val)
         elif isinstance(other, Mapping):
             for key in other:

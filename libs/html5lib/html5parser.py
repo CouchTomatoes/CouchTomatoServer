@@ -984,7 +984,7 @@ def getPhases(debug):
                 self.tree.insertText(data)
 
         def processCharacters(self, token):
-            if token["data"] == "\u0000":
+            if token["data"] == "\\u0000":
                 # The tokenizer should always emit null on its own
                 return
             self.tree.reconstructActiveFormattingElements()
@@ -1785,7 +1785,7 @@ def getPhases(debug):
             return True
 
         def processCharacters(self, token):
-            if token["data"] == "\u0000":
+            if token["data"] == "\\u0000":
                 return
             self.characterTokens.append(token)
 
@@ -2232,7 +2232,7 @@ def getPhases(debug):
                 assert self.parser.innerHTML
 
         def processCharacters(self, token):
-            if token["data"] == "\u0000":
+            if token["data"] == "\\u0000":
                 return
             self.tree.insertText(token["data"])
 
@@ -2397,8 +2397,8 @@ def getPhases(debug):
                 token["name"] = replacements[token["name"]]
 
         def processCharacters(self, token):
-            if token["data"] == "\u0000":
-                token["data"] = "\uFFFD"
+            if token["data"] == "\\u0000":
+                token["data"] = "\\uFFFD"
             elif (self.parser.framesetOK and
                   any(char not in spaceCharacters for char in token["data"])):
                 self.parser.framesetOK = False

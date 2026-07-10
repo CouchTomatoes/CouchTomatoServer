@@ -378,7 +378,7 @@ class ThreadedResolver(ExecutorResolver):
             # was when we created the pool then delete it.
             cls._threadpool = None
         if cls._threadpool is None:
-            from concurrent.futures import ThreadPoolExecutor
+            from .concurrent.futures import ThreadPoolExecutor
             cls._threadpool = ThreadPoolExecutor(num_threads)
             cls._threadpool_pid = pid
         return cls._threadpool

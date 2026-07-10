@@ -72,17 +72,17 @@ import numbers
 import socket
 import sys
 
-import twisted.internet.abstract
-from twisted.internet.defer import Deferred
-from twisted.internet.posixbase import PosixReactorBase
-from twisted.internet.interfaces import \
+from . import twisted.internet.abstract
+from .twisted.internet.defer import Deferred
+from .twisted.internet.posixbase import PosixReactorBase
+from .twisted.internet.interfaces import \
     IReactorFDSet, IDelayedCall, IReactorTime, IReadDescriptor, IWriteDescriptor
-from twisted.python import failure, log
-from twisted.internet import error
-import twisted.names.cache
-import twisted.names.client
-import twisted.names.hosts
-import twisted.names.resolve
+from .twisted.python import failure, log
+from .twisted.internet import error
+from . import twisted.names.cache
+from . import twisted.names.client
+from . import twisted.names.hosts
+from . import twisted.names.resolve
 
 from zope.interface import implementer
 
@@ -370,7 +370,7 @@ def install(io_loop=None):
     if not io_loop:
         io_loop = tornado.ioloop.IOLoop.current()
     reactor = TornadoReactor(io_loop)
-    from twisted.internet.main import installReactor
+    from .twisted.internet.main import installReactor
     installReactor(reactor)
     return reactor
 
@@ -418,7 +418,7 @@ class TwistedIOLoop(tornado.ioloop.IOLoop):
     """
     def initialize(self, reactor=None):
         if reactor is None:
-            import twisted.internet.reactor
+            from . import twisted.internet.reactor
             reactor = twisted.internet.reactor
         self.reactor = reactor
         self.fds = {}

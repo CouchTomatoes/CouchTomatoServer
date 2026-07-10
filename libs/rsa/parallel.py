@@ -88,7 +88,7 @@ if __name__ == '__main__':
             break
         
         if count and count % 10 == 0:
-            print('%i times' % count)
+            print(('%i times' % count))
     
     print('Doctests done')
 

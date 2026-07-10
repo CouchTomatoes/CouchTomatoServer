@@ -58,7 +58,7 @@ def list_subtitles(paths, languages=None, services=None, force=True, multi=False
             results.append((task.video, result))
         except:
             logger.error('Error consuming task %r' % task, exc_info=True)
-    for service_instance in service_instances.values():
+    for service_instance in list(service_instances.values()):
         service_instance.terminate()
     return group_by_video(results)
 
@@ -93,7 +93,7 @@ def download_subtitles(paths, languages=None, services=None, force=True, multi=F
         paths = [paths]
     order = order or [LANGUAGE_INDEX, SERVICE_INDEX, SERVICE_CONFIDENCE, MATCHING_CONFIDENCE]
     subtitles_by_video = list_subtitles(paths, languages, services, force, multi, cache_dir, max_depth, scan_filter)
-    for video, subtitles in subtitles_by_video.items():
+    for video, subtitles in list(subtitles_by_video.items()):
         subtitles.sort(key=lambda s: key_subtitles(s, video, languages, services, order), reverse=True)
     results = []
     service_instances = {}
@@ -104,6 +104,6 @@ def download_subtitles(paths, languages=None, services=None, force=True, multi=F
             results.append((task.video, result))
         except:
             logger.error('Error consuming task %r' % task, exc_info=True)
-    for service_instance in service_instances.values():
+    for service_instance in list(service_instances.values()):
         service_instance.terminate()
     return group_by_video(results)

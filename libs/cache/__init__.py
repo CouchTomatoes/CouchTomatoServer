@@ -34,7 +34,7 @@ def _items(mappingorseq):
         ...    assert k*k == v
 
     """
-    return iter(mappingorseq.items()) if hasattr(mappingorseq, 'iteritems') \
+    return iter(list(mappingorseq.items())) if hasattr(mappingorseq, 'iteritems') \
         else mappingorseq
 
 
@@ -81,7 +81,7 @@ class BaseCache(object):
         :param keys: The function accepts multiple keys as positional
                      arguments.
         """
-        return dict(zip(keys, self.get_many(*keys)))
+        return dict(list(zip(keys, self.get_many(*keys))))
 
     def set(self, key, value, timeout = None):
         """Adds a new key/value to the cache (overwrites value, if key already

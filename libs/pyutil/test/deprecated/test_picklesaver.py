@@ -9,7 +9,7 @@ import os
 try:
     from twisted.trial import unittest
 except ImportError as le:
-    print("Skipping %s since it requires Twisted and Twisted could not be imported: %s" % (__name__, le,))
+    print(("Skipping %s since it requires Twisted and Twisted could not be imported: %s" % (__name__, le,)))
 else:
     from pyutil import PickleSaver, fileutil
 

@@ -261,7 +261,7 @@ def safename(filename):
 
 NORMALIZE_SPACE = re.compile(r'(?:\r\n)?[ \t]+')
 def _normalize_headers(headers):
-    return dict([ (key.lower(), NORMALIZE_SPACE.sub(value, ' ').strip())  for (key, value) in headers.items()])
+    return dict([ (key.lower(), NORMALIZE_SPACE.sub(value, ' ').strip())  for (key, value) in list(headers.items())])
 
 def _parse_cache_control(headers):
     retval = {}
@@ -418,7 +418,7 @@ def _updateCache(request_headers, response_headers, content, cache, cachekey):
             cache.delete(cachekey)
         else:
             info = email.Message.Message()
-            for key, value in response_headers.items():
+            for key, value in list(response_headers.items()):
                 if key not in ['status','content-encoding','transfer-encoding']:
                     info[key] = value
 
@@ -894,16 +894,16 @@ class HTTPConnectionWithTimeout(http.client.HTTPConnection):
                     self.sock.settimeout(self.timeout)
                     # End of difference from httplib.
                 if self.debuglevel > 0:
-                    print("connect: (%s, %s) ************" % (self.host, self.port))
+                    print(("connect: (%s, %s) ************" % (self.host, self.port)))
                     if use_proxy:
-                        print("proxy: %s ************" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass)))
+                        print(("proxy: %s ************" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass))))
 
                 self.sock.connect((self.host, self.port) + sa[2:])
             except socket.error as msg:
                 if self.debuglevel > 0:
-                    print("connect fail: (%s, %s)" % (self.host, self.port))
+                    print(("connect fail: (%s, %s)" % (self.host, self.port)))
                     if use_proxy:
-                        print("proxy: %s" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass)))
+                        print(("proxy: %s" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass))))
                 if self.sock:
                     self.sock.close()
                 self.sock = None
@@ -1020,9 +1020,9 @@ class HTTPSConnectionWithTimeout(http.client.HTTPSConnection):
                     sock, self.key_file, self.cert_file,
                     self.disable_ssl_certificate_validation, self.ca_certs)
                 if self.debuglevel > 0:
-                    print("connect: (%s, %s)" % (self.host, self.port))
+                    print(("connect: (%s, %s)" % (self.host, self.port)))
                     if use_proxy:
-                        print("proxy: %s" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass)))
+                        print(("proxy: %s" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass))))
                 if not self.disable_ssl_certificate_validation:
                     cert = self.sock.getpeercert()
                     hostname = self.host.split(':', 0)[0]
@@ -1048,9 +1048,9 @@ class HTTPSConnectionWithTimeout(http.client.HTTPSConnection):
                 raise
             except socket.error as msg:
                 if self.debuglevel > 0:
-                    print("connect fail: (%s, %s)" % (self.host, self.port))
+                    print(("connect fail: (%s, %s)" % (self.host, self.port)))
                     if use_proxy:
-                        print("proxy: %s" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass)))
+                        print(("proxy: %s" % str((proxy_host, proxy_port, proxy_rdns, proxy_user, proxy_pass))))
                 if self.sock:
                     self.sock.close()
                 self.sock = None
@@ -1667,7 +1667,7 @@ class Response(dict):
                 self[key.lower()] = value
             self.status = int(self['status'])
         else:
-            for key, value in info.items():
+            for key, value in list(info.items()):
                 self[key.lower()] = value
             self.status = int(self.get('status', self.status))
             self.reason = self.get('reason', self.reason)
