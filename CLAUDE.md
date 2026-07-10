@@ -377,6 +377,158 @@ Rules going forward:
   bare, matching upstream (they never had Release pages either). Removed the
   workflow file afterward since it was explicitly single-use.
 
+**2026-07-10 (cont'd, release automation polish + resumed browser click-through testing)**
+- User asked to renumber releases to start at `v4.0.0` (retiring v1.0.0–v1.0.2 as a
+  false start) and to style auto-generated release notes like the mirrored upstream
+  ones (green NEW / red FIX badge-icon bullets instead of GitHub's default "What's
+  Changed" summary). Updated `.github/workflows/release.yml` accordingly; deleted
+  the v1.0.x releases/tags via a one-off `cleanup-old-releases.yml` workflow (same
+  pattern as the tag-mirroring one-off — proxy blocks direct tag deletion from this
+  session, `GITHUB_TOKEN` in Actions doesn't). First release (`v4.0.0`) initially
+  only summarized the single triggering push; fixed `release.yml` so a genuine
+  "first release" pulls full history since the upstream import boundary (`7260c12f`)
+  instead, and backfilled `v4.0.0`'s notes the same way via another one-off workflow.
+  All one-off workflow files removed after running, per established convention.
+- At the user's request, forked `CouchPotato/CouchPotatoAPI` (the dead
+  `api.couchpota.to` backend's source) into `CodeAhmed/CouchPotatoAPI` — this
+  session's GitHub App can't fork cross-org or create repos itself, so did a mirror
+  `git clone` + the user manually clicked GitHub's own Fork button, then this session
+  cloned the fork locally to inspect it. Confirmed the fork's routes/auth headers
+  match our `couchpotatoapi.py` client exactly (no protocol changes needed if it were
+  ever revived), and that it's a bigger dependency than just movie suggestions —
+  `trakt/main.py` and `putio/main.py` both also hit `api.couchpota.to` for OAuth
+  relay. Documented all of this, plus the fork being archived/unlicensed/undocumented
+  for setup, in `README.md`'s "Project status" note and `TODO.md` §5.
+- **Resumed the "next steps" #2 browser click-through task** (previously blocked
+  behind the release-automation detour) and immediately found the exact
+  `profile.forceDefaults` `ElemNotFound` bug flagged as unresolved — it now
+  reproduces on essentially every fresh-DB boot, not just occasionally.
+  **Root-caused it**: `couchpotato/core/event.py`'s `fireEvent` dispatches any event
+  with more than one subscribed handler (`app.load`, `app.initialize`, etc.) across a
+  10-thread pool via `axl.axel.Event`. Many plugins touch the database from those
+  handlers, but `libs/codernitydb3/database.py`'s `Database` class does
+  unsynchronized `seek`+`read`/`write` on shared index file handles — concurrent
+  writes from different plugins race on the same on-disk files, most visibly the
+  shared `id` index every document type writes through. One thread reads a bucket
+  pointer another thread just wrote before the corresponding entry bytes are in
+  place, and gets back a short read (`struct.error`) or a stale offset
+  (`ElemNotFound`). **Fix**: added a single `threading.RLock()` to `Database`, held
+  across every public entry point (`insert`/`update`/`get`/`get_many`/`all`/
+  `delete`) — RLock specifically because e.g. `all(with_doc=True)` calls back into
+  `get()` on the same thread while already holding the lock. Verified: reproduced
+  the crash reliably before the fix, then got 3 consecutive clean fresh-DB boots
+  after it. **This was likely always a latent bug in the original vendored
+  CodernityDB too** (Python 2's GIL + different timing may have mostly hidden it) —
+  not something the codernitydb3 swap introduced, just something the swap didn't
+  fix either.
+- Continuing the click-through, found and fixed a real (if minor) wizard bug:
+  `Page.Wizard` never set `default_action` (unlike the Settings page, which gets it
+  wired up externally by `page/about.js`), so `Page.Settings.openTab()`'s fallback
+  chain (`action == 'index' ? default_action : action`) resolved to `undefined` on
+  the wizard's normal first-load path (`create()`'s parameterless
+  `self.openTab()` call), crashing `toggleTab`'s `tab_name.split('/')` with
+  `Cannot read properties of undefined (reading 'split')` — confirmed via a Playwright
+  harness that this happened on the real final `/#wizard/` page, not a transient
+  redirect artifact. Fixed by adding `default_action: 'welcome'` to `Page.Wizard` in
+  both `couchpotato/core/plugins/wizard/static/wizard.js` and the pre-built
+  `combined.plugins.min.js` bundle it ships as (this repo doesn't have a working
+  `grunt` build pipeline set up in-sandbox, so the served bundle is hand-patched to
+  match source — flagged as a real gap, see `TODO.md`).
+- Also found (separately) a **cosmetic-only, pre-existing class of console error**:
+  the wizard's index page does a synchronous client-side redirect
+  (`window.location = '.../wizard/'`) before `<body>` finishes settling, and several
+  unrelated `domready` handlers (`page/login.js`'s `hasClass` check was the first
+  one hit) can fire on the *old, already-being-discarded* document mid-navigation,
+  where `document.body` intermittently reads back `null`. Confirmed via a Playwright
+  harness (diffing `readyState`/`href` at the moment of each error) that this is
+  fully confined to the torn-down old document and never affects the real page users
+  land on. Added a defensive `if(!b) return;` guard to `login.js` (source +
+  `combined.base.min.js`) to silence the one instance actually hit in practice;
+  there may be others further down the same `domready` handler queue that never got
+  reached once this one was silenced — not chased further since they're provably
+  inert, logged in `TODO.md` §5 as a known, low-priority, cosmetic-only item.
+- Also noted a stray broken image reference (`https://couchpota.to/media/images/
+  userscript.gif`, `net::ERR_CONNECTION_RESET`) — same dead-domain root cause as the
+  `CouchPotatoApi` provider, just a static asset this time instead of an API call.
+  Not fixed yet, logged in `TODO.md` §5.
+
+**2026-07-10 (cont'd, the download-to-library pipeline — 6 bugs, verified against a real transmission-daemon)**
+- User asked the real question this whole port has been building toward: does adding
+  a movie actually send it to Transmission, and once a download completes, do the
+  background jobs (renamer/scanner) reliably move it into the library? Answer at the
+  start of this investigation: **no, at multiple points** — verified by actually
+  running the pipeline, not just reading the code.
+- Installed a real `transmission-daemon` in this sandbox (RPC-authenticated,
+  `rpc-username`/`rpc-password` set) instead of mocking anything. Used
+  `transmission-create` + `truncate -s 250M` to make a legitimately-sized dummy movie
+  file and pre-seed it into Transmission's own `download-dir`, so adding the torrent
+  hash-checks against already-present data and reports 100% complete instantly — a
+  standard way to exercise a real torrent client without waiting on network/trackers.
+- **Found and fixed 6 bugs, all the same root cause**: Python 2 code where
+  `.encode()` on a string (or iterating the result of one) used to behave like `str`
+  now returns real `bytes` in Python 3, and the call site never decoded back:
+  1. `couchpotato/core/settings.py`: `Settings.saveView()` did
+     `value.encode('unicode_escape')` and stored the raw **bytes** straight into
+     `RawConfigParser` — **every setting saved through the UI/API was silently
+     corrupted**. Booleans came back `False` forever (`getBool()`'s fallback compares
+     `bytes == 1`, always False); text came back as the literal string
+     `"b'http://localhost:9091'"` (`toUnicode()`'s `str(bytes)` fallback). This alone
+     broke the Transmission downloader ("port is missing" — because the trailing `'`
+     from the bytes-repr broke the host:port split). Fixed: decode back to `str`
+     before storing.
+  2. `couchpotato/core/helpers/encoding.py`: `toSafeString()` did
+     `.encode('ASCII', 'ignore')` without decoding back, so `for c in cleaned_filename`
+     yielded `int`s instead of characters (`'in <string>' requires string as left
+     operand, not int`). `getImdb()`/`simplifyString()` call this unconditionally, so
+     **`movie.add()` was completely broken** for a normal "add by IMDB id" — the
+     single most basic user action in the whole app. Fixed: decode back to `str`.
+  3. `couchpotato/core/plugins/scanner.py`: `os.path.join(sp(root), ss(filename))`
+     mixed a `str` with `ss()`'s intentional `bytes` return
+     (`TypeError: Can't mix strings and bytes in path components`), crashing the
+     `os.walk()`-based folder scan outright — the renamer's scan of the downloads
+     folder always found 0 files. Fixed by dropping the unnecessary `ss()` (filenames
+     from `os.walk()` are already `str`). Also cleaned up 3 more `ss()` misuses in
+     `get3dType()`/`getMeta()` in the same file that don't crash today (not exercised
+     by a non-3D test file) but would corrupt 3D-tag and embedded-title matching the
+     same way once real files hit those paths.
+  4. `couchpotato/core/plugins/quality/main.py`: `containsTagScore()` checked
+     `ss(alt.lower()) in words` where `words` is a list of `str` — `bytes in
+     list-of-str` doesn't raise, it just always evaluates `False`. **Quality *tag*
+     matching (1080p, BluRay, x264, etc.) has been silently dead this whole time**,
+     quietly falling back to weaker extension-only scoring for every release. This is
+     the dangerous variant of the bug class — no traceback, no log, just wrong
+     behavior — found by noticing multiple qualities (2160p/1080p/720p) all "matched"
+     a single-quality test filename equally via extension only.
+  5. `couchpotato/core/plugins/renamer.py`: `doReplace()` — the function that builds
+     *every* destination file/folder name during a rename — returned `ss(...)`
+     instead of `str`, so `scan()`'s final
+     `os.path.join(destination, final_folder_name, final_file_name)` crashed the same
+     way as #3. **This is the bug that directly blocked "move the finished download
+     into the library."**
+  6. `couchpotato/core/plugins/file.py`: same pattern in
+     `Filesystem.download()`'s cache-path construction, breaking movie
+     poster/backdrop image caching (`file.download` event errors during rename).
+  Each bug was confirmed individually by reproducing its exact traceback before
+  applying the fix, not just inferred from reading the diff.
+- **Full pipeline verified working, twice, from a fresh DB**: configured Transmission
+  + renamer `from`/`to` folders via the real settings API →
+  `download.transmission.test` → `true` → added "The Matrix" via `movie.add` (real
+  TMDB metadata pulled in) → seeded torrent shows 100% complete in Transmission →
+  `renamer.scan()` API call detects the file, correctly identifies `the matrix 1999`
+  via filename parsing, matches it against the movie added above (confirmed via
+  `couchpotatoapi.py`'s `/search/` fallback when TMDB direct lookup didn't fire),
+  scores its quality, and moves+renames it to `Matrix, The (1999)/The Matrix.mkv` in
+  the configured library folder, removing it from the downloads folder. Movie status
+  and release status both flip to `done`. Repeated the whole cycle a second time
+  from a completely fresh DB/config with the same result.
+- Two things intentionally **not** chased as bugs after checking them: a 200MB
+  minimum-file-size filter (`scanner.py`'s `file_sizes['movie']['min']`, working as
+  designed — my first test file was 5MB and correctly got skipped as a
+  sample/trailer) and a 1-minute "still unpacking" freshness guard on newly-created
+  files (also working as designed).
+- Left the fix as PR #8 (still open/draft) rather than auto-merging, since it's a
+  substantive change to core save/scan/rename logic, not a docs/workflow tweak.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
@@ -385,28 +537,39 @@ plugin import backlog cleared same day: 0 remaining loader failures, down from ~
 See `TODO.md` for the detailed, checkbox-tracked list — this section is now the
 higher-level plan for what comes after.
 
-1. Root-cause the new `profile.forceDefaults` `ElemNotFound` finding (see progress
-   log) — possibly a timing interaction with the updater's `git fetch` now running
-   at startup, now that the updater plugin actually loads instead of being silently
-   skipped.
+1. ~~Root-cause the `profile.forceDefaults` `ElemNotFound` finding~~ — **done
+   2026-07-10**: real cross-thread data race in `codernitydb3`'s `Database`, fixed
+   with a global lock. See progress log.
 2. Continue clicking through the actual UI in the browser (wizard → save → main app →
    settings → try adding a movie, try triggering a real search against one of the
    now-loading torrent/nzb providers) to find the next layer of real runtime bugs —
-   this approach found several major ones already; curl/import-success alone won't
-   catch them.
-3. Replace remaining easy vendored libs (six, dateutil, certifi, html5lib, oauthlib,
+   this approach found several major ones already (DB race, wizard `default_action`
+   crash, and 6 bytes/str bugs blocking the whole download-to-library pipeline);
+   curl/import-success alone won't catch them. The wizard's Welcome/General steps
+   load cleanly, and add-movie → Transmission → renamer is now verified working
+   end to end via the API — next: get through the wizard's remaining steps
+   (Downloaders/Providers/Renamer/Automation/Finish, save) and exercise a **real**
+   torrent/NZB provider search in the browser UI itself (everything so far was
+   driven via direct API calls + a self-seeded test torrent, not actual clicks
+   through the search/snatch UI against a live provider).
+3. Fix the JS build pipeline gap noted in the progress log: `combined.*.min.js` are
+   pre-built bundles with no verified-working `grunt` build in this sandbox, so any
+   frontend JS fix currently needs hand-patching both the source file *and* the
+   matching bundle. Worth getting `npm install` + `grunt` actually working (or
+   documenting why not) so this stops being manual.
+4. Replace remaining easy vendored libs (six, dateutil, certifi, html5lib, oauthlib,
    rsa, pyasn1 — tornado/chardet/requests/GitPython/CodernityDB3/bs4/bencode/httplib2
    already done) with real pip packages + grow `requirements.txt`.
-4. Hand-port the remaining CouchPotato-specific vendored libs with no drop-in
+5. Hand-port the remaining CouchPotato-specific vendored libs with no drop-in
    replacement (axl, caper, enzyme, pynma, gntp, etc.) with 2to3 + manual fixes.
    apscheduler is vendored+patched for now; a real swap to pip APScheduler needs an
    API rewrite (`add_interval_job` → `add_job(trigger='interval', ...)`), not just a
    dependency swap.
-5. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
-   Docker/systemd units, docs.
-6. CI + packaging.
-7. Decide on the tag-mirroring question in `SUGGESTIONS.md` (blocked on repo owner
-   input, not something to keep retrying).
+6. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
+   Docker/systemd units, docs. (README.md partially rebranded 2026-07-10.)
+7. CI + packaging.
+8. Decide on the tag-mirroring question in `SUGGESTIONS.md` (blocked on repo owner
+   input, not something to keep retrying) — mostly moot now, tags are already mirrored.
 
 ## Working conventions
 

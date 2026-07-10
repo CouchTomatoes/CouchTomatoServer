@@ -176,16 +176,82 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       rewritten to work in bytes throughout), and `_base.updater` (rewrote
       `GitUpdater` against GitPython's real API — not a mechanical swap, the object
       model differs). Full details in `CLAUDE.md`'s progress log.
-- [ ] New non-fatal finding from the updater now actually running (was silently
-      crash-skipped before): a `profile.forceDefaults` `ElemNotFound` during initial
-      profile cleanup, likely a timing interaction with the updater's `git fetch` now
-      running at startup. Not yet root-caused — narrower runtime issue, not an import
-      failure.
-- [ ] No `ss()` bytes-vs-str landmines left in hot paths (grep `ss(` — same pattern
-      already found twice in §3; expect more in providers/renamer)
+- [x] Root-caused and fixed the `profile.forceDefaults` `ElemNotFound`/`struct.error`
+      finding (2026-07-10) — not a timing interaction with the updater's `git fetch`
+      as first suspected. Real cause: `couchpotato/core/event.py` dispatches any
+      event with 2+ handlers (`app.load`, `app.initialize`, etc.) across a 10-thread
+      pool, and `libs/codernitydb3/database.py`'s `Database` did unsynchronized
+      file I/O — concurrent plugin writes raced on shared index files, especially
+      the global `id` index. Fixed with a `threading.RLock()` around every public
+      `Database` entry point. Verified: reliably reproduced before the fix, 3
+      consecutive clean fresh-DB boots after it.
+- [x] Found and fixed a wizard crash while browser-testing (2026-07-10):
+      `Page.Wizard` never set `default_action`, so its normal first-load path hit
+      `toggleTab(undefined)` → `Cannot read properties of undefined (reading
+      'split')` on the real `/#wizard/` page (confirmed via Playwright, not a
+      redirect artifact). Fixed by adding `default_action: 'welcome'` in
+      `wizard.js`. **Gap found along the way**: this repo has no verified-working
+      `grunt`/`npm` build for the `combined.*.min.js` bundles actually served —
+      had to hand-patch the pre-built `combined.plugins.min.js` to match. Worth
+      fixing properly (see `CLAUDE.md` next-steps #3) so future frontend fixes
+      don't need manual bundle patching.
+- [ ] Cosmetic-only, low-priority: a few `domready` handlers (`page/login.js` was
+      the one actually hit) can throw when the wizard's client-side redirect tears
+      down the old document mid-navigation (`document.body` reads back `null`
+      transiently). Confirmed via Playwright this never affects the real page users
+      land on. Added a defensive guard to `login.js` for the one instance hit in
+      practice; there may be others further down the same handler queue that were
+      never reached once this one was silenced. Not chased further — provably inert.
+- [ ] Stray broken image: `https://couchpota.to/media/images/userscript.gif` fails
+      with `net::ERR_CONNECTION_RESET` (same dead-domain cause as the CouchPotatoApi
+      provider, just a static asset). Not fixed yet.
+- [x] **The whole download-to-library pipeline was broken end to end — found and
+      fixed 6 bytes/str bugs (2026-07-10), verified against a real transmission-daemon
+      running in this sandbox.** All the same root cause (Python 2 `.encode()`/bytes-
+      iteration idiom that returned `str` in Py2, returns real `bytes` in Py3, never
+      decoded back at the call site):
+      - `core/settings.py`'s `saveView()` stored raw bytes into the config —
+        **every setting saved through the UI/API was silently corrupted**
+        (booleans stuck `False`, text came back as literal `"b'...'"` strings).
+        Broke Transmission's host:port parsing.
+      - `core/helpers/encoding.py`'s `toSafeString()` iterated bytes as ints —
+        **`movie.add()` was completely broken** for a normal IMDB-id add
+        (`getImdb()`/`simplifyString()` call it unconditionally).
+      - `core/plugins/scanner.py`: `os.path.join()` mixing str+bytes crashed
+        `os.walk()`-based folder scanning outright — renamer's scan of the
+        downloads folder always found 0 files. Also fixed 3 more latent
+        instances (3D-tag/embedded-title matching, not crash-triggering with a
+        non-3D test file but same bug).
+      - `core/plugins/quality/main.py`: quality *tag* matching (1080p, BluRay,
+        etc.) silently always evaluated `False` (bytes `in` list-of-str never
+        matches, no exception) — quietly dead this whole time, falling back to
+        weaker extension-only scoring for every release.
+      - `core/plugins/renamer.py`: `doReplace()` — builds every destination
+        file/folder name — returned bytes, crashing the actual move/rename
+        step. **This is the one that blocked "move the finished download into
+        the library."**
+      - `core/plugins/file.py`: same pattern breaking poster/backdrop image
+        caching.
+      Verified via a real `transmission-daemon` (RPC-authenticated) + a
+      pre-seeded dummy movie file, twice from a fresh DB: `movie.add()` →
+      `download.transmission.test` succeeds → torrent shows 100% complete →
+      `renamer.scan()` detects/matches/scores/moves the file into the library
+      → movie + release status both flip to `done`. Left as PR #8 (draft, not
+      auto-merged — substantive core logic change). Full writeup in
+      `CLAUDE.md`'s 2026-07-10 progress log entry.
+- [ ] No `ss()` bytes-vs-str landmines left in hot paths (grep `ss(` — pattern found
+      repeatedly now: §3, the wizard-testing entry above, and the pipeline entry
+      just above. `renamer.py` has one more instance in `checkSnatched()` — appends
+      `ss(...)` into a list used only for a debug log message, doesn't crash,
+      not yet fixed, low priority)
 - [ ] `grep -r "__pycache__"` clean, `.gitignore` covers build artifacts
-- [ ] Smoke-test core flows manually in a real browser: add movie to wanted list,
-      trigger a search, check settings pages load
+- [ ] Smoke-test core flows manually in a real browser: wizard confirmed clean
+      through Welcome/General with 0 console errors; add-movie → Transmission →
+      renamer confirmed working end to end, but driven via direct API calls +
+      a self-seeded test torrent, not actual clicks through the UI against a
+      live provider — still need Downloaders/Providers/Renamer/Automation/Finish
+      wizard steps, save, and a real in-browser search/snatch against a live
+      torrent/NZB provider
 
 ---
 

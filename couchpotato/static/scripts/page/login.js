@@ -1,6 +1,8 @@
 window.addEvent('domready', function(){
-	var b = $(document.body),
-		login_page = b.hasClass('login');
+	var b = $(document.body);
+	if(!b) return; // document.body can be null here if this page is already being torn down for a redirect
+
+	var login_page = b.hasClass('login');
 
 	if(login_page){
 

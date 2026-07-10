@@ -150,7 +150,7 @@ class Scanner(Plugin):
             try:
                 files = []
                 for root, dirs, walk_files in os.walk(folder, followlinks=True):
-                    files.extend([sp(os.path.join(sp(root), ss(filename))) for filename in walk_files])
+                    files.extend([sp(os.path.join(sp(root), filename)) for filename in walk_files])
 
                     # Break if CP wants to shut down
                     if self.shuttingDown():
@@ -501,15 +501,13 @@ class Scanner(Plugin):
         return data
 
     def get3dType(self, filename):
-        filename = ss(filename)
-
         words = re.split('\W+', filename.lower())
 
         for key in self.threed_types:
             tags = self.threed_types.get(key, [])
 
             for tag in tags:
-                if (isinstance(tag, tuple) and '.'.join(tag) in '.'.join(words)) or (isinstance(tag, str) and ss(tag.lower()) in words):
+                if (isinstance(tag, tuple) and '.'.join(tag) in '.'.join(words)) or (isinstance(tag, str) and tag.lower() in words):
                     log.debug('Found %s in %s', (tag, filename))
                     return key
 
@@ -533,14 +531,14 @@ class Scanner(Plugin):
 
             try:
                 if p.title and self.findYear(p.title):
-                    titles.append(ss(p.title))
+                    titles.append(p.title)
             except:
                 log.error('Failed getting title from meta: %s', traceback.format_exc())
 
             for video in p.video:
                 try:
                     if video.title and self.findYear(video.title):
-                        titles.append(ss(video.title))
+                        titles.append(video.title)
                 except:
                     log.error('Failed getting title from meta: %s', traceback.format_exc())
 
