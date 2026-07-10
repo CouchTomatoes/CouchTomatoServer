@@ -6,7 +6,17 @@ delete) once decided/resolved.
 
 ## Mirroring upstream CouchPotato's release tags
 
-**Status: blocked from this session, needs your input.**
+**Status: ✅ Done (2026-07-10).** All 27 upstream tags are now on this repo, and the
+12 that had real upstream GitHub Release objects (`build/2.0.8` through
+`build/3.0.1`) got their title/body/changelog-links mirrored faithfully — verified
+they show the original release notes, embedded changelog badges, and even the
+original author's commit-message humor intact. The other 15 tags (`build/2.0.0.pre1`
+through `build/2.0.7.1`, plus `2.3.0`/`2.5.0`) are bare tags with no Release page,
+matching upstream exactly since those never had one either. Done via a one-off
+`workflow_dispatch` GitHub Actions workflow (see the 2026-07-10 update below for
+how) — the workflow file was removed after running since it was single-use.
+
+Original blocker writeup kept below for reference.
 
 Upstream `CouchPotato/CouchPotatoServer` has 27 git tags (`build/2.0.0.pre1` through
 `build/3.0.1`) marking old Python 2 release builds. All 27 were fetched successfully
