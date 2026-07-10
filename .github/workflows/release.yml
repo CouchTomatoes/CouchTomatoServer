@@ -4,7 +4,14 @@ name: Release
 # Release. CouchTomato's own version numbers start at v4.0.0 (v1.0.x was a
 # false start, retired — see SUGGESTIONS.md); after that the patch version
 # auto-increments from the latest existing v4+ tag. Release notes use the
-# same NEW/FIX badge-icon style as the mirrored upstream CouchPotato releases.
+# same NEW/FIX badge-icon style as the mirrored upstream CouchPotato releases,
+# and are built from everything since the *last release tag* — not since the
+# last push. github.event.before turned out to be unreliable when multiple
+# merges land in quick succession (observed 2026-07-10: several releases in a
+# row came out "No notable changes" or missing commits because the recorded
+# "before" SHA didn't match the actually-preceding release). Tag-based ranges
+# don't have that problem — they're computed from real git state, not event
+# metadata that can lag behind rapid pushes.
 
 on:
   push:
@@ -32,15 +39,14 @@ jobs:
           latest=$(git tag --list 'v*.*.*' --sort=-v:refname | grep -Ev '^v[123]\.' | head -n1)
           if [ -z "$latest" ]; then
             next="v4.0.0"
-            echo "first_release=true" >> "$GITHUB_OUTPUT"
           else
             IFS='.' read -r major minor patch <<< "${latest#v}"
             next="v${major}.${minor}.$((patch + 1))"
-            echo "first_release=false" >> "$GITHUB_OUTPUT"
           fi
           echo "Latest tag: ${latest:-none}"
           echo "Next version: $next"
           echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "latest_tag=$latest" >> "$GITHUB_OUTPUT"
 
       - name: Generate release notes
         id: notes
@@ -48,24 +54,20 @@ jobs:
           new_badge='![new](https://f.cloud.github.com/assets/38136/745795/740c50b0-e41a-11e2-9616-0ce4ea95e1a6.png)'
           fix_badge='![fix](https://f.cloud.github.com/assets/38136/745794/7404d5ec-e41a-11e2-8980-93db26f9a342.png)'
 
-          if [ "${{ steps.version.outputs.first_release }}" = "true" ]; then
+          latest_tag="${{ steps.version.outputs.latest_tag }}"
+          if [ -z "$latest_tag" ]; then
             # First CouchTomato release ever cut — summarize all of our own
             # commits since the upstream Python 2 CouchPotato import boundary
             # (see CLAUDE.md), not just the single push that triggered this.
-            log_args=("7260c12f..HEAD")
+            range="7260c12f..HEAD"
           else
-            before="${{ github.event.before }}"
-            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$before" 2>/dev/null; then
-              log_args=(-1)
-            else
-              log_args=("${before}..${{ github.sha }}")
-            fi
+            range="${latest_tag}..HEAD"
           fi
 
           new_lines=$(mktemp)
           fix_lines=$(mktemp)
 
-          git log "${log_args[@]}" --no-merges --pretty=format:'%s' | while IFS= read -r subject; do
+          git log "$range" --no-merges --pretty=format:'%s' | while IFS= read -r subject; do
             [ -z "$subject" ] && continue
             if printf '%s\n' "$subject" | grep -qiE '^(fix|fixed|fixes|bugfix|hotfix)\b'; then
               printf '%s %s\n' "$fix_badge" "$subject" >> "$fix_lines"
