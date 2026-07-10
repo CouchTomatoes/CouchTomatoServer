@@ -205,13 +205,53 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
 - [ ] Stray broken image: `https://couchpota.to/media/images/userscript.gif` fails
       with `net::ERR_CONNECTION_RESET` (same dead-domain cause as the CouchPotatoApi
       provider, just a static asset). Not fixed yet.
-- [ ] No `ss()` bytes-vs-str landmines left in hot paths (grep `ss(` — same pattern
-      already found twice in §3; expect more in providers/renamer)
+- [x] **The whole download-to-library pipeline was broken end to end — found and
+      fixed 6 bytes/str bugs (2026-07-10), verified against a real transmission-daemon
+      running in this sandbox.** All the same root cause (Python 2 `.encode()`/bytes-
+      iteration idiom that returned `str` in Py2, returns real `bytes` in Py3, never
+      decoded back at the call site):
+      - `core/settings.py`'s `saveView()` stored raw bytes into the config —
+        **every setting saved through the UI/API was silently corrupted**
+        (booleans stuck `False`, text came back as literal `"b'...'"` strings).
+        Broke Transmission's host:port parsing.
+      - `core/helpers/encoding.py`'s `toSafeString()` iterated bytes as ints —
+        **`movie.add()` was completely broken** for a normal IMDB-id add
+        (`getImdb()`/`simplifyString()` call it unconditionally).
+      - `core/plugins/scanner.py`: `os.path.join()` mixing str+bytes crashed
+        `os.walk()`-based folder scanning outright — renamer's scan of the
+        downloads folder always found 0 files. Also fixed 3 more latent
+        instances (3D-tag/embedded-title matching, not crash-triggering with a
+        non-3D test file but same bug).
+      - `core/plugins/quality/main.py`: quality *tag* matching (1080p, BluRay,
+        etc.) silently always evaluated `False` (bytes `in` list-of-str never
+        matches, no exception) — quietly dead this whole time, falling back to
+        weaker extension-only scoring for every release.
+      - `core/plugins/renamer.py`: `doReplace()` — builds every destination
+        file/folder name — returned bytes, crashing the actual move/rename
+        step. **This is the one that blocked "move the finished download into
+        the library."**
+      - `core/plugins/file.py`: same pattern breaking poster/backdrop image
+        caching.
+      Verified via a real `transmission-daemon` (RPC-authenticated) + a
+      pre-seeded dummy movie file, twice from a fresh DB: `movie.add()` →
+      `download.transmission.test` succeeds → torrent shows 100% complete →
+      `renamer.scan()` detects/matches/scores/moves the file into the library
+      → movie + release status both flip to `done`. Left as PR #8 (draft, not
+      auto-merged — substantive core logic change). Full writeup in
+      `CLAUDE.md`'s 2026-07-10 progress log entry.
+- [ ] No `ss()` bytes-vs-str landmines left in hot paths (grep `ss(` — pattern found
+      repeatedly now: §3, the wizard-testing entry above, and the pipeline entry
+      just above. `renamer.py` has one more instance in `checkSnatched()` — appends
+      `ss(...)` into a list used only for a debug log message, doesn't crash,
+      not yet fixed, low priority)
 - [ ] `grep -r "__pycache__"` clean, `.gitignore` covers build artifacts
-- [ ] Smoke-test core flows manually in a real browser: wizard now confirmed clean
-      through Welcome/General with 0 console errors — still need Downloaders/
-      Providers/Renamer/Automation/Finish, save, add movie to wanted list, trigger
-      a search, check settings pages load
+- [ ] Smoke-test core flows manually in a real browser: wizard confirmed clean
+      through Welcome/General with 0 console errors; add-movie → Transmission →
+      renamer confirmed working end to end, but driven via direct API calls +
+      a self-seeded test torrent, not actual clicks through the UI against a
+      live provider — still need Downloaders/Providers/Renamer/Automation/Finish
+      wizard steps, save, and a real in-browser search/snatch against a live
+      torrent/NZB provider
 
 ---
 

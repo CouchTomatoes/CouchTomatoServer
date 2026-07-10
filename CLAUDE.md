@@ -452,6 +452,83 @@ Rules going forward:
   `CouchPotatoApi` provider, just a static asset this time instead of an API call.
   Not fixed yet, logged in `TODO.md` §5.
 
+**2026-07-10 (cont'd, the download-to-library pipeline — 6 bugs, verified against a real transmission-daemon)**
+- User asked the real question this whole port has been building toward: does adding
+  a movie actually send it to Transmission, and once a download completes, do the
+  background jobs (renamer/scanner) reliably move it into the library? Answer at the
+  start of this investigation: **no, at multiple points** — verified by actually
+  running the pipeline, not just reading the code.
+- Installed a real `transmission-daemon` in this sandbox (RPC-authenticated,
+  `rpc-username`/`rpc-password` set) instead of mocking anything. Used
+  `transmission-create` + `truncate -s 250M` to make a legitimately-sized dummy movie
+  file and pre-seed it into Transmission's own `download-dir`, so adding the torrent
+  hash-checks against already-present data and reports 100% complete instantly — a
+  standard way to exercise a real torrent client without waiting on network/trackers.
+- **Found and fixed 6 bugs, all the same root cause**: Python 2 code where
+  `.encode()` on a string (or iterating the result of one) used to behave like `str`
+  now returns real `bytes` in Python 3, and the call site never decoded back:
+  1. `couchpotato/core/settings.py`: `Settings.saveView()` did
+     `value.encode('unicode_escape')` and stored the raw **bytes** straight into
+     `RawConfigParser` — **every setting saved through the UI/API was silently
+     corrupted**. Booleans came back `False` forever (`getBool()`'s fallback compares
+     `bytes == 1`, always False); text came back as the literal string
+     `"b'http://localhost:9091'"` (`toUnicode()`'s `str(bytes)` fallback). This alone
+     broke the Transmission downloader ("port is missing" — because the trailing `'`
+     from the bytes-repr broke the host:port split). Fixed: decode back to `str`
+     before storing.
+  2. `couchpotato/core/helpers/encoding.py`: `toSafeString()` did
+     `.encode('ASCII', 'ignore')` without decoding back, so `for c in cleaned_filename`
+     yielded `int`s instead of characters (`'in <string>' requires string as left
+     operand, not int`). `getImdb()`/`simplifyString()` call this unconditionally, so
+     **`movie.add()` was completely broken** for a normal "add by IMDB id" — the
+     single most basic user action in the whole app. Fixed: decode back to `str`.
+  3. `couchpotato/core/plugins/scanner.py`: `os.path.join(sp(root), ss(filename))`
+     mixed a `str` with `ss()`'s intentional `bytes` return
+     (`TypeError: Can't mix strings and bytes in path components`), crashing the
+     `os.walk()`-based folder scan outright — the renamer's scan of the downloads
+     folder always found 0 files. Fixed by dropping the unnecessary `ss()` (filenames
+     from `os.walk()` are already `str`). Also cleaned up 3 more `ss()` misuses in
+     `get3dType()`/`getMeta()` in the same file that don't crash today (not exercised
+     by a non-3D test file) but would corrupt 3D-tag and embedded-title matching the
+     same way once real files hit those paths.
+  4. `couchpotato/core/plugins/quality/main.py`: `containsTagScore()` checked
+     `ss(alt.lower()) in words` where `words` is a list of `str` — `bytes in
+     list-of-str` doesn't raise, it just always evaluates `False`. **Quality *tag*
+     matching (1080p, BluRay, x264, etc.) has been silently dead this whole time**,
+     quietly falling back to weaker extension-only scoring for every release. This is
+     the dangerous variant of the bug class — no traceback, no log, just wrong
+     behavior — found by noticing multiple qualities (2160p/1080p/720p) all "matched"
+     a single-quality test filename equally via extension only.
+  5. `couchpotato/core/plugins/renamer.py`: `doReplace()` — the function that builds
+     *every* destination file/folder name during a rename — returned `ss(...)`
+     instead of `str`, so `scan()`'s final
+     `os.path.join(destination, final_folder_name, final_file_name)` crashed the same
+     way as #3. **This is the bug that directly blocked "move the finished download
+     into the library."**
+  6. `couchpotato/core/plugins/file.py`: same pattern in
+     `Filesystem.download()`'s cache-path construction, breaking movie
+     poster/backdrop image caching (`file.download` event errors during rename).
+  Each bug was confirmed individually by reproducing its exact traceback before
+  applying the fix, not just inferred from reading the diff.
+- **Full pipeline verified working, twice, from a fresh DB**: configured Transmission
+  + renamer `from`/`to` folders via the real settings API →
+  `download.transmission.test` → `true` → added "The Matrix" via `movie.add` (real
+  TMDB metadata pulled in) → seeded torrent shows 100% complete in Transmission →
+  `renamer.scan()` API call detects the file, correctly identifies `the matrix 1999`
+  via filename parsing, matches it against the movie added above (confirmed via
+  `couchpotatoapi.py`'s `/search/` fallback when TMDB direct lookup didn't fire),
+  scores its quality, and moves+renames it to `Matrix, The (1999)/The Matrix.mkv` in
+  the configured library folder, removing it from the downloads folder. Movie status
+  and release status both flip to `done`. Repeated the whole cycle a second time
+  from a completely fresh DB/config with the same result.
+- Two things intentionally **not** chased as bugs after checking them: a 200MB
+  minimum-file-size filter (`scanner.py`'s `file_sizes['movie']['min']`, working as
+  designed — my first test file was 5MB and correctly got skipped as a
+  sample/trailer) and a 1-minute "still unpacking" freshness guard on newly-created
+  files (also working as designed).
+- Left the fix as PR #8 (still open/draft) rather than auto-merging, since it's a
+  substantive change to core save/scan/rename logic, not a docs/workflow tweak.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
@@ -466,11 +543,15 @@ higher-level plan for what comes after.
 2. Continue clicking through the actual UI in the browser (wizard → save → main app →
    settings → try adding a movie, try triggering a real search against one of the
    now-loading torrent/nzb providers) to find the next layer of real runtime bugs —
-   this approach found several major ones already (most recently the DB race and a
-   wizard `default_action` crash); curl/import-success alone won't catch them. The
-   wizard's Welcome/General steps now load cleanly — next: get through Downloaders/
-   Providers/Renamer/Automation/Finish, save, then exercise the main app (add a
-   movie, trigger a search).
+   this approach found several major ones already (DB race, wizard `default_action`
+   crash, and 6 bytes/str bugs blocking the whole download-to-library pipeline);
+   curl/import-success alone won't catch them. The wizard's Welcome/General steps
+   load cleanly, and add-movie → Transmission → renamer is now verified working
+   end to end via the API — next: get through the wizard's remaining steps
+   (Downloaders/Providers/Renamer/Automation/Finish, save) and exercise a **real**
+   torrent/NZB provider search in the browser UI itself (everything so far was
+   driven via direct API calls + a self-seeded test torrent, not actual clicks
+   through the search/snatch UI against a live provider).
 3. Fix the JS build pipeline gap noted in the progress log: `combined.*.min.js` are
    pre-built bundles with no verified-working `grunt` build in this sandbox, so any
    frontend JS fix currently needs hand-patching both the source file *and* the
