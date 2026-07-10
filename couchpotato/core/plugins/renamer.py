@@ -82,7 +82,7 @@ class Renamer(Plugin):
 
     def scanView(self, **kwargs):
 
-        async = tryInt(kwargs.get('async', 0))
+        is_async = tryInt(kwargs.get('async', 0))
         base_folder = kwargs.get('base_folder')
         media_folder = sp(kwargs.get('media_folder'))
         to_folder = kwargs.get('to_folder')
@@ -108,7 +108,7 @@ class Renamer(Plugin):
                     'files': files
                 })
 
-        fire_handle = fireEvent if not async else fireEventAsync
+        fire_handle = fireEvent if not is_async else fireEventAsync
         fire_handle('renamer.scan', base_folder = base_folder, release_download = release_download, to_folder = to_folder)
 
         return {

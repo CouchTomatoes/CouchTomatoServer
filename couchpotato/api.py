@@ -5,6 +5,7 @@ import threading
 import traceback
 import urllib.request, urllib.parse, urllib.error
 
+from couchpotato.core.helpers.encoding import jsonBytesDefault
 from couchpotato.core.helpers.request import getParams
 from couchpotato.core.logger import CPLog
 from tornado.ioloop import IOLoop
@@ -140,7 +141,7 @@ class ApiHandler(RequestHandler):
 
                 if jsonp_callback:
                     self.set_header('Content-Type', 'text/javascript')
-                    self.finish(str(jsonp_callback) + '(' + json.dumps(result) + ')')
+                    self.finish(str(jsonp_callback) + '(' + json.dumps(result, default = jsonBytesDefault) + ')')
                 elif isinstance(result, tuple) and result[0] == 'redirect':
                     self.redirect(result[1])
                 else:

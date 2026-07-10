@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# Copyright 2020 Nick M. (https://github.com/nickmasster)
 # Copyright 2011-2013 Codernity (http://codernity.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,25 +16,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import functools
 from heapq import nsmallest
 from operator import itemgetter
 from collections import defaultdict
 
-
 try:
     from collections import Counter
 except ImportError:
+
     class Counter(dict):
+
         'Mapping where default values are zero'
+
         def __missing__(self, key):
             return 0
 
 
 def twolvl_iterator(dict):
-    for k, v in list(dict.items()):
-        for kk, vv in list(v.items()):
+    for k, v in dict.iteritems():
+        for kk, vv in v.iteritems():
             yield k, kk, vv
 
 
@@ -55,7 +57,7 @@ def create_cache1lvl(lock_obj):
                     with lock:
                         if len(cache) == maxsize:
                             for k, _ in nsmallest(maxsize // 10 or 1,
-                                                  iter(list(use_count.items())),
+                                                  use_count.items(),
                                                   key=itemgetter(1)):
                                 del cache[k], use_count[k]
                         cache[key] = user_function(key, *args, **kwargs)
@@ -82,7 +84,9 @@ def create_cache1lvl(lock_obj):
             wrapper.cache = cache
             wrapper.delete = delete
             return wrapper
+
         return decorating_function
+
     return cache1lvl
 
 
@@ -103,11 +107,11 @@ def create_cache2lvl(lock_obj):
                 except KeyError:
                     with lock:
                         if wrapper.cache_size == maxsize:
-                            to_delete = maxsize / 10 or 1
-                            for k1, k2, v in nsmallest(to_delete,
-                                                       twolvl_iterator(
-                                                           use_count),
-                                                       key=itemgetter(2)):
+                            to_delete = maxsize // 10 or 1
+                            for k1, k2, v in nsmallest(
+                                    to_delete,
+                                    twolvl_iterator(use_count),
+                                    key=itemgetter(2)):
                                 del cache[k1][k2], use_count[k1][k2]
                                 if not cache[k1]:
                                     del cache[k1]
@@ -154,5 +158,7 @@ def create_cache2lvl(lock_obj):
             wrapper.delete = delete
             wrapper.cache_size = 0
             return wrapper
+
         return decorating_function
+
     return cache2lvl
