@@ -53,7 +53,7 @@ jobs:
               extra=""
               [ "$prerelease" = "true" ] && extra="--prerelease"
               echo "Mirroring release for $tag ($name)"
-              gh release create "$tag" --title "$name" --notes "$body" $extra \
+              gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "$name" --notes "$body" $extra \
                 || echo "  (release create failed or already exists for $tag)"
               mirrored=$((mirrored + 1))
             else
