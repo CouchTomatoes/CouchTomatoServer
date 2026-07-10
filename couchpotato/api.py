@@ -8,7 +8,7 @@ import urllib.request, urllib.parse, urllib.error
 from couchpotato.core.helpers.request import getParams
 from couchpotato.core.logger import CPLog
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, asynchronous
+from tornado.web import RequestHandler
 
 
 log = CPLog(__name__)
@@ -45,8 +45,8 @@ class NonBlockHandler(RequestHandler):
 
     stopper = None
 
-    @asynchronous
     def get(self, route, *args, **kwargs):
+        self._auto_finish = False
         route = route.strip('/')
         start, stop = api_nonblock[route]
         self.stopper = stop
@@ -84,8 +84,8 @@ def addNonBlockApiView(route, func_tuple, docs = None, **kwargs):
 class ApiHandler(RequestHandler):
     route = None
 
-    @asynchronous
     def get(self, route, *args, **kwargs):
+        self._auto_finish = False
         self.route = route = route.strip('/')
         if not api.get(route):
             self.write('API call doesn\'t seem to exist')
