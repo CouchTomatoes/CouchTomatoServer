@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import unicode_literals
+
 from guessit import Guess
 from guessit.transfo import SingleNodeGuesser
 from guessit.patterns import episode_rexps
@@ -32,7 +32,7 @@ def number_list(s):
 
     if len(l) == 2:
         # it is an episode interval, return all numbers in between
-        return range(l[0], l[1]+1)
+        return list(range(l[0], l[1]+1))
 
     return l
 

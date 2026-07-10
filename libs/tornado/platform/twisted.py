@@ -64,7 +64,7 @@ reactor.  Recommended usage::
 `TwistedIOLoop` always uses the global Twisted reactor.
 """
 
-from __future__ import absolute_import, division, print_function, with_statement
+
 
 import datetime
 import functools
@@ -313,10 +313,10 @@ class TornadoReactor(PosixReactorBase):
         return self._removeAll(self._readers, self._writers)
 
     def getReaders(self):
-        return self._readers.keys()
+        return list(self._readers.keys())
 
     def getWriters(self):
-        return self._writers.keys()
+        return list(self._writers.keys())
 
     # The following functions are mainly used in twisted-style test cases;
     # it is expected that most users of the TornadoReactor will call
@@ -430,7 +430,7 @@ class TwistedIOLoop(tornado.ioloop.IOLoop):
         for c in self.reactor.getDelayedCalls():
             c.cancel()
         if all_fds:
-            for fd in fds.values():
+            for fd in list(fds.values()):
                 self.close_fd(fd.fileobj)
 
     def add_handler(self, fd, handler, events):

@@ -264,7 +264,7 @@ class CaptureGroup(object):
 
                 Logr.debug(node)
 
-                next_subject = node.next()
+                next_subject = next(node)
 
                 Logr.debug('----------[%s] (%s)----------' % (next_subject, repr(next_subject.value) if next_subject else None))
 

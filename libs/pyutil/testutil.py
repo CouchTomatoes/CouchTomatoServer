@@ -3,7 +3,7 @@ import os, signal, time
 from twisted.internet import defer, reactor
 from twisted.trial import unittest
 
-import repeatable_random
+from . import repeatable_random
 repeatable_random # http://divmod.org/trac/ticket/1499
 
 class SignalMixin:
@@ -51,7 +51,7 @@ class TestMixin(SignalMixin):
         """
         self.repeatable = repeatable
         if self.repeatable:
-            import repeatable_random
+            from . import repeatable_random
             repeatable_random.force_repeatability()
         if hasattr(time, 'realtime'):
             self.teststarttime = time.realtime()
@@ -97,7 +97,7 @@ class TestMixin(SignalMixin):
             if p.active():
                 p.cancel()
             else:
-                print "WEIRDNESS! pending timed call not active!"
+                print("WEIRDNESS! pending timed call not active!")
         if required_to_quiesce and active:
             self.fail("Reactor was still active when it was required to be quiescent.")
 

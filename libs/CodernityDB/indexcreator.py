@@ -275,7 +275,7 @@ class Parser(object):
         self.tokens = []
         self.tokens_head = ['# %s\n' % self.name, 'class %s(' % self.name, '):\n', '    def __init__(self, *args, **kwargs):        ']
 
-        for i in xrange(3):
+        for i in range(3):
             tokenize.tokenize(self.readline(i), self.add(self.pre_tokens, i))
             # tokenize treats some keyword not in the right way, thats why we
             # have to change some of them

@@ -5,7 +5,7 @@ Copyright (c) 2003-2007  Gustavo Niemeyer <gustavo@niemeyer.net>
 This module offers extensions to the standard Python
 datetime module.
 """
-from __future__ import unicode_literals
+
 __license__ = "Simplified BSD"
 
 
@@ -141,7 +141,7 @@ class _timelex(object):
             raise StopIteration
         return token
 
-    def next(self):
+    def __next__(self):
         return self.__next__() # Python 2.x support
 
     def split(cls, s):

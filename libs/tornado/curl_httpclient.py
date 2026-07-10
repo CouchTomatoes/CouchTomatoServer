@@ -16,7 +16,7 @@
 
 """Non-blocking HTTP client implementation using pycurl."""
 
-from __future__ import absolute_import, division, print_function, with_statement
+
 
 import collections
 import functools
@@ -360,7 +360,7 @@ class CurlAsyncHTTPClient(AsyncHTTPClient):
             "HEAD": pycurl.NOBODY,
         }
         custom_methods = set(["DELETE", "OPTIONS", "PATCH"])
-        for o in curl_options.values():
+        for o in list(curl_options.values()):
             curl.setopt(o, False)
         if request.method in curl_options:
             curl.unsetopt(pycurl.CUSTOMREQUEST)

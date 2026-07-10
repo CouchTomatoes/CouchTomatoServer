@@ -42,11 +42,11 @@ def test_connect(client):
 
 
 def test_call_method(client):
-    assert isinstance(client.call('core.get_free_space'), (int, long))
+    assert isinstance(client.call('core.get_free_space'), int)
 
 
 def test_call_method_arguments(client):
-    assert isinstance(client.call('core.get_free_space', '/'), (int, long))
+    assert isinstance(client.call('core.get_free_space', '/'), int)
 
 
 @pytest.mark.parametrize('client',
@@ -61,5 +61,5 @@ def test_call_method_exception(client):
 
 
 def test_attr_caller(client):
-    assert isinstance(client.core.get_free_space(), (int, long))
-    assert isinstance(client.core.get_free_space('/'), (int, long))
+    assert isinstance(client.core.get_free_space(), int)
+    assert isinstance(client.core.get_free_space('/'), int)

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import unicode_literals
+
 from guessit import s, u
 import os.path
 import zipfile

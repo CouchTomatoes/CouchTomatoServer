@@ -23,7 +23,7 @@ def main():
         chs = 7-chs
         i += chs
 
-    print s
+    print(s)
 
 if __name__ == '__main__':
     main()

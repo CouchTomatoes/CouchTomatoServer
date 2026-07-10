@@ -59,7 +59,7 @@ def force_repeatability():
             subsec = t % 1
             t += (subsec * 1000000)
             t %= 1000000
-            SEED = long(t)
+            SEED = int(t)
         import sys
         sys.stdout.write("REPEATABLE_RANDOMNESS_SEED: %s\n" % SEED) ; sys.stdout.flush()
         sys.stdout.write("In order to reproduce this run of the code, set the environment variable \"REPEATABLE_RANDOMNESS_SEED\" to %s before executing.\n" % SEED) ; sys.stdout.flush()

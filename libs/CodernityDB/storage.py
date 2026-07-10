@@ -25,7 +25,7 @@ import io
 try:
     from CodernityDB import __version__
 except ImportError:
-    from __init__ import __version__
+    from .__init__ import __version__
 
 
 class StorageException(Exception):
