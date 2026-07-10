@@ -1,0 +1,4 @@
+tornado
+chardet
+GitPython
+requests
