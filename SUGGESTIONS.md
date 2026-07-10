@@ -115,6 +115,30 @@ state the commands below will move.
    git push https://github.com/CouchTomatoes/CouchPotatoAPI.git master
    ```
 
+3. **Important — step 1 only moves git tags, not GitHub Releases.** The
+   Releases page (the styled NEW/FIX-badge notes you see on
+   `CodeAhmed/CouchTomato`) is separate per-repo metadata that never
+   transfers with `git push`, even `--tags`. `.github/workflows/
+   mirror-releases-to-target.yml` (already in the repo, rides along with
+   step 1's push) recreates every release to match. **Tested 2026-07-10**:
+   ran its exact read/parse/iterate logic against the real 25-release
+   dataset here (a throwaway dry-run workflow, since this session can't
+   push-test against `CouchTomatoes` directly) — confirmed it correctly
+   processes all 25 releases (10 `v4.x` + 15 mirrored upstream `build/*`)
+   with matching tag/title/body and none dropped. Only the final
+   `gh release create`/`edit` calls weren't exercised against the real
+   target, but that's the exact command pattern already proven twice
+   elsewhere in this project (the upstream tag mirror, the v4.0.0 notes
+   backfill). After step 1 has landed in `CouchTomatoes/CouchTomatoServer`:
+   - Go to that repo's **Actions** tab → **Mirror releases from
+     CodeAhmed/CouchTomato** → **Run workflow** (leave the default
+     `source_repo` input as `CodeAhmed/CouchTomato`).
+   - It's idempotent (updates in place if a release already exists there),
+     so it's safe to re-run if anything looks off.
+   - Spot-check a couple of releases against the originals afterward, then
+     delete `mirror-releases-to-target.yml` from the new repo once you're
+     happy — it's one-off, matching the workflow's own header comment.
+
 **After you've done this**, if you want a future session to keep working against
 the new home, either open that session with `CouchTomatoes/CouchTomatoServer` as
 the initial repo source (avoids the same cross-tier lock), or just tell a
