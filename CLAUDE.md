@@ -353,6 +353,30 @@ Rules going forward:
   (`f4b76a5f`) per the merged-PR restart convention in this file's working
   conventions section, ready for the next round of work.
 
+**2026-07-10 (cont'd, mirrored all upstream tags + releases)**
+- PR #2 (docs + the one-off tag-mirroring workflow) merged, which also correctly
+  triggered `release.yml` again — `v1.0.1` was created automatically, confirming the
+  "release on every push to master" behavior works as intended across multiple merges.
+- Ran the one-off `mirror-upstream-tags.yml` workflow via `workflow_dispatch`.
+  **First attempt had a bug**: the workflow added a second git remote (`upstream`) to
+  fetch tags from, which confused `gh`'s automatic repo-detection — all 12
+  `gh release create` calls silently targeted `CouchPotato/CouchPotatoServer` instead
+  of `CodeAhmed/CouchTomato` and failed with `403 Resource not accessible by
+  integration`. Caught via job logs (`get_job_logs`), not from the run's overall
+  "success" status — the shell script's `|| echo` swallowed the failures so the step
+  still exited 0. **Fix:** pass `--repo "$GITHUB_REPOSITORY"` explicitly to `gh
+  release create` rather than relying on ambient detection. Re-ran successfully
+  against the feature branch directly (confirmed `workflow_dispatch` only needs the
+  workflow *registered* on the default branch once — after that it can be dispatched
+  against any ref, including a branch with an unmerged fix).
+- **Result**: all 27 upstream tags now on this repo. 12 of them
+  (`build/2.0.8`–`build/3.0.1`) had real GitHub Release objects upstream and got
+  their title/body mirrored verbatim — confirmed by reading the actual release notes
+  back (original changelog badges, `RuudBurger/CouchPotatoServer/compare/...` links,
+  even the original author's jokes in the release bodies). The other 15 tags are
+  bare, matching upstream (they never had Release pages either). Removed the
+  workflow file afterward since it was explicitly single-use.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
