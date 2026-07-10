@@ -176,16 +176,42 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       rewritten to work in bytes throughout), and `_base.updater` (rewrote
       `GitUpdater` against GitPython's real API — not a mechanical swap, the object
       model differs). Full details in `CLAUDE.md`'s progress log.
-- [ ] New non-fatal finding from the updater now actually running (was silently
-      crash-skipped before): a `profile.forceDefaults` `ElemNotFound` during initial
-      profile cleanup, likely a timing interaction with the updater's `git fetch` now
-      running at startup. Not yet root-caused — narrower runtime issue, not an import
-      failure.
+- [x] Root-caused and fixed the `profile.forceDefaults` `ElemNotFound`/`struct.error`
+      finding (2026-07-10) — not a timing interaction with the updater's `git fetch`
+      as first suspected. Real cause: `couchpotato/core/event.py` dispatches any
+      event with 2+ handlers (`app.load`, `app.initialize`, etc.) across a 10-thread
+      pool, and `libs/codernitydb3/database.py`'s `Database` did unsynchronized
+      file I/O — concurrent plugin writes raced on shared index files, especially
+      the global `id` index. Fixed with a `threading.RLock()` around every public
+      `Database` entry point. Verified: reliably reproduced before the fix, 3
+      consecutive clean fresh-DB boots after it.
+- [x] Found and fixed a wizard crash while browser-testing (2026-07-10):
+      `Page.Wizard` never set `default_action`, so its normal first-load path hit
+      `toggleTab(undefined)` → `Cannot read properties of undefined (reading
+      'split')` on the real `/#wizard/` page (confirmed via Playwright, not a
+      redirect artifact). Fixed by adding `default_action: 'welcome'` in
+      `wizard.js`. **Gap found along the way**: this repo has no verified-working
+      `grunt`/`npm` build for the `combined.*.min.js` bundles actually served —
+      had to hand-patch the pre-built `combined.plugins.min.js` to match. Worth
+      fixing properly (see `CLAUDE.md` next-steps #3) so future frontend fixes
+      don't need manual bundle patching.
+- [ ] Cosmetic-only, low-priority: a few `domready` handlers (`page/login.js` was
+      the one actually hit) can throw when the wizard's client-side redirect tears
+      down the old document mid-navigation (`document.body` reads back `null`
+      transiently). Confirmed via Playwright this never affects the real page users
+      land on. Added a defensive guard to `login.js` for the one instance hit in
+      practice; there may be others further down the same handler queue that were
+      never reached once this one was silenced. Not chased further — provably inert.
+- [ ] Stray broken image: `https://couchpota.to/media/images/userscript.gif` fails
+      with `net::ERR_CONNECTION_RESET` (same dead-domain cause as the CouchPotatoApi
+      provider, just a static asset). Not fixed yet.
 - [ ] No `ss()` bytes-vs-str landmines left in hot paths (grep `ss(` — same pattern
       already found twice in §3; expect more in providers/renamer)
 - [ ] `grep -r "__pycache__"` clean, `.gitignore` covers build artifacts
-- [ ] Smoke-test core flows manually in a real browser: add movie to wanted list,
-      trigger a search, check settings pages load
+- [ ] Smoke-test core flows manually in a real browser: wizard now confirmed clean
+      through Welcome/General with 0 console errors — still need Downloaders/
+      Providers/Renamer/Automation/Finish, save, add movie to wanted list, trigger
+      a search, check settings pages load
 
 ---
 
