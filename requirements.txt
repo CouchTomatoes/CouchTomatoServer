@@ -1,4 +1,4 @@
-tornado
-chardet
 GitPython
+chardet
 requests
+tornado

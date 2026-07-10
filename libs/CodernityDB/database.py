@@ -276,7 +276,7 @@ class Database(object):
             # it will first save index as a string, and then compile it
             # it will allow to control the index object on the DB side
             ind = new_index
-            init_arguments = new_index.__class__.__init__.__func__.__code__.co_varnames[
+            init_arguments = new_index.__class__.__init__.__code__.co_varnames[
                 3:]  # ignore self, path and name
             for curr in init_arguments:
                 if curr not in ('args', 'kwargs'):
