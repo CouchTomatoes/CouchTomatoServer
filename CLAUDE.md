@@ -579,3 +579,9 @@ higher-level plan for what comes after.
 - Commit after each mechanical/logical step, not in one giant diff — makes the porting
   process auditable and bisectable.
 - No `.env`/secrets expected in this repo; none encountered so far.
+- **Whenever you browser-test something (Playwright/headless Chromium), save a
+  screenshot to `docs/screenshots/` and commit it in the same PR as the fix it
+  verifies.** Name it `YYYY-MM-DD-what-was-tested.png`, one shot per distinct thing
+  verified (not every frame). See `docs/screenshots/README.md` for the full
+  convention. This makes "I tested it and it works" checkable by the user without
+  them having to re-run anything.
