@@ -94,12 +94,45 @@ Rules going forward:
   **Not yet started.**
 - App does not boot yet (`python3 CouchPotato.py --help` fails on the tornado import above).
 
+**2026-07-10 (cont'd)**
+- Ported the 8 tornado-dependent files: only `couchpotato/api.py` actually used the
+  removed `@asynchronous` decorator — fixed by setting `self._auto_finish = False`
+  (confirmed via `tornado.web.RequestHandler._execute` source that this is exactly
+  what `@asynchronous` did internally). `_core.py` used private `IOLoop._closing`
+  (no longer exists on the asyncio-based IOLoop in modern tornado) — removed those
+  checks, `add_callback`/`stop()` are safe to call unconditionally here.
+- Found and fixed a **systemic pattern**: `couchpotato/core/helpers/encoding.py`'s
+  `ss()` helper encodes to `bytes` (a Py2 "safe string" idiom). Several call sites
+  pass its result into `str`-only APIs (`os.path.normpath`+`rstrip` in `sp()`,
+  `re.sub` in `logger.py`'s `safeMessage()`), which breaks in Py3. Fixed both call
+  sites by using `toUnicode()` instead of `ss()` — paths and log messages should
+  stay `str` throughout in Py3, there's no need to round-trip through bytes.
+  **Expect this same `ss()`-misuse pattern elsewhere in the codebase** (providers,
+  renamer, etc.) — grep for `ss(` when hitting bytes/str TypeErrors.
+- Removed vendored `libs/requests` (ancient version uses `collections.MutableMapping`,
+  which moved to `collections.abc` in Py3.10+) — pip-installed `requests` was already
+  in `requirements.txt`, just needed the vendored copy out of the way.
+- Fixed a Py2 unbound-method idiom in vendored `libs/CodernityDB/database.py`:
+  `new_index.__class__.__init__.__func__.__code__` — `.__func__` doesn't exist in Py3
+  (plain functions aren't wrapped), just drop it.
+- **Result: `python3 CouchPotato.py --help` now works end to end.** Actually starting
+  the server (`python3 CouchPotato.py --data_dir ... --console_log --debug`) gets
+  through CLI parsing and into `db.create()`, then fails inside CodernityDB's
+  `_add_single_index` → `header_for_indexes(...)`: `TypeError: a bytes-like object is
+  required, not 'str'` at `libs/CodernityDB/database.py:177` (`f.write(...)`). This is
+  the **next thing to fix** — likely the same bytes/str theme, but this time the
+  target (a binary file write) may legitimately need bytes, so check `header_for_indexes`'s
+  return type before blindly wrapping in `toUnicode()`.
+- Opened a PR from `claude/couch-tomato-parity-e1f5bl` into `master` (draft, WIP),
+  assigned to the repo owner, to make progress visible/reviewable while porting continues.
+
 ## Next steps (in order)
 
-1. Port the 8 tornado-dependent files off `@asynchronous`/`IOLoop.instance()` to modern
-   tornado 6 async/await + `IOLoop.current()`.
-2. Get `python3 CouchPotato.py --help` (then a real boot) working end to end, fixing
-   whatever import/API error comes next, one at a time, committing after each fix.
+1. Fix `header_for_indexes(...)` bytes/str TypeError in `libs/CodernityDB/database.py`
+   (`_add_single_index`, line ~177) — next boot blocker, see progress log for details.
+2. Keep iterating: run `python3 CouchPotato.py --data_dir <scratch dir> --console_log --debug`,
+   fix whatever error comes next, one at a time, committing after each fix, until the
+   server actually starts and the web UI is reachable.
 3. Once it boots: replace remaining easy vendored libs (requests, six, dateutil, certifi,
    bs4, html5lib, oauthlib, httplib2, apscheduler, rsa, pyasn1, GitPython already done)
    with real pip packages + grow `requirements.txt`.
