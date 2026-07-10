@@ -9,13 +9,13 @@ them and lazily writing them to a file.
 
 # from the Python Standard Library
 import os
-import cPickle as pickle
+import pickle as pickle
 import warnings
 
 # from the pyutil library
-import fileutil
-import nummedobj
-import twistedutil
+from . import fileutil
+from . import nummedobj
+from . import twistedutil
 
 # from the Twisted library
 from twisted.python import log
@@ -122,27 +122,27 @@ class PickleSaver(nummedobj.NummedObj):
         nummedobj.NummedObj.__init__(self)
         self._DELAY = DELAY
 
-        self._attrnames = attrs.keys()
+        self._attrnames = list(attrs.keys())
         self._extres = PickleSaver.ExtRes(fname=fname, objname=self.__repr__())
         self._savecb = savecb
 
-        for attrname, defaultval in attrs.items():
+        for attrname, defaultval in list(attrs.items()):
             setattr(self, attrname, defaultval)
 
         try:
             attrdict = pickle.loads(open(self._extres.fname, "rb").read())
-            for attrname, attrval in attrdict.items():
+            for attrname, attrval in list(attrdict.items()):
                 if not hasattr(self, attrname):
                     log.msg("WARNING: %s has no attribute named %s on load from disk, value: %s." % (self, attrname, attrval,))
                 setattr(self, attrname, attrval)
-        except (pickle.UnpicklingError, IOError, EOFError,), le:
+        except (pickle.UnpicklingError, IOError, EOFError,) as le:
             try:
                 attrdict = pickle.loads(open(self._extres.fname + ".tmp", "rb").read())
-                for attrname, attrval in attrdict.items():
+                for attrname, attrval in list(attrdict.items()):
                     if not hasattr(self, attrname):
                         log.msg("WARNING: %s has no attribute named %s on load from disk, value: %s." % (self, attrname, attrval,))
                     setattr(self, attrname, attrval)
-            except (pickle.UnpicklingError, IOError, EOFError,), le2:
+            except (pickle.UnpicklingError, IOError, EOFError,) as le2:
                 log.msg("Got exception attempting to load attrs.  (This is normal if this is the first time you've used this persistent %s object.)  fname: %s, le: %s, le2: %s" % (self.__class__, self._extres.fname, le, le2,))
 
         self.lazy_save()

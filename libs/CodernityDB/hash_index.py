@@ -45,7 +45,7 @@ from CodernityDB.misc import random_hex_32
 try:
     from CodernityDB import __version__
 except ImportError:
-    from __init__ import __version__
+    from .__init__ import __version__
 
 
 class IU_HashIndex(Index):
@@ -76,7 +76,7 @@ class IU_HashIndex(Index):
         self.hash_lim = hash_lim
         if not storage_class:
             storage_class = IU_Storage
-        if storage_class and not isinstance(storage_class, basestring):
+        if storage_class and not isinstance(storage_class, str):
             storage_class = storage_class.__name__
         self.storage_class = storage_class
         self.storage = None
@@ -476,7 +476,7 @@ class IU_HashIndex(Index):
         gen = self.all()
         while True:
             try:
-                doc_id, key, start, size, status = gen.next()
+                doc_id, key, start, size, status = next(gen)
             except StopIteration:
                 break
             self.storage._f.seek(start)

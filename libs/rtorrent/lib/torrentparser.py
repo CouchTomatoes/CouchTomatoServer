@@ -27,7 +27,7 @@ import hashlib
 if is_py3():
     from urllib.request import urlopen  # @UnresolvedImport @UnusedImport
 else:
-    from urllib2 import urlopen  # @UnresolvedImport @Reimport
+    from urllib.request import urlopen  # @UnresolvedImport @Reimport
 
 
 class TorrentParser():
@@ -89,7 +89,7 @@ class TorrentParser():
 
     def _calc_info_hash(self):
         self.info_hash = None
-        if "info" in self._torrent_decoded.keys():
+        if "info" in list(self._torrent_decoded.keys()):
             info_encoded = bencode.encode(self._torrent_decoded["info"])
 
             if info_encoded:

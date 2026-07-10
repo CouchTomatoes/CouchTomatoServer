@@ -59,7 +59,7 @@ See the `convert_yielded` function to extend this mechanism.
    via ``singledispatch``.
 
 """
-from __future__ import absolute_import, division, print_function, with_statement
+
 
 import collections
 import functools
@@ -309,7 +309,7 @@ class WaitIterator(object):
                 "You must provide args or kwargs, not both")
 
         if kwargs:
-            self._unfinished = dict((f, k) for (k, f) in kwargs.items())
+            self._unfinished = dict((f, k) for (k, f) in list(kwargs.items()))
             futures = list(kwargs.values())
         else:
             self._unfinished = dict((f, i) for (i, f) in enumerate(args))
@@ -332,7 +332,7 @@ class WaitIterator(object):
         self.current_index = self.current_future = None
         return True
 
-    def next(self):
+    def __next__(self):
         """Returns a `.Future` that will yield the next available result.
 
         Note that this `.Future` will not be the same object as any of
@@ -541,7 +541,7 @@ class Multi(YieldPoint):
         self.keys = None
         if isinstance(children, dict):
             self.keys = list(children.keys())
-            children = children.values()
+            children = list(children.values())
         self.children = []
         for i in children:
             if is_future(i):
@@ -563,7 +563,7 @@ class Multi(YieldPoint):
     def get_result(self):
         result = (i.get_result() for i in self.children)
         if self.keys is not None:
-            return dict(zip(self.keys, result))
+            return dict(list(zip(self.keys, result)))
         else:
             return list(result)
 
@@ -590,7 +590,7 @@ def multi_future(children):
     """
     if isinstance(children, dict):
         keys = list(children.keys())
-        children = children.values()
+        children = list(children.values())
     else:
         keys = None
     assert all(is_future(i) for i in children)
@@ -608,7 +608,7 @@ def multi_future(children):
                 future.set_exc_info(sys.exc_info())
             else:
                 if keys is not None:
-                    future.set_result(dict(zip(keys, result_list)))
+                    future.set_result(dict(list(zip(keys, result_list))))
                 else:
                     future.set_result(result_list)
     for f in children:
@@ -849,7 +849,7 @@ class Runner(object):
             any(isinstance(f, YieldPoint) for f in yielded)):
             yielded = Multi(yielded)
         elif (isinstance(yielded, dict) and
-            any(isinstance(f, YieldPoint) for f in yielded.values())):
+            any(isinstance(f, YieldPoint) for f in list(yielded.values()))):
             yielded = Multi(yielded)
 
         if isinstance(yielded, YieldPoint):

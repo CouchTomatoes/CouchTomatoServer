@@ -27,7 +27,7 @@ from CodernityDB.storage import IU_Storage, DummyStorage
 try:
     from CodernityDB import __version__
 except ImportError:
-    from __init__ import __version__
+    from .__init__ import __version__
 
 
 import io
@@ -101,7 +101,7 @@ class Index(object):
     def _fix_params(self):
         self.buckets.seek(0)
         props = marshal.loads(self.buckets.read(self._start_ind))
-        for k, v in props.iteritems():
+        for k, v in props.items():
             self.__dict__[k] = v
         self.buckets.seek(0, 2)
 

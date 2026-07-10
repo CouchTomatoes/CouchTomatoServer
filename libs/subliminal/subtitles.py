@@ -51,7 +51,7 @@ class Subtitle(object):
         return to_unicode(self.path)
 
     def __str__(self):
-        return unicode(self).encode('utf-8')
+        return str(self).encode('utf-8')
 
     def __repr__(self):
         return '%s(%s, %s)' % (self.__class__.__name__, self, self.language)

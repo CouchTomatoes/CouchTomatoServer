@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import unicode_literals
+
 from guessit import UnicodeMixin, base_text_type, Guess
 from guessit.textutils import clean_string, str_fill
 from guessit.patterns import group_delimiters
@@ -174,7 +174,7 @@ class BaseMatchTree(UnicodeMixin):
             if result is None:
                 return ' '
 
-            for prop, l in mmap.items():
+            for prop, l in list(mmap.items()):
                 if prop in result:
                     return l
 

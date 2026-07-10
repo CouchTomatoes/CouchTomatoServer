@@ -10,7 +10,7 @@ interface of its subclasses, including `.AsyncHTTPClient`, `.IOLoop`,
 and `.Resolver`.
 """
 
-from __future__ import absolute_import, division, print_function, with_statement
+
 
 import array
 import inspect
@@ -120,8 +120,8 @@ if type('') is not type(b''):
 else:
     def u(s):
         return s.decode('unicode_escape')
-    unicode_type = unicode
-    basestring_type = basestring
+    unicode_type = str
+    basestring_type = str
 
 # Deprecated alias that was used before we dropped py25 support.
 # Left here in case anyone outside Tornado is using it.
@@ -328,7 +328,7 @@ def _websocket_mask_python(mask, data):
     """
     mask = array.array("B", mask)
     unmasked = array.array("B", data)
-    for i in xrange(len(data)):
+    for i in range(len(data)):
         unmasked[i] = unmasked[i] ^ mask[i % 4]
     if hasattr(unmasked, 'tobytes'):
         # tostring was deprecated in py32.  It hasn't been removed,

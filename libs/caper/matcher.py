@@ -67,7 +67,7 @@ class FragmentMatcher(object):
         Logr.info("Compiled %s patterns in %ss", compile_count, delta_seconds(datetime.now() - compile_start))
 
     def find_group(self, name):
-        for group_name, weight_groups in self.regex.items():
+        for group_name, weight_groups in list(self.regex.items()):
             if group_name and group_name == name:
                 return group_name, weight_groups
 
@@ -76,7 +76,7 @@ class FragmentMatcher(object):
     def value_match(self, value, group_name=None, single=True):
         result = None
 
-        for group, weight_groups in self.regex.items():
+        for group, weight_groups in list(self.regex.items()):
             if group_name and group != group_name:
                 continue
 
