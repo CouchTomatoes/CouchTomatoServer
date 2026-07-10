@@ -1,0 +1,85 @@
+name: Mirror releases from CodeAhmed/CouchTomato
+
+# One-off, manually-triggered workflow to recreate every GitHub Release from
+# CodeAhmed/CouchTomato in *this* repo, matching each release's tag (which
+# must already exist here via `git push --tags`), title, body, and
+# draft/prerelease flags exactly.
+#
+# Why this exists: a plain `git push --tags` only moves git tags. GitHub
+# Release objects (the styled NEW/FIX notes you see on the Releases page)
+# are separate metadata that GitHub stores per-repo — they never transfer
+# with git and have to be recreated explicitly through the API, same as the
+# original mirror-upstream-tags.yml did for the build/* releases mirrored
+# from CouchPotato/CouchPotatoServer.
+#
+# Idempotent: if a release already exists here for a given tag, it's
+# updated in place (gh release edit) rather than failing.
+#
+# Safe to delete once it's been run and you've spot-checked a few releases.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: 'owner/repo to mirror releases from'
+        required: true
+        default: 'CodeAhmed/CouchTomato'
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror every release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_REPO: ${{ inputs.source_repo }}
+        run: |
+          set -euo pipefail
+
+          releases_json=$(gh api "repos/${SOURCE_REPO}/releases" --paginate)
+          count=$(echo "$releases_json" | jq 'length')
+          echo "Found $count releases in $SOURCE_REPO"
+
+          created=0
+          updated=0
+          skipped=0
+
+          echo "$releases_json" | jq -c '.[]' | while IFS= read -r rel || [ -n "$rel" ]; do
+            tag=$(echo "$rel" | jq -r '.tag_name')
+            title=$(echo "$rel" | jq -r '.name // .tag_name')
+            draft=$(echo "$rel" | jq -r '.draft')
+            prerelease=$(echo "$rel" | jq -r '.prerelease')
+
+            notes_file=$(mktemp)
+            echo "$rel" | jq -r '.body // ""' > "$notes_file"
+
+            echo "=== $tag ($title) draft=$draft prerelease=$prerelease ==="
+
+            if ! git rev-parse "refs/tags/$tag" >/dev/null 2>&1; then
+              echo "  SKIP: tag $tag doesn't exist in this repo yet — push tags first."
+              continue
+            fi
+
+            extra_flags=()
+            [ "$draft" = "true" ] && extra_flags+=(--draft)
+            [ "$prerelease" = "true" ] && extra_flags+=(--prerelease)
+
+            if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "  Release $tag already exists here — updating."
+              gh release edit "$tag" --title "$title" --notes-file "$notes_file" --repo "$GITHUB_REPOSITORY" "${extra_flags[@]}"
+            else
+              echo "  Creating release $tag."
+              gh release create "$tag" --title "$title" --notes-file "$notes_file" --repo "$GITHUB_REPOSITORY" "${extra_flags[@]}"
+            fi
+          done
+
+          echo "Done. Spot-check the Releases page against $SOURCE_REPO's."
+        shell: bash
