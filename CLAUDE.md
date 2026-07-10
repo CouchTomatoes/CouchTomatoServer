@@ -526,8 +526,46 @@ Rules going forward:
   designed — my first test file was 5MB and correctly got skipped as a
   sample/trailer) and a 1-minute "still unpacking" freshness guard on newly-created
   files (also working as designed).
-- Left the fix as PR #8 (still open/draft) rather than auto-merging, since it's a
-  substantive change to core save/scan/rename logic, not a docs/workflow tweak.
+- PR #8 merged same day, at the user's explicit direction (part of asking to move
+  the stable project to `CouchTomatoes` — see below).
+
+**2026-07-10 (cont'd, release notes were silently broken — two compounding bugs)**
+- User reported releases were auto-generating with "No notable changes" even
+  though real commits had landed (v4.0.2, v4.0.3, v4.0.5, v4.0.6 all affected;
+  v4.0.1 and v4.0.4 were showing *incomplete* notes, missing one commit each).
+  Root-caused as **two separate, compounding bugs** in `release.yml`, found by
+  reproducing the exact failing script locally rather than guessing from the
+  YAML:
+  1. The notes range was computed from `github.event.before` (the push event's
+     previous-SHA field), which turned out to be **unreliable when several PR
+     merges land in quick succession** (exactly what happens during an active
+     session — 5 merges within ~10 minutes). Confirmed by diffing the actual
+     previous release *tag* against each broken release's target commit: the
+     real commits were always there in git, `event.before` just didn't point
+     where expected. Fixed by computing the range from the **latest existing
+     release tag** instead (`latest_tag..HEAD`) — derived from real git state,
+     immune to event-delivery timing.
+  2. Even after fixing #1, the very next release (v4.0.7) *still* came out "No
+     notable changes" despite a provably-correct `v4.0.6..HEAD` range. Second
+     root cause, found by reproducing the notes-generation script locally line
+     by line: `git log --pretty=format:'%s'` deliberately omits a trailing
+     newline after the last log entry, and a bare `while IFS= read -r subject;
+     do ... done` **silently drops any final line that isn't
+     newline-terminated**. For a single-commit range — the common case for a
+     one-commit PR — that's the *only* line, so the loop body never executes
+     at all. For multi-commit ranges it silently dropped just the last
+     (chronologically oldest) commit, which is exactly why v4.0.4 was missing
+     one of its four entries. Fixed with the standard bash idiom
+     `while IFS= read -r subject || [ -n "$subject" ]`.
+  Verified each fix by reproducing the failure locally first (`bash -c` with
+  the exact script + exact tag range), confirming the fix resolves it, before
+  touching the workflow file.
+- Backfilled v4.0.1 through v4.0.7's release notes with the corrected logic via
+  a one-off `backfill-release-notes.yml` workflow (same established pattern),
+  then removed the workflow file after running. All releases now show accurate,
+  complete NEW/FIX-badge notes. The next natural release (v4.0.8, from the fix
+  commit's own merge) came out correct with zero manual intervention, confirming
+  the fix holds going forward.
 
 ## Next steps (in order)
 
