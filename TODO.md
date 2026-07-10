@@ -136,23 +136,24 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
 - [ ] Minor residual browser console error: `Cannot read properties of null (reading
       'hasClass')` still appears once on page load even though content renders fully
       — cosmetic/non-blocking so far, not yet root-caused.
-- [ ] Real bugs found while investigating the above, not yet fixed (all logged
-      server-side, none block boot): `couchpotato/core/helpers/encoding.py`
-      `tryUrlencode()` does `for letter in ss(s):` — iterating `bytes` in Python 3
-      yields `int`s, not 1-character strings, so `new += letter` raises `TypeError:
-      can only concatenate str (not "int") to str`. Affects `cp.messages` and likely
-      other calls through this helper.
-- [ ] TMDB API key is being sent as a literal Python bytes-repr string
-      (`api_key=b'e224fe4f...'`) instead of the actual key, causing every TMDB
-      request to fail with 401 — breaks movie info/search. Somewhere a bytes value is
-      being `str()`-ed instead of `.decode()`-ed before going into request params.
-- [ ] `requests.exceptions.InvalidHeader: Header part (1) from ('X-CP-API', 1) must be
-      of type str or bytes, not <class 'int'>` — an integer header value needs
-      str-conversion before being passed to `requests`.
-- [ ] `profile.forceDefaults` still hits `EOFError: EOF read where object expected` in
-      `codernitydb3/storage.py`'s `marshal.loads()` when iterating `db.all('id')` on
-      a fresh DB — separate from the tree_index bug above (that one's fixed), this is
-      a new/different issue in the generic `all()` iteration path, not yet root-caused.
+- [x] Fixed `tryUrlencode()` iterating `bytes` byte-by-byte (Python 3 yields `int`s,
+      not 1-character strings) — simplified to a single `quote_plus(ss(s))` call
+      since `quote_plus` accepts bytes directly.
+- [x] Fixed TMDB API key bytes-repr leak (`api_key=b'e224fe4f...'`) — `base64.b64decode()`
+      returns `bytes` in Python 3 (was `str` in Python 2); added `.decode('utf-8')`.
+      Same pattern fixed in `userscript/main.py`'s self-test helper.
+- [x] Fixed `requests.exceptions.InvalidHeader` — `couchpotatoapi.py`'s
+      `getRequestHeaders()` had two raw non-str header values (`int`, `float`);
+      same bug independently in `trakt/main.py`'s `'trakt-api-version': 2`. Wrapped
+      all in `str()`.
+- [x] `profile.forceDefaults`'s `EOFError` no longer reproduces — was very likely a
+      downstream symptom of the IOLoop/routing bugs fixed earlier, not a separate
+      root cause. Verified clean across multiple fresh-DB boots.
+- [x] Root-caused (not a bug): `CouchPotatoApi` provider's "Failed to parsing
+      CouchPotatoApi" error — `couchpota.to` (upstream CouchPotato's own API domain)
+      is now a permanently parked/for-sale domain, returning an HTML placeholder
+      instead of JSON. This is a dead external service, not something fixable in
+      code. This provider (suggestions/messages) will never work again as-is.
 - [ ] Provider/plugin modules still failing to import (non-fatal, loader skips them
       individually): `scanner`/`subtitle` (vendored `subliminal` uses `from .async
       import` — reserved keyword), `notifications.join`, `notifications.xmpp_`,
