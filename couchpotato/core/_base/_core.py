@@ -7,7 +7,7 @@ import traceback
 import webbrowser
 import sys
 
-from couchpotato.api import addApiView
+from couchpotato.api import addApiView, main_ioloop
 from couchpotato.core.event import fireEvent, addEvent
 from couchpotato.core.helpers.variable import cleanHost, md5, isSubFolder, compareVersions
 from couchpotato.core.logger import CPLog
@@ -123,7 +123,7 @@ class Core(Plugin):
         def shutdown():
             self.initShutdown()
 
-        IOLoop.current().add_callback(shutdown)
+        main_ioloop.add_callback(shutdown)
 
         return 'shutdown'
 
@@ -133,7 +133,7 @@ class Core(Plugin):
 
         def restart():
             self.initShutdown(restart = True)
-        IOLoop.current().add_callback(restart)
+        main_ioloop.add_callback(restart)
 
         return 'restarting'
 

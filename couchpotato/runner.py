@@ -281,6 +281,16 @@ def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, En
     )
     Env.set('app', application)
 
+    # Static paths (must be registered before the catch-all web handlers below,
+    # since Tornado matches handlers in registration order and the catch-all
+    # `(.*)` pattern would otherwise swallow every static asset request first)
+    static_path = '%sstatic/' % web_base
+    for dir_name in ['fonts', 'images', 'scripts', 'style']:
+        application.add_handlers(".*$", [
+            ('%s%s/(.*)' % (static_path, dir_name), StaticFileHandler, {'path': sp(os.path.join(base_path, 'couchpotato', 'static', dir_name))})
+        ])
+    Env.set('static_path', static_path)
+
     # Request handlers
     application.add_handlers(".*$", [
         (r'%snonblock/(.*)(/?)' % api_base, NonBlockHandler),
@@ -298,14 +308,6 @@ def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, En
         (r'%s(.*)(/?)' % web_base, WebHandler),
         (r'(.*)', WebHandler),
     ])
-
-    # Static paths
-    static_path = '%sstatic/' % web_base
-    for dir_name in ['fonts', 'images', 'scripts', 'style']:
-        application.add_handlers(".*$", [
-            ('%s%s/(.*)' % (static_path, dir_name), StaticFileHandler, {'path': sp(os.path.join(base_path, 'couchpotato', 'static', dir_name))})
-        ])
-    Env.set('static_path', static_path)
 
     # Load configs & plugins
     loader = Env.get('loader')

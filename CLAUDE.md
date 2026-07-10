@@ -197,30 +197,103 @@ Rules going forward:
   block boot) — full list is in `TODO.md` §5, this is the "provider plugins" bucket
   from the next-steps list below, now that the app actually runs.
 
+**2026-07-10 (cont'd, verified in a real browser — found and fixed the two real showstoppers)**
+- `curl` showing a 200 with rendered HTML was misleading — actually drove the app in
+  headless Chromium (Playwright, `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`;
+  no `playwright` npm package locally but it's installed globally — `require(execSync('npm
+  root -g') + '/playwright')`). Found the page was **blank white** despite the curl
+  "success". This is exactly the gap the project's testing guidance warns about:
+  curl/test suites verify the response exists, not that the feature works.
+- **Bug 1 — static asset routing order.** `couchpotato/runner.py` registered the
+  catch-all `WebHandler` route in one `application.add_handlers()` call, then
+  `StaticFileHandler` routes in a *second, later* call. Tornado matches handlers in
+  registration order, so the catch-all always won and every `/static/scripts/*.js`
+  request got redirected to `/#static/scripts/...` instead of served. The browser
+  then tried to execute the redirect target's HTML as JavaScript
+  (`Unexpected token '<'`), so the frontend framework (MooTools) never initialized.
+  **Fix: register static handlers before the catch-all.** Simple reordering, no logic
+  change.
+- **Bug 2 — the big one.** Every API response was silently vanishing:
+  `curl .../api/<key>/settings/` just hung forever, no error, no timeout. Diagnosed
+  with `py-spy dump --pid <pid>` (had to `pip install py-spy`) — found the API
+  worker thread had already *finished*, not blocked, meaning the handler ran to
+  completion but its response never got sent. Root cause: `couchpotato/api.py`'s
+  `ApiHandler.taskFinished()` runs inside a background `Thread` (every API call goes
+  through `run_handler`'s `@run_async` thread-per-request pattern) and called
+  `IOLoop.current().add_callback(self.sendData, ...)` — but `IOLoop.current()` called
+  from a thread that isn't running an event loop **creates and returns a brand-new,
+  never-started IOLoop**, not the real running one. So the callback got scheduled on
+  a phantom loop that never executes, and the HTTP response never got sent — for
+  every single API call in the entire app. Confirmed with a minimal repro
+  (`IOLoop.current()` on main thread vs. inside a `threading.Thread` returns two
+  different `id()`s). **Fix:** capture `main_ioloop = IOLoop.current()` once at
+  `api.py` import time (which happens on the main thread, before the server starts
+  and before any worker threads exist), export it, and use that captured reference
+  instead of calling `IOLoop.current()` fresh inside any worker-thread callback.
+  Applied the same fix to `core/_base/_core.py`'s `shutdown()`/`restart()` (also
+  API-routed → also worker-thread-called → same bug) and
+  `core/notifications/core/main.py`'s `frontend()` notification broadcaster.
+  **Any future code that schedules a tornado callback from inside a thread must use
+  `main_ioloop` from `couchpotato.api`, never call `IOLoop.current()` directly from
+  that thread** — this is a sharp edge that will bite again if forgotten.
+- **Bug 3.** While chasing why `profile.forceDefaults` failed on a fresh DB, found a
+  genuine upstream bug in vendored `libs/codernitydb3/tree_index.py`:
+  `_find_key_many`'s `except ElemNotFound:` handler blindly followed `next_leaf` as a
+  file offset, but `next_leaf == 0` legitimately means "no next leaf" for a
+  freshly-created empty index (not a valid offset) — following it read garbage bytes
+  at file offset 0 (the file header), which decoded into an even more bogus "next
+  leaf" pointer on the next iteration, eventually seeking miles past EOF and crashing
+  with `struct.error: unpack requires a buffer of 10 bytes`. The analogous singular
+  `_find_key` method already had the correct `if next_leaf:` guard — `_find_key_many`
+  was just missing it. Reproduced in isolation with a minimal standalone script before
+  fixing, verified fixed the same way. Note: `_find_key_smaller` (~line 1722 in that
+  file) has the same unguarded-`prev_leaf` pattern but isn't exercised by any current
+  CouchPotato code path — left alone, flagged in `TODO.md`.
+- **Result: the setup wizard actually renders and is interactive** — "Welcome to the
+  new CouchPotato", real form fields (Username/Password/Port etc.), confirmed via
+  screenshot. This is the first time the frontend has been proven to *work*, not just
+  "return 200."
+- Along the way, found (but did NOT yet fix — logged in `TODO.md` §5) three more real
+  bugs surfaced by the now-working API layer: `tryUrlencode()` iterating `bytes` in
+  Python 3 (yields `int`s, not chars), a bytes-repr literally leaking into the TMDB
+  API key parameter (`b'e224...'` sent as the actual key, breaks all TMDB requests),
+  and an integer being passed directly as an HTTP header value where `requests`
+  needs a string. `profile.forceDefaults` still has one more DB-layer issue
+  (`EOFError` in `marshal.loads`) separate from the tree_index bug — not yet
+  root-caused.
+- Cleaned up: removed `py-spy` install artifacts aren't committed (pip-installed to
+  the system, not the repo); temp repro scripts lived only in the scratchpad dir, not
+  the repo.
+
 ## Next steps (in order)
 
-**Boot milestone reached 2026-07-10: server starts, web UI renders.** See `TODO.md`
-for the detailed, checkbox-tracked list — this section is now the higher-level plan
-for what comes after.
+**Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
+interactive in a real headless browser (setup wizard works end to end).** See
+`TODO.md` for the detailed, checkbox-tracked list — this section is now the
+higher-level plan for what comes after.
 
-1. Manually verify the web UI in an actual browser (not just curl) — add a movie,
-   trigger a search, open settings pages. Fix the empty-DB `struct.error` in
-   `profile.forceDefaults` noted in the progress log / `TODO.md` §5 if it blocks
-   real usage.
-2. Work through the long tail of provider/notification/downloader plugin import
+1. Fix the three real bugs surfaced by browser-testing the now-working API layer
+   (see progress log / `TODO.md` §5): `tryUrlencode()`'s bytes-iteration bug, the
+   TMDB API key bytes-repr leak (breaks all TMDB requests — likely high priority
+   since movie info lookup is core functionality), the integer-header bug, and the
+   separate `EOFError` in `profile.forceDefaults`'s `db.all('id')` path.
+2. Continue clicking through the actual UI in the browser (wizard → save → main app →
+   settings → try adding a movie) to find the next layer of real bugs the same way —
+   this found 3 major ones already; curl alone would never have caught them.
+3. Work through the long tail of provider/notification/downloader plugin import
    failures listed in `TODO.md` §5 (each is independently non-fatal but disables that
    feature) — likely the largest remaining chunk of work.
-3. Replace remaining easy vendored libs (six, dateutil, certifi, bs4, html5lib,
+4. Replace remaining easy vendored libs (six, dateutil, certifi, bs4, html5lib,
    oauthlib, httplib2, rsa, pyasn1 — tornado/chardet/requests/GitPython/CodernityDB3
    already done) with real pip packages + grow `requirements.txt`.
-4. Hand-port the remaining CouchPotato-specific vendored libs with no drop-in
+5. Hand-port the remaining CouchPotato-specific vendored libs with no drop-in
    replacement (axl, caper, enzyme, pynma, gntp, etc.) with 2to3 + manual fixes.
    apscheduler is vendored+patched for now; a real swap to pip APScheduler needs an
    API rewrite (`add_interval_job` → `add_job(trigger='interval', ...)`), not just a
    dependency swap.
-5. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
+6. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
    Docker/systemd units, docs.
-6. CI + packaging.
+7. CI + packaging.
 
 ## Working conventions
 

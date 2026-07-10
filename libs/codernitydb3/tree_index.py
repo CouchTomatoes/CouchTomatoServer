@@ -1623,6 +1623,8 @@ class IU_TreeBasedIndex(Index):
             nr_of_elements, prev_leaf, next_leaf = self._read_leaf_nr_of_elements_and_neighbours(
                 leaf_with_key)
         except ElemNotFound:
+            if not next_leaf:
+                return
             leaf_with_key = next_leaf
             key_index = 0
             nr_of_elements, prev_leaf, next_leaf = self._read_leaf_nr_of_elements_and_neighbours(
