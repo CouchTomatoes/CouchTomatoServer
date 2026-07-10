@@ -925,7 +925,7 @@ Remove it if you want it to be renamed (again, or at least let it try again)
         replaced = re.sub(r"[\x00:\*\?\"<>\|]", '', replaced)
 
         sep = self.conf('foldersep') if folder else self.conf('separator')
-        return ss(replaced.replace(' ', ' ' if not sep else sep))
+        return replaced.replace(' ', ' ' if not sep else sep)
 
     def replaceDoubles(self, string):
 
