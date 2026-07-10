@@ -1,12 +1,15 @@
 name: Backfill release notes
 
-# One-off, manually-triggered workflow to regenerate v4.0.1 through v4.0.6's
-# release notes using tag-based ranges. Those releases were cut while
-# release.yml still based its range on github.event.before, which turned out
-# to be unreliable when several merges landed in quick succession — several
-# came out "No notable changes" or missing commits even though real work
-# happened. This regenerates each one's notes from the previous tag to that
-# tag, the same logic release.yml now uses going forward.
+# One-off, manually-triggered workflow to regenerate v4.0.1 through v4.0.7's
+# release notes using tag-based ranges. Those releases were cut with two
+# compounding bugs in release.yml: (1) the range was based on
+# github.event.before, unreliable when several merges land in quick
+# succession, and (2) even when the range was right, a bare `while read`
+# silently dropped the last (often only) commit because `git log
+# --pretty=format:'%s'` doesn't emit a trailing newline — so single-commit
+# releases always came out "No notable changes." This regenerates each
+# release's notes from the previous tag to that tag with both fixed, the
+# same logic release.yml now uses going forward.
 #
 # Safe to delete once it's been run.
 
@@ -25,23 +28,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Regenerate notes for v4.0.1 through v4.0.6
+      - name: Regenerate notes for v4.0.1 through v4.0.7
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           new_badge='![new](https://f.cloud.github.com/assets/38136/745795/740c50b0-e41a-11e2-9616-0ce4ea95e1a6.png)'
           fix_badge='![fix](https://f.cloud.github.com/assets/38136/745794/7404d5ec-e41a-11e2-8980-93db26f9a342.png)'
 
-          tags=(v4.0.0 v4.0.1 v4.0.2 v4.0.3 v4.0.4 v4.0.5 v4.0.6)
+          tags=(v4.0.0 v4.0.1 v4.0.2 v4.0.3 v4.0.4 v4.0.5 v4.0.6 v4.0.7)
 
-          for i in $(seq 1 6); do
+          for i in $(seq 1 7); do
             prev="${tags[$((i-1))]}"
             cur="${tags[$i]}"
 
             new_lines=$(mktemp)
             fix_lines=$(mktemp)
 
-            git log "${prev}..${cur}" --no-merges --pretty=format:'%s' | while IFS= read -r subject; do
+            git log "${prev}..${cur}" --no-merges --pretty=format:'%s' | while IFS= read -r subject || [ -n "$subject" ]; do
               [ -z "$subject" ] && continue
               if printf '%s\n' "$subject" | grep -qiE '^(fix|fixed|fixes|bugfix|hotfix)\b'; then
                 printf '%s %s\n' "$fix_badge" "$subject" >> "$fix_lines"
