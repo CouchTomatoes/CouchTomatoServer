@@ -19,7 +19,7 @@ class MatcherBase(Plugin):
     def flattenInfo(self, info):
         # Flatten dictionary of matches (chain info)
         if isinstance(info, dict):
-            return dict([(key, self.flattenInfo(value)) for key, value in info.items()])
+            return dict([(key, self.flattenInfo(value)) for key, value in list(info.items())])
 
         # Flatten matches
         result = None
@@ -29,7 +29,7 @@ class MatcherBase(Plugin):
                 if result is None:
                     result = {}
 
-                for key, value in match.items():
+                for key, value in list(match.items()):
                     if key not in result:
                         result[key] = []
 
@@ -58,7 +58,7 @@ class MatcherBase(Plugin):
         if not value:
             return value
 
-        if isinstance(value, basestring):
+        if isinstance(value, str):
             return simplifyString(value)
 
         if isinstance(value, list):
@@ -70,15 +70,15 @@ class MatcherBase(Plugin):
         info = self.flattenInfo(chain.info[group])
 
         found_tags = []
-        for tag, accepted in tags.items():
+        for tag, accepted in list(tags.items()):
             values = [self.simplifyValue(x) for x in info.get(tag, [None])]
 
             if any([val in accepted for val in values]):
                 found_tags.append(tag)
 
-        log.debug('tags found: %s, required: %s' % (found_tags, tags.keys()))
+        log.debug('tags found: %s, required: %s' % (found_tags, list(tags.keys())))
 
         if set(tags.keys()) == set(found_tags):
             return True
 
-        return all([key in found_tags for key, value in tags.items()])
+        return all([key in found_tags for key, value in list(tags.items())])

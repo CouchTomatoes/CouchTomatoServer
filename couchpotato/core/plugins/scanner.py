@@ -213,7 +213,7 @@ class Scanner(Plugin):
 
         # Group files minus extension
         ignored_identifiers = []
-        for identifier, group in movie_files.items():
+        for identifier, group in list(movie_files.items()):
             if identifier not in group['identifiers'] and len(identifier) > 0: group['identifiers'].append(identifier)
 
             log.debug('Grouping files: %s', identifier)
@@ -254,7 +254,7 @@ class Scanner(Plugin):
 
         # Group the files based on the identifier
         delete_identifiers = []
-        for identifier, found_files in path_identifiers.items():
+        for identifier, found_files in list(path_identifiers.items()):
             log.debug('Grouping files on identifier: %s', identifier)
 
             group = movie_files.get(identifier)
@@ -277,7 +277,7 @@ class Scanner(Plugin):
 
         # Group based on folder
         delete_identifiers = []
-        for identifier, found_files in path_identifiers.items():
+        for identifier, found_files in list(path_identifiers.items()):
             log.debug('Grouping files on foldername: %s', identifier)
 
             for ff in found_files:
@@ -509,7 +509,7 @@ class Scanner(Plugin):
             tags = self.threed_types.get(key, [])
 
             for tag in tags:
-                if (isinstance(tag, tuple) and '.'.join(tag) in '.'.join(words)) or (isinstance(tag, (str, unicode)) and ss(tag.lower()) in words):
+                if (isinstance(tag, tuple) and '.'.join(tag) in '.'.join(words)) or (isinstance(tag, str) and ss(tag.lower()) in words):
                     log.debug('Found %s in %s', (tag, filename))
                     return key
 
@@ -701,7 +701,7 @@ class Scanner(Plugin):
         return name
 
     def getSamples(self, files):
-        return set(filter(lambda s: self.isSampleFile(s), files))
+        return set([s for s in files if self.isSampleFile(s)])
 
     def getMediaFiles(self, files):
 
@@ -711,7 +711,7 @@ class Scanner(Plugin):
         return set(filter(test, files))
 
     def getMovieExtras(self, files):
-        return set(filter(lambda s: getExt(s.lower()) in self.extensions['movie_extra'], files))
+        return set([s for s in files if getExt(s.lower()) in self.extensions['movie_extra']])
 
     def getDVDFiles(self, files):
         def test(s):
@@ -720,13 +720,13 @@ class Scanner(Plugin):
         return set(filter(test, files))
 
     def getSubtitles(self, files):
-        return set(filter(lambda s: getExt(s.lower()) in self.extensions['subtitle'], files))
+        return set([s for s in files if getExt(s.lower()) in self.extensions['subtitle']])
 
     def getSubtitlesExtras(self, files):
-        return set(filter(lambda s: getExt(s.lower()) in self.extensions['subtitle_extra'], files))
+        return set([s for s in files if getExt(s.lower()) in self.extensions['subtitle_extra']])
 
     def getNfo(self, files):
-        return set(filter(lambda s: getExt(s.lower()) in self.extensions['nfo'], files))
+        return set([s for s in files if getExt(s.lower()) in self.extensions['nfo']])
 
     def getTrailers(self, files):
 
@@ -742,7 +742,7 @@ class Scanner(Plugin):
         files = set(filter(test, files))
 
         images = {
-            'backdrop': set(filter(lambda s: re.search('(^|[\W_])fanart|backdrop\d*[\W_]', s.lower()) and self.filesizeBetween(s, self.file_sizes['backdrop']), files))
+            'backdrop': set([s for s in files if re.search('(^|[\W_])fanart|backdrop\d*[\W_]', s.lower()) and self.filesizeBetween(s, self.file_sizes['backdrop'])])
         }
 
         # Rest
@@ -865,7 +865,7 @@ class Scanner(Plugin):
         return 1
 
     def getCodec(self, filename, codecs):
-        codecs = map(re.escape, codecs)
+        codecs = list(map(re.escape, codecs))
         try:
             codec = re.search('[^A-Z0-9](?P<codec>' + '|'.join(codecs) + ')[^A-Z0-9]', filename, re.I)
             return (codec and codec.group('codec')) or ''

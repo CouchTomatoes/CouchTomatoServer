@@ -1,5 +1,5 @@
 from string import ascii_letters, digits
-from urllib import quote_plus
+from urllib.parse import quote_plus
 import os
 import re
 import traceback
@@ -29,7 +29,7 @@ def simplifyString(original):
 
 def toUnicode(original, *args):
     try:
-        if isinstance(original, unicode):
+        if isinstance(original, str):
             return original
         else:
             try:
@@ -96,7 +96,7 @@ def sp(path, *args):
 
 
 def ek(original, *args):
-    if isinstance(original, (str, unicode)):
+    if isinstance(original, str):
         try:
             from couchpotato.environment import Env
             return original.decode(Env.get('encoding'), 'ignore')
@@ -121,7 +121,7 @@ def stripAccents(s):
 def tryUrlencode(s):
     new = six.u('')
     if isinstance(s, dict):
-        for key, value in s.items():
+        for key, value in list(s.items()):
             new += six.u('&%s=%s') % (key, tryUrlencode(value))
 
         return new[1:]

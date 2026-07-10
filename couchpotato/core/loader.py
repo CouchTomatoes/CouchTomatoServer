@@ -40,7 +40,7 @@ class Loader(object):
             self.paths['custom_plugins'] = (30, '', custom_plugin_dir)
 
         # Loop over all paths and add to module list
-        for plugin_type, plugin_tuple in self.paths.items():
+        for plugin_type, plugin_tuple in list(self.paths.items()):
             priority, module, dir_name = plugin_tuple
             self.addFromDir(plugin_type, priority, module, dir_name)
 
@@ -136,7 +136,7 @@ class Loader(object):
             return False
         try:
             # Load single file plugin
-            if isinstance(module.autoload, (str, unicode)):
+            if isinstance(module.autoload, str):
                 getattr(module, module.autoload)()
             # Load folder plugin
             else:

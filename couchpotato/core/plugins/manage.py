@@ -264,7 +264,7 @@ class Manage(Plugin):
         groups = fireEvent('scanner.scan', folder = folder, files = files, single = True)
 
         if groups:
-            for group in groups.values():
+            for group in list(groups.values()):
                 if group.get('media'):
                     if release_download and release_download.get('release_id'):
                         fireEvent('release.add', group = group, update_id = release_download.get('release_id'))

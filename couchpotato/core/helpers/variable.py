@@ -281,7 +281,7 @@ def splitString(str, split_on = ',', clean = True):
 
 
 def removeEmpty(l):
-    return list(filter(None, l))
+    return list([_f for _f in l if _f])
 
 
 def removeDuplicate(l):
@@ -290,7 +290,7 @@ def removeDuplicate(l):
 
 
 def dictIsSubset(a, b):
-    return all([k in b and b[k] == v for k, v in a.items()])
+    return all([k in b and b[k] == v for k, v in list(a.items())])
 
 
 # Returns True if sub_folder is the same as or inside base_folder
@@ -329,9 +329,9 @@ def removePyc(folder, only_excess = True, show_logs = True):
 
     for root, dirs, files in os.walk(folder):
 
-        pyc_files = filter(lambda filename: filename.endswith('.pyc'), files)
-        py_files = set(filter(lambda filename: filename.endswith('.py'), files))
-        excess_pyc_files = filter(lambda pyc_filename: pyc_filename[:-1] not in py_files, pyc_files) if only_excess else pyc_files
+        pyc_files = [filename for filename in files if filename.endswith('.pyc')]
+        py_files = set([filename for filename in files if filename.endswith('.py')])
+        excess_pyc_files = [pyc_filename for pyc_filename in pyc_files if pyc_filename[:-1] not in py_files] if only_excess else pyc_files
 
         for excess_pyc_file in excess_pyc_files:
             full_path = os.path.join(root, excess_pyc_file)
@@ -364,7 +364,7 @@ def getFreeSpace(directories):
             if os.name == 'nt':
                 _, total, free = ctypes.c_ulonglong(), ctypes.c_ulonglong(), \
                                    ctypes.c_ulonglong()
-                if sys.version_info >= (3,) or isinstance(folder, unicode):
+                if sys.version_info >= (3,) or isinstance(folder, str):
                     fun = ctypes.windll.kernel32.GetDiskFreeSpaceExW #@UndefinedVariable
                 else:
                     fun = ctypes.windll.kernel32.GetDiskFreeSpaceExA #@UndefinedVariable

@@ -116,7 +116,7 @@ class Library(LibraryBase):
 
         # Unique children
         for key in keys:
-            result[key] = result[key].values()
+            result[key] = list(result[key].values())
 
         # Include releases
         result['releases'] = fireEvent('release.for_media', result['_id'], single = True)

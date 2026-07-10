@@ -76,7 +76,7 @@ class OMDBAPI(MovieProvider):
         try:
 
             try:
-                if isinstance(movie, (str, unicode)):
+                if isinstance(movie, str):
                     movie = json.loads(movie)
             except ValueError:
                 log.info('No proper json to decode')
@@ -91,7 +91,7 @@ class OMDBAPI(MovieProvider):
             tmp_movie = movie.copy()
             for key in tmp_movie:
                 tmp_movie_elem = tmp_movie.get(key)
-                if not isinstance(tmp_movie_elem, (str, unicode)) or tmp_movie_elem.lower() == 'n/a':
+                if not isinstance(tmp_movie_elem, str) or tmp_movie_elem.lower() == 'n/a':
                     del movie[key]
 
             year = tryInt(movie.get('Year', ''))
@@ -119,7 +119,7 @@ class OMDBAPI(MovieProvider):
                 'writers': splitString(movie.get('Writer', '')),
                 'actors': splitString(movie.get('Actors', '')),
             }
-            movie_data = dict((k, v) for k, v in movie_data.items() if v)
+            movie_data = dict((k, v) for k, v in list(movie_data.items()) if v)
         except:
             log.error('Failed parsing IMDB API json: %s', traceback.format_exc())
 
