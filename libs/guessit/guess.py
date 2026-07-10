@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import unicode_literals
+
 from guessit import UnicodeMixin, s, u, base_text_type
 from guessit.language import Language
 from guessit.country import Country
@@ -57,7 +57,7 @@ class Guess(UnicodeMixin, dict):
             
     def to_dict(self, advanced=False):
         data = dict(self)
-        for prop, value in data.items():
+        for prop, value in list(data.items()):
             if isinstance(value, datetime.date):
                 data[prop] = value.isoformat()
             elif isinstance(value, (Language, Country, base_text_type)):

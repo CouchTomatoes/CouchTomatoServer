@@ -1,4 +1,4 @@
-from urllib import unquote
+from urllib.parse import unquote
 import re
 
 from couchpotato.core.helpers.encoding import toUnicode
@@ -10,7 +10,7 @@ def getParams(params):
     reg = re.compile('^[a-z0-9_\.]+$')
 
     # Sort keys
-    param_keys = params.keys()
+    param_keys = list(params.keys())
     param_keys.sort(key = natsortKey)
 
     temp = {}
@@ -49,11 +49,11 @@ def dictToList(params):
 
     if type(params) is dict:
         new = {}
-        for x, value in params.items():
+        for x, value in list(params.items()):
             try:
                 convert = lambda text: int(text) if text.isdigit() else text.lower()
                 alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
-                sorted_keys = sorted(value.keys(), key = alphanum_key)
+                sorted_keys = sorted(list(value.keys()), key = alphanum_key)
 
                 all_ints = 0
                 for pnr in sorted_keys:

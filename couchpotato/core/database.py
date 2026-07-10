@@ -200,7 +200,7 @@ class Database(object):
                 log.error('Something wrong with indexes, trying repair')
 
                 # Remove all indexes
-                old_indexes = self.indexes.keys()
+                old_indexes = list(self.indexes.keys())
                 for index_name in old_indexes:
                     try:
                         db.destroy_index(index_name)

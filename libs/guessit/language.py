@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import unicode_literals
+
 from guessit import UnicodeMixin, base_text_type, u, s
 from guessit.fileutils import load_file_in_same_dir
 from guessit.textutils import find_words
@@ -276,7 +276,7 @@ class Language(UnicodeMixin):
     def __ne__(self, other):
         return not self == other
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.lang != 'und'
 
     def __unicode__(self):

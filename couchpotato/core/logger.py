@@ -50,21 +50,21 @@ class CPLog(object):
         self.logger.critical(self.addContext(msg, replace_tuple), exc_info = 1)
 
     def addContext(self, msg, replace_tuple = ()):
-        return '[%+25.25s] %s' % (self.context[-25:], self.safeMessage(msg, replace_tuple))
+        return '[%s] %s' % (self.context, self.safeMessage(msg, replace_tuple))
 
     def safeMessage(self, msg, replace_tuple = ()):
 
-        from couchpotato.core.helpers.encoding import ss, toUnicode
+        from couchpotato.core.helpers.encoding import toUnicode
 
-        msg = ss(msg)
+        msg = toUnicode(msg)
 
         try:
             if isinstance(replace_tuple, tuple):
-                msg = msg % tuple([ss(x) if not isinstance(x, (int, float)) else x for x in list(replace_tuple)])
+                msg = msg % tuple([toUnicode(x) if not isinstance(x, (int, float)) else x for x in list(replace_tuple)])
             elif isinstance(replace_tuple, dict):
-                msg = msg % dict((k, ss(v) if not isinstance(v, (int, float)) else v) for k, v in replace_tuple.iteritems())
+                msg = msg % dict((k, toUnicode(v) if not isinstance(v, (int, float)) else v) for k, v in replace_tuple.items())
             else:
-                msg = msg % ss(replace_tuple)
+                msg = msg % toUnicode(replace_tuple)
         except Exception as e:
             self.logger.error('Failed encoding stuff to log "%s": %s' % (msg, e))
 

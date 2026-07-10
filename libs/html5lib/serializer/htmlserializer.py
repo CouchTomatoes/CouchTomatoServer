@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, unicode_literals
+
 from six import text_type
 
 import gettext
@@ -24,7 +24,7 @@ else:
     unicode_encode_errors = "htmlentityreplace"
 
     encode_entity_map = {}
-    is_ucs4 = len("\U0010FFFF") == 1
+    is_ucs4 = len("\\U0010FFFF") == 1
     for k, v in list(entities.items()):
         # skip multi-character entities
         if ((is_ucs4 and len(v) > 1) or
@@ -232,7 +232,7 @@ class HTMLSerializer(object):
                     in_cdata = True
                 elif in_cdata:
                     self.serializeError(_("Unexpected child element of a CDATA element"))
-                for (attr_namespace, attr_name), attr_value in token["data"].items():
+                for (attr_namespace, attr_name), attr_value in list(token["data"].items()):
                     # TODO: Add namespace support here
                     k = attr_name
                     v = attr_value

@@ -17,10 +17,10 @@
 # LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 # OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import os.path
 import time
-import xmlrpclib
+import xmlrpc.client
 
 from rtorrent.connection import Connection
 from rtorrent.common import find_torrent, join_uri, \
@@ -221,7 +221,7 @@ class RTorrent:
         """
         p = self._get_conn()
         tp = TorrentParser(torrent)
-        torrent = xmlrpclib.Binary(tp._raw_torrent)
+        torrent = xmlrpc.client.Binary(tp._raw_torrent)
         info_hash = tp.info_hash
 
         func_name = self._get_load_function("raw", start, verbose)
@@ -287,7 +287,7 @@ class RTorrent:
             torrent = open(torrent, "rb").read()
 
         if file_type in ["raw", "file"]:
-            finput = xmlrpclib.Binary(torrent)
+            finput = xmlrpc.client.Binary(torrent)
         elif file_type == "url":
             finput = torrent
 
@@ -593,6 +593,6 @@ class_methods_pair = {
     rtorrent.tracker.Tracker: rtorrent.tracker.methods,
     rtorrent.peer.Peer: rtorrent.peer.methods,
 }
-for c in class_methods_pair.keys():
+for c in list(class_methods_pair.keys()):
     rtorrent.rpc._build_rpc_methods(c, class_methods_pair[c])
     _build_class_methods(c)

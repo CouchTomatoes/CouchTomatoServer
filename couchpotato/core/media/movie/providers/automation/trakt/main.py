@@ -23,7 +23,7 @@ class TraktBase(Provider):
         headers = {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer %s' % self.conf('automation_oauth_token'),
-            'trakt-api-version': 2,
+            'trakt-api-version': '2',
             'trakt-api-key': self.client_id,
         }
 

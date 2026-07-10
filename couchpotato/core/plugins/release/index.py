@@ -27,11 +27,11 @@ class ReleaseStatusIndex(TreeBasedIndex):
         super(ReleaseStatusIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return md5(key).hexdigest()
+        return md5(key.encode('utf-8')).hexdigest().encode('utf-8')
 
     def make_key_value(self, data):
         if data.get('_t') == 'release' and data.get('status'):
-            return md5(data.get('status')).hexdigest(), {'media_id': data.get('media_id')}
+            return md5(data.get('status').encode('utf-8')).hexdigest().encode('utf-8'), {'media_id': data.get('media_id')}
 
 
 class ReleaseIDIndex(HashIndex):
@@ -42,11 +42,11 @@ class ReleaseIDIndex(HashIndex):
         super(ReleaseIDIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return md5(key).hexdigest()
+        return md5(key.encode('utf-8')).hexdigest().encode('utf-8')
 
     def make_key_value(self, data):
         if data.get('_t') == 'release' and data.get('identifier'):
-            return md5(data.get('identifier')).hexdigest(), {'media_id': data.get('media_id')}
+            return md5(data.get('identifier').encode('utf-8')).hexdigest().encode('utf-8'), {'media_id': data.get('media_id')}
 
 
 class ReleaseDownloadIndex(HashIndex):
@@ -57,8 +57,8 @@ class ReleaseDownloadIndex(HashIndex):
         super(ReleaseDownloadIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return md5(key.lower()).hexdigest()
+        return md5(key.lower().encode('utf-8')).hexdigest().encode('utf-8')
 
     def make_key_value(self, data):
         if data.get('_t') == 'release' and data.get('download_info') and data['download_info']['id'] and data['download_info']['downloader']:
-            return md5(('%s-%s' % (data['download_info']['downloader'], data['download_info']['id'])).lower()).hexdigest(), None
+            return md5(('%s-%s' % (data['download_info']['downloader'], data['download_info']['id'])).lower().encode('utf-8')).hexdigest().encode('utf-8'), None

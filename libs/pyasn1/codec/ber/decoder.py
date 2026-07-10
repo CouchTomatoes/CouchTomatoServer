@@ -758,11 +758,11 @@ class Decoder:
                         __chosenSpec = None
                     if debug.logger and debug.logger & debug.flagDecoder:
                         debug.logger('candidate ASN.1 spec is a map of:')
-                        for t, v in asn1Spec.getPosMap().items():
+                        for t, v in list(asn1Spec.getPosMap().items()):
                             debug.logger('  %s -> %s' % (t, v.__class__.__name__))
                         if asn1Spec.getNegMap():
                             debug.logger('but neither of: ')
-                            for t, v in asn1Spec.getNegMap().items():
+                            for t, v in list(asn1Spec.getNegMap().items()):
                                 debug.logger('  %s -> %s' % (t, v.__class__.__name__))
                         debug.logger('new candidate ASN.1 spec is %s, chosen by %s' % (__chosenSpec is None and '<none>' or __chosenSpec.prettyPrintType(), tagSet))
                 else:

@@ -18,10 +18,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import unicode_literals
+
 from guessit import s, to_hex
 import hashlib
 import os.path
+from functools import reduce
 
 
 def hash_file(filename):

@@ -26,17 +26,17 @@ if sys.version_info[0] > 2:
     from urllib.error import HTTPError as HTTPError_
     import urllib.parse as urlparse_
 else:
-    import cookielib as cookiejar_
-    import httplib as http_client_
-    from urllib2 import Request as Request_
-    from urllib2 import HTTPHandler as HTTPHandler_
-    from urllib2 import HTTPCookieProcessor as HTTPCookieProcessor_
-    from urllib2 import HTTPBasicAuthHandler as HTTPBasicAuthHandler_
-    from urllib2 import HTTPPasswordMgrWithDefaultRealm as \
+    import http.cookiejar as cookiejar_
+    import http.client as http_client_
+    from urllib.request import Request as Request_
+    from urllib.request import HTTPHandler as HTTPHandler_
+    from urllib.request import HTTPCookieProcessor as HTTPCookieProcessor_
+    from urllib.request import HTTPBasicAuthHandler as HTTPBasicAuthHandler_
+    from urllib.request import HTTPPasswordMgrWithDefaultRealm as \
                                             HTTPPasswordMgrWithDefaultRealm_
-    from urllib2 import ProxyHandler as ProxyHandler_
-    from urllib2 import HTTPError as HTTPError_
-    import urlparse as urlparse_
+    from urllib.request import ProxyHandler as ProxyHandler_
+    from urllib.error import HTTPError as HTTPError_
+    import urllib.parse as urlparse_
 
 from ndg.httpsclient.urllib2_build_opener import build_opener
 from ndg.httpsclient.https import HTTPSContextHandler

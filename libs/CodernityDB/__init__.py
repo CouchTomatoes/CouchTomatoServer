@@ -1,20 +1,5 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-#
-# Copyright 2011-2013 Codernity (http://codernity.com)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
-__version__ = '0.5.0'
-__license__ = "Apache 2.0"
+# Compatibility shim: CouchPotato code (including source generated at runtime for
+# index files) imports "CodernityDB.*". The vendored engine now lives at
+# libs/codernitydb3 (a Python 3 native port). This package re-exports it under the
+# original import path so nothing else has to change.
+from codernitydb3 import __version__, __license__

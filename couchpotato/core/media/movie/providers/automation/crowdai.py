@@ -19,7 +19,7 @@ class CrowdAI(Automation, RSS):
 
         movies = []
 
-        urls = dict(zip(splitString(self.conf('automation_urls')), [tryInt(x) for x in splitString(self.conf('automation_urls_use'))]))
+        urls = dict(list(zip(splitString(self.conf('automation_urls')), [tryInt(x) for x in splitString(self.conf('automation_urls_use'))])))
 
         for url in urls:
 

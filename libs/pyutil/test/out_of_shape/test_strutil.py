@@ -10,10 +10,10 @@ from pyutil import strutil
 
 class Teststrutil(unittest.TestCase):
     def test_short_input(self):
-        self.failUnless(strutil.pop_trailing_newlines("\r\n") == "")
-        self.failUnless(strutil.pop_trailing_newlines("\r") == "")
-        self.failUnless(strutil.pop_trailing_newlines("x\r\n") == "x")
-        self.failUnless(strutil.pop_trailing_newlines("x\r") == "x")
+        self.assertTrue(strutil.pop_trailing_newlines("\r\n") == "")
+        self.assertTrue(strutil.pop_trailing_newlines("\r") == "")
+        self.assertTrue(strutil.pop_trailing_newlines("x\r\n") == "x")
+        self.assertTrue(strutil.pop_trailing_newlines("x\r") == "x")
 
     def test_split(self):
         _assert(strutil.split_on_newlines("x\r\ny") == ["x", "y",], strutil.split_on_newlines("x\r\ny"))

@@ -8,7 +8,7 @@ import json
 import binascii
 import webbrowser
 try:
-    from urllib import urlencode
+    from urllib.parse import urlencode
 except ImportError:
     from urllib.parse import urlencode
 from datetime import datetime
@@ -394,14 +394,14 @@ def strptime(date):
         'second': date[17:],
     }
 
-    d = dict((k, int(v)) for k, v in d.iteritems())
+    d = dict((k, int(v)) for k, v in list(d.items()))
     return datetime(**d)
 
 
 def _str(s):
     """Python 3 compatibility function for converting to str."""
     try:
-        if isinstance(s, unicode):
+        if isinstance(s, str):
             return s.encode('utf-8', 'replace')
     except NameError:
         pass

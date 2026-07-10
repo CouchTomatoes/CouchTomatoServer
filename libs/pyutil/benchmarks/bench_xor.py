@@ -17,12 +17,12 @@ inputs = {}
 
 def _help_init_string(N):
     global inputs
-    if not inputs.has_key(N):
+    if N not in inputs:
         inputs[N] = [randutil.insecurerandstr(N), randutil.insecurerandstr(N),]
 
 def _help_make_bench_xor(f):
     def g(n):
-        assert inputs.has_key(n)
+        assert n in inputs
         _assert(isinstance(inputs[n][0], str), "Required to be a string.", inputs[n][0])
         assert len(inputs[n][0]) == n
         _assert(isinstance(inputs[n][1], str), "Required to be a string.", inputs[n][1])
@@ -35,17 +35,17 @@ def _help_make_bench_xor(f):
 
 def bench(SETSIZES=[2**x for x in range(0, 22, 3)]):
     random.seed(0)
-    if len(SFUNCS) <= 1: print ""
-    maxnamel = max(map(len, SFNAMES))
+    if len(SFUNCS) <= 1: print("")
+    maxnamel = max(list(map(len, SFNAMES)))
     for SETSIZE in SETSIZES:
         seed = random.random()
         # print "seed: ", seed
         random.seed(seed)
         i = 0
-        if len(SFUNCS) > 1: print ""
+        if len(SFUNCS) > 1: print("")
         for FUNC in SFUNCS:
             funcname = SFNAMES[i] + " " * (maxnamel - len(SFNAMES[i]))
-            print "%s" % funcname,
+            print("%s" % funcname, end=' ')
             sys.stdout.flush()
             benchfunc.rep_bench(_help_make_bench_xor(FUNC), SETSIZE, initfunc=_help_init_string, MAXREPS=2**9, MAXTIME=30)
             i = i + 1
