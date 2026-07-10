@@ -217,9 +217,9 @@ def xrange_six(start, stop=None, step=None):
         if PY3:
             return list(range(start, stop, step))
         else:
-            return range(start, stop, step)
+            return list(range(start, stop, step))
     else:
         if PY3:
             return list(range(start))
         else:
-            return range(start)
+            return list(range(start))

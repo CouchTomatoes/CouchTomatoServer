@@ -1,6 +1,6 @@
 
 
-from datrie import Trie as DATrie
+from .datrie import Trie as DATrie
 from six import text_type
 
 from ._base import Trie as ABCTrie

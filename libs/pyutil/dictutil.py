@@ -67,7 +67,7 @@ class UtilDict:
         """
         @return a sequence of (key, value,) pairs sorted according to value
         """
-        l = [(x[1], x[0],) for x in self.d.items()]
+        l = [(x[1], x[0],) for x in list(self.d.items())]
         l.sort()
         return [(x[1], x[0],) for x in l]
 
@@ -217,12 +217,12 @@ class NumDict:
         """
         @return a sequence of (key, value,) pairs sorted according to value
         """
-        l = [(x[1], x[0],) for x in self.d.items()]
+        l = [(x[1], x[0],) for x in list(self.d.items())]
         l.sort()
         return [(x[1], x[0],) for x in l]
 
     def item_with_largest_value(self):
-        it = iter(self.d.items())
+        it = iter(list(self.d.items()))
         (winner, winnerval,) = next(it)
         try:
             while True:
@@ -433,7 +433,7 @@ class ValueOrderedDict:
     def __repr_n__(self, n=None):
         s = ["{",]
         try:
-            iter = iter(self.items())
+            iter = iter(list(self.items()))
             x = next(iter)
             s.append(str(x[0])); s.append(": "); s.append(str(x[1]))
             i = 1
@@ -452,7 +452,7 @@ class ValueOrderedDict:
         return "<%s %s>" % (self.__class__.__name__, self.__repr_n__(16),)
 
     def __eq__(self, other):
-        for (k, v,) in other.items():
+        for (k, v,) in list(other.items()):
             if k not in self.d or self.d[k] != v:
                 return False
         return True
@@ -473,7 +473,7 @@ class ValueOrderedDict:
                 oldx =x
         except StopIteration:
             pass
-        for (k, v,) in self.d.items():
+        for (k, v,) in list(self.d.items()):
             i = bisect_left(self.l, (v, k,))
             while (self.l[i][0] is not v) or (self.l[i][1] is not k):
                 i += 1
@@ -571,7 +571,7 @@ class ValueOrderedDict:
         @return: self
         """
         assert self._assert_invariants()
-        for (k, v,) in otherdict.items():
+        for (k, v,) in list(otherdict.items()):
             self.insert(k, v)
         assert self._assert_invariants()
         return self

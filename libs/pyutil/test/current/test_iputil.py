@@ -4,7 +4,7 @@ try:
     from twisted.trial import unittest
     unittest # http://divmod.org/trac/ticket/1499
 except ImportError as le:
-    print("Skipping test_iputil since it requires Twisted and Twisted could not be imported: %s" % (le,))
+    print(("Skipping test_iputil since it requires Twisted and Twisted could not be imported: %s" % (le,)))
 else:
     from pyutil import iputil, testutil
     import re

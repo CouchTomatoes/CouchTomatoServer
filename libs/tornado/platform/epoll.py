@@ -16,7 +16,7 @@
 """EPoll-based IOLoop implementation for Linux systems."""
 
 
-import select
+from . import select
 
 from tornado.ioloop import PollIOLoop
 

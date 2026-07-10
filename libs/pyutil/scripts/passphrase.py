@@ -68,4 +68,4 @@ def main():
 
     passphrase, bits = gen_passphrase(args.bits, allwords)
 
-    print("Your new password is: '%s'. It is worth about %s bits." % (passphrase, bits))
+    print(("Your new password is: '%s'. It is worth about %s bits." % (passphrase, bits)))

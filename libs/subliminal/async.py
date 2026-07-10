@@ -55,7 +55,7 @@ class Worker(threading.Thread):
 
     def terminate(self):
         """Terminate instantiated services"""
-        for service_name, service in self.services.items():
+        for service_name, service in list(self.services.items()):
             try:
                 service.terminate()
             except:
@@ -132,7 +132,7 @@ class Pool(object):
             paths = [paths]
         order = order or [LANGUAGE_INDEX, SERVICE_INDEX, SERVICE_CONFIDENCE, MATCHING_CONFIDENCE]
         subtitles_by_video = self.list_subtitles(paths, languages, services, force, multi, cache_dir, max_depth, scan_filter)
-        for video, subtitles in subtitles_by_video.items():
+        for video, subtitles in list(subtitles_by_video.items()):
             subtitles.sort(key=lambda s: key_subtitles(s, video, languages, services, order), reverse=True)
         tasks = create_download_tasks(subtitles_by_video, languages, multi)
         for task in tasks:

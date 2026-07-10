@@ -19,7 +19,7 @@ Used as a fallback for systems that don't support epoll or kqueue.
 """
 
 
-import select
+from . import select
 
 from tornado.ioloop import IOLoop, PollIOLoop
 

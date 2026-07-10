@@ -25,7 +25,7 @@ module.
 
 
 import functools
-import platform
+from . import platform
 import traceback
 import sys
 
@@ -34,7 +34,7 @@ from tornado.stack_context import ExceptionStackContext, wrap
 from tornado.util import raise_exc_info, ArgReplacer
 
 try:
-    from concurrent import futures
+    from .concurrent import futures
 except ImportError:
     futures = None
 

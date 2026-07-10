@@ -90,7 +90,7 @@ class OrderedDict:
     def __repr_n__(self, n=None):
         s = ["{",]
         try:
-            iter = iter(self.items())
+            iter = iter(list(self.items()))
             x = next(iter)
             s.append(str(x[0])); s.append(": "); s.append(str(x[1]))
             i = 1
@@ -112,7 +112,7 @@ class OrderedDict:
         _assert((len(self.d) > 2) == (self.d[self.hs][2] is not self.ts) == (self.d[self.ts][1] is not self.hs), "Head and tail point to something other than each other if and only if there is at least one element in the dictionary.", self.hs, self.ts, len(self.d))
         foundprevsentinel = 0
         foundnextsentinel = 0
-        for (k, (v, p, n,)) in self.d.items():
+        for (k, (v, p, n,)) in list(self.d.items()):
             _assert(v not in (self.hs, self.ts,))
             _assert(p is not self.ts, "A reference to the tail sentinel may not appear in prev.", k, v, p, n)
             _assert(n is not self.hs, "A reference to the head sentinel may not appear in next.", k, v, p, n)
@@ -128,7 +128,7 @@ class OrderedDict:
         _assert(foundnextsentinel == 2, "A reference to the tail sentinel is required appear as a next (plus a self-referential reference).")
 
         count = 0
-        for (k, v,) in self.items():
+        for (k, v,) in list(self.items()):
             _assert(k not in (self.hs, self.ts,), k, self.hs, self.ts)
             count += 1
         _assert(count == len(self.d)-2, count, len(self.d)) # -2 for the sentinels
@@ -245,7 +245,7 @@ class OrderedDict:
         """
         assert self._assert_invariants()
 
-        for (k, v,) in otherdict.items():
+        for (k, v,) in list(otherdict.items()):
             assert self._assert_invariants()
             self[k] = v
             assert self._assert_invariants()
@@ -279,7 +279,7 @@ class OrderedDict:
     def keys(self):
         res = [None] * len(self)
         i = 0
-        for k in self.keys():
+        for k in list(self.keys()):
             res[i] = k
             i += 1
         return res
@@ -295,7 +295,7 @@ class OrderedDict:
     def values(self):
         res = [None] * len(self)
         i = 0
-        for v in self.values():
+        for v in list(self.values()):
             res[i] = v
             i += 1
         return res
@@ -303,7 +303,7 @@ class OrderedDict:
     def items(self):
         res = [None] * len(self)
         i = 0
-        for it in self.items():
+        for it in list(self.items()):
             res[i] = it
             i += 1
         return res
@@ -498,7 +498,7 @@ class SmallOrderedDict(dict):
                 while len(self) > self._maxsize:
                     dict.popitem(self)
             else:
-                for k, v, in otherdict.items():
+                for k, v, in list(otherdict.items()):
                     if len(self) == self._maxsize:
                         break
                     dict.__setitem__(self, k, v)
@@ -506,7 +506,7 @@ class SmallOrderedDict(dict):
             assert self._assert_invariants()
             return self
       
-        for k in otherdict.keys():
+        for k in list(otherdict.keys()):
             if dict.has_key(self, k):
                 self._lru.remove(k)
         self._lru.extend(list(otherdict.keys()))

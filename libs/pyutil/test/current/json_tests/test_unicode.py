@@ -39,12 +39,12 @@ class TestUnicode(TestCase):
         self.assertEqual(j, '["%s"]' % (u,))
 
     def test_big_unicode_encode(self):
-        u = '\U0001d120'
+        u = '\\U0001d120'
         self.assertEqual(json.dumps(u), '"\\ud834\\udd20"')
-        self.assertEqual(json.dumps(u, ensure_ascii=False), '"\U0001d120"')
+        self.assertEqual(json.dumps(u, ensure_ascii=False), '"\\U0001d120"')
 
     def test_big_unicode_decode(self):
-        u = 'z\U0001d120x'
+        u = 'z\\U0001d120x'
         self.assertEqual(json.loads('"' + u + '"'), u)
         self.assertEqual(json.loads('"z\\ud834\\udd20x"'), u)
 

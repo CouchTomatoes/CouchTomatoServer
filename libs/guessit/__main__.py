@@ -32,8 +32,8 @@ import locale
 def detect_filename(filename, filetype, info=['filename'], advanced = False):
     filename = u(filename)
 
-    print('For:', filename)
-    print('GuessIt found:', guess_file_info(filename, filetype, info).nice_string(advanced))
+    print(('For:', filename))
+    print(('GuessIt found:', guess_file_info(filename, filetype, info).nice_string(advanced)))
 
 
 def run_demo(episodes=True, movies=True, advanced=False):
@@ -52,7 +52,7 @@ def run_demo(episodes=True, movies=True, advanced=False):
                     ]
 
         for f in testeps:
-            print('-'*80)
+            print(('-'*80))
             detect_filename(f, filetype='episode', advanced=advanced)
 
 
@@ -79,7 +79,7 @@ def run_demo(episodes=True, movies=True, advanced=False):
                        ]
 
         for f in testmovies:
-            print('-'*80)
+            print(('-'*80))
             detect_filename(f, filetype = 'movie', advanced = advanced)
 
 

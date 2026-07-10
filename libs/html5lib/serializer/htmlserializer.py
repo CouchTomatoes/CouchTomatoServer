@@ -24,7 +24,7 @@ else:
     unicode_encode_errors = "htmlentityreplace"
 
     encode_entity_map = {}
-    is_ucs4 = len("\U0010FFFF") == 1
+    is_ucs4 = len("\\U0010FFFF") == 1
     for k, v in list(entities.items()):
         # skip multi-character entities
         if ((is_ucs4 and len(v) > 1) or

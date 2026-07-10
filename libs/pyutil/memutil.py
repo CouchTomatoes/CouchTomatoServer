@@ -17,7 +17,7 @@ class Canary:
         self.ownerdesc = repr(owner)
 
     def __del__(self):
-        print("Canary says that %s is gone." % self.ownerdesc)
+        print(("Canary says that %s is gone." % self.ownerdesc))
 
 def estimate_mem_of_obj(o):
     # assumes 32-bit CPUs...
@@ -400,11 +400,11 @@ def describe_object_with_dict_details(o):
     if isinstance(o, dict) and o:
         sl.append('-')
         nd = dictutil.NumDict()
-        for k, v in o.items():
+        for k, v in list(o.items()):
             nd.inc((describe_object(k), describe_object(v),))
         k, v = nd.item_with_largest_value()
         sl.append("-")
-        iterator = iter(o.items())
+        iterator = iter(list(o.items()))
         k,v =  next(iterator)
         sl.append(describe_object(k))
         sl.append(":")
@@ -417,7 +417,7 @@ def describe_dict(o):
     sl.append(str(l))
     if l:
         sl.append("-")
-        iterator = iter(o.items())
+        iterator = iter(list(o.items()))
         firstitem=True
         try:
             while True:
@@ -496,7 +496,7 @@ def dump_description_of_object_refs(o, f):
 
     # First, any __dict__ items
     try:
-        itemsiter = iter(o.__dict__.items())
+        itemsiter = iter(list(o.__dict__.items()))
     except:
         pass
     else:
