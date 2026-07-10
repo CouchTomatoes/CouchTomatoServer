@@ -14,6 +14,12 @@ from tornado.web import RequestHandler
 
 log = CPLog(__name__)
 
+# Captured on the main thread at import time (well before the IOLoop starts running
+# and before any worker threads are spawned). Background threads must schedule
+# callbacks onto *this* loop - calling IOLoop.current() from inside a worker thread
+# returns a brand new, never-started loop instead of the running one, so callbacks
+# scheduled that way silently vanish and API responses never get sent.
+main_ioloop = IOLoop.current()
 
 api = {}
 api_locks = {}
@@ -129,7 +135,7 @@ class ApiHandler(RequestHandler):
     post = get
 
     def taskFinished(self, result, route):
-        IOLoop.current().add_callback(self.sendData, result, route)
+        main_ioloop.add_callback(self.sendData, result, route)
         self.unlock()
 
     def sendData(self, result, route):

@@ -90,18 +90,69 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       custom_header — unused import was breaking that index's file generation
 - [x] **Server starts without crashing and stays up** ✅
 - [x] **Web UI is reachable in a browser** ✅ — `GET /` returns real rendered HTML
-      (verified via curl: title "CouchPotato", full page, no error markers)
-- [ ] Can navigate the UI without immediate errors (add/search a movie, open settings) —
-      not yet manually verified in an actual browser, only curl-tested
+- [x] **Verified in an actual headless browser (Playwright/Chromium), not just curl** ✅
+      — found and fixed two showstopper bugs curl couldn't reveal (see below). The
+      setup wizard now renders real, interactive content: "Welcome to the new
+      CouchPotato", working form fields, settings sections.
+- [x] Fixed **static asset routing order bug** in `couchpotato/runner.py`: the
+      catch-all `WebHandler` (`(.*)`) was registered *before* the `StaticFileHandler`
+      routes, so Tornado matched the catch-all first and every `/static/*` request
+      (all JS/CSS) got redirected instead of served — browser tried to execute the
+      returned HTML as JavaScript (`Unexpected token '<'`), so the frontend framework
+      (MooTools) never loaded and the page was blank white despite `curl` showing a
+      200. Fixed by registering static handlers before the catch-all.
+- [x] Fixed the **single highest-impact bug found so far**: `IOLoop.current()` called
+      from inside a background worker thread (every API request runs its handler in a
+      `Thread` via `api.py`'s `run_handler`/`run_async`) returns a brand-new,
+      never-started event loop instead of the real running one — so
+      `IOLoop.current().add_callback(self.sendData, ...)` in `ApiHandler.taskFinished`
+      silently scheduled the HTTP response on a phantom loop that never runs. Every
+      single API call in the app hung forever with no response and no error logged.
+      Fixed by capturing `main_ioloop = IOLoop.current()` once at import time in
+      `api.py` (main thread, before the loop starts / before any threads exist) and
+      using that captured reference in worker-thread callbacks instead of calling
+      `IOLoop.current()` fresh. Same fix applied to `core/_base/_core.py`'s
+      `shutdown()`/`restart()` (API-routed, same bug) and
+      `core/notifications/core/main.py`'s `frontend()` notification broadcaster.
+      **If any new code schedules a tornado callback from inside a thread, it must
+      import and use `main_ioloop` from `couchpotato.api`, never call
+      `IOLoop.current()` directly from that thread.**
+- [x] Fixed a genuine upstream bug in vendored `libs/codernitydb3/tree_index.py`:
+      `_find_key_many`'s `except ElemNotFound:` handler followed `next_leaf`
+      unconditionally, but `next_leaf == 0` legitimately means "no next leaf" (not a
+      valid file offset) for a freshly-created empty index — following it as a
+      pointer read garbage/random bytes at file offset 0, which then got
+      misinterpreted as an even more bogus "next leaf" offset on the next iteration,
+      eventually seeking past EOF and crashing with
+      `struct.error: unpack requires a buffer of 10 bytes`. Fixed by adding the same
+      `if not next_leaf: return` guard that the analogous `_find_key` (singular)
+      method already had. Reproduced and verified in isolation before/after the fix
+      (see progress log). **Note:** `_find_key_smaller` (~line 1722) has the same
+      unguarded-`prev_leaf` pattern but isn't currently exercised by any CouchPotato
+      code path — flagged for later, not fixed yet since it's unverified.
 
 ## 5. Sanity pass once it boots
 
-- [ ] Known remaining non-fatal error: `profile.forceDefaults` on a fresh/empty DB hits
-      `struct.error: unpack requires a buffer of 10 bytes` reading an empty
-      `media_status` B-tree leaf in `libs/codernitydb3/tree_index.py`
-      `_read_leaf_nr_of_elements_and_neighbours` — caught gracefully by the event
-      system, doesn't block boot, but likely means "first movie added" flows need
-      checking
+- [ ] Minor residual browser console error: `Cannot read properties of null (reading
+      'hasClass')` still appears once on page load even though content renders fully
+      — cosmetic/non-blocking so far, not yet root-caused.
+- [ ] Real bugs found while investigating the above, not yet fixed (all logged
+      server-side, none block boot): `couchpotato/core/helpers/encoding.py`
+      `tryUrlencode()` does `for letter in ss(s):` — iterating `bytes` in Python 3
+      yields `int`s, not 1-character strings, so `new += letter` raises `TypeError:
+      can only concatenate str (not "int") to str`. Affects `cp.messages` and likely
+      other calls through this helper.
+- [ ] TMDB API key is being sent as a literal Python bytes-repr string
+      (`api_key=b'e224fe4f...'`) instead of the actual key, causing every TMDB
+      request to fail with 401 — breaks movie info/search. Somewhere a bytes value is
+      being `str()`-ed instead of `.decode()`-ed before going into request params.
+- [ ] `requests.exceptions.InvalidHeader: Header part (1) from ('X-CP-API', 1) must be
+      of type str or bytes, not <class 'int'>` — an integer header value needs
+      str-conversion before being passed to `requests`.
+- [ ] `profile.forceDefaults` still hits `EOFError: EOF read where object expected` in
+      `codernitydb3/storage.py`'s `marshal.loads()` when iterating `db.all('id')` on
+      a fresh DB — separate from the tree_index bug above (that one's fixed), this is
+      a new/different issue in the generic `all()` iteration path, not yet root-caused.
 - [ ] Provider/plugin modules still failing to import (non-fatal, loader skips them
       individually): `scanner`/`subtitle` (vendored `subliminal` uses `from .async
       import` — reserved keyword), `notifications.join`, `notifications.xmpp_`,
