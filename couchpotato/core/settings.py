@@ -1,5 +1,5 @@
-from __future__ import with_statement
-import ConfigParser
+
+import configparser
 import traceback
 from hashlib import md5
 
@@ -63,7 +63,7 @@ class Settings(object):
     def setFile(self, config_file):
         self.file = config_file
 
-        self.p = ConfigParser.RawConfigParser()
+        self.p = configparser.RawConfigParser()
         self.p.read(config_file)
 
         from couchpotato.core.logger import CPLog
@@ -78,7 +78,7 @@ class Settings(object):
         return self.p
 
     def sections(self):
-        res = filter( self.isSectionReadable, self.p.sections())
+        res = list(filter( self.isSectionReadable, self.p.sections()))
         return res
 
     def connectEvents(self):
@@ -91,7 +91,7 @@ class Settings(object):
 
         self.addSection(section_name)
 
-        for option_name, option in options.items():
+        for option_name, option in list(options.items()):
             self.setDefault(section_name, option_name, option.get('default', ''))
 
             # Set UI-meta for option (hidden/ro/rw)
@@ -182,7 +182,7 @@ class Settings(object):
         value = self.p.get(section, option)
 
         if value:
-            return map(str.strip, str.split(value, self.directories_delimiter))
+            return list(map(str.strip, str.split(value, self.directories_delimiter)))
         return []
 
     def getUnicode(self, section, option):
@@ -232,7 +232,7 @@ class Settings(object):
                 if (self.getType(section, option_name) == 'directories'):
                     if (not value):
                         value = []
-                    try : value = map(soft_chroot.abs2chroot, value)
+                    try : value = list(map(soft_chroot.abs2chroot, value))
                     except : value = []
 
                 values[section][option_name] = value
@@ -283,7 +283,7 @@ class Settings(object):
         # So, next loops do one thing: copy options to res and in the process
         #   1. omit NON-READABLE (for UI) options,  and
         #   2. put flags on READONLY options
-        for section_key in self.options.keys():
+        for section_key in list(self.options.keys()):
             section_orig = self.options[section_key]
             section_name = section_orig.get('name') if 'name' in section_orig else section_key
             if self.isSectionReadable(section_name):
@@ -346,7 +346,7 @@ class Settings(object):
             value = json.loads(value)
             if not (value and isinstance(value, list)):
                 value = []
-            value = map(soft_chroot.chroot2abs, value)
+            value = list(map(soft_chroot.chroot2abs, value))
             value = self.directories_delimiter.join(value)
 
         # See if a value handler is attached, use that as value

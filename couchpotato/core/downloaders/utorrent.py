@@ -1,15 +1,15 @@
 ﻿from base64 import b16encode, b32decode
 from datetime import timedelta
 from hashlib import sha1
-import cookielib
-import httplib
+import http.cookiejar
+import http.client
 import json
 import os
 import re
 import stat
 import time
-import urllib
-import urllib2
+import urllib.request, urllib.parse, urllib.error
+import urllib.request, urllib.error, urllib.parse
 
 from bencode import bencode as benc, bdecode
 from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
@@ -230,13 +230,13 @@ class uTorrentAPI(object):
         self.url = 'http://' + str(host) + ':' + str(port) + '/gui/'
         self.token = ''
         self.last_time = time.time()
-        cookies = cookielib.CookieJar()
-        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookies), MultipartPostHandler)
+        cookies = http.cookiejar.CookieJar()
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookies), MultipartPostHandler)
         self.opener.addheaders = [('User-agent', 'couchpotato-utorrent-client/1.0')]
         if username and password:
-            password_manager = urllib2.HTTPPasswordMgrWithDefaultRealm()
+            password_manager = urllib.request.HTTPPasswordMgrWithDefaultRealm()
             password_manager.add_password(realm = None, uri = self.url, user = username, passwd = password)
-            self.opener.add_handler(urllib2.HTTPBasicAuthHandler(password_manager))
+            self.opener.add_handler(urllib.request.HTTPBasicAuthHandler(password_manager))
         elif username or password:
             log.debug('User or password missing, not using authentication.')
         self.token = self.get_token()
@@ -245,7 +245,7 @@ class uTorrentAPI(object):
         if time.time() > self.last_time + 1800:
             self.last_time = time.time()
             self.token = self.get_token()
-        request = urllib2.Request(self.url + '?token=' + self.token + '&' + action, data)
+        request = urllib.request.Request(self.url + '?token=' + self.token + '&' + action, data)
         try:
             open_request = self.opener.open(request)
             response = open_request.read()
@@ -253,14 +253,14 @@ class uTorrentAPI(object):
                 return response
             else:
                 log.debug('Unknown failure sending command to uTorrent. Return text is: %s', response)
-        except httplib.InvalidURL as err:
+        except http.client.InvalidURL as err:
             log.error('Invalid uTorrent host, check your config %s', err)
-        except urllib2.HTTPError as err:
+        except urllib.error.HTTPError as err:
             if err.code == 401:
                 log.error('Invalid uTorrent Username or Password, check your config')
             else:
                 log.error('uTorrent HTTPError: %s', err)
-        except urllib2.URLError as err:
+        except urllib.error.URLError as err:
             log.error('Unable to connect to uTorrent %s', err)
         return False
 
@@ -270,20 +270,20 @@ class uTorrentAPI(object):
         return token
 
     def add_torrent_uri(self, filename, torrent, add_folder = False):
-        action = 'action=add-url&s=%s' % urllib.quote(torrent)
+        action = 'action=add-url&s=%s' % urllib.parse.quote(torrent)
         if add_folder:
-            action += '&path=%s' % urllib.quote(filename)
+            action += '&path=%s' % urllib.parse.quote(filename)
         return self._request(action)
 
     def add_torrent_file(self, filename, filedata, add_folder = False):
         action = 'action=add-file'
         if add_folder:
-            action += '&path=%s' % urllib.quote(filename)
+            action += '&path=%s' % urllib.parse.quote(filename)
         return self._request(action, {'torrent_file': (ss(filename), filedata)})
 
     def set_torrent(self, hash, params):
         action = 'action=setprops&hash=%s' % hash
-        for k, v in params.items():
+        for k, v in list(params.items()):
             action += '&s=%s&v=%s' % (k, v)
         return self._request(action)
 
@@ -338,7 +338,7 @@ class uTorrentAPI(object):
             if isinstance(settings_dict[key], bool):
                 settings_dict[key] = 1 if settings_dict[key] else 0
 
-        action = 'action=setsetting' + ''.join(['&s=%s&v=%s' % (key, value) for (key, value) in settings_dict.items()])
+        action = 'action=setsetting' + ''.join(['&s=%s&v=%s' % (key, value) for (key, value) in list(settings_dict.items())])
         return self._request(action)
 
     def get_files(self, hash):

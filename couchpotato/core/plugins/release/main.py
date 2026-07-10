@@ -184,7 +184,7 @@ class Release(Plugin):
                 })
 
             # Empty out empty file groups
-            release['files'] = dict((k, [toUnicode(x) for x in v]) for k, v in group['files'].items() if v)
+            release['files'] = dict((k, [toUnicode(x) for x in v]) for k, v in list(group['files'].items()) if v)
             db.update(release)
 
             fireEvent('media.restatus', media['_id'], allowed_restatus = ['done'], single = True)
@@ -469,10 +469,10 @@ class Release(Plugin):
                 # Update info, but filter out functions
                 for info in rel:
                     try:
-                        if not isinstance(rel[info], (str, unicode, int, long, float)):
+                        if not isinstance(rel[info], (str, int, float)):
                             continue
 
-                        rls['info'][info] = toUnicode(rel[info]) if isinstance(rel[info], (str, unicode)) else rel[info]
+                        rls['info'][info] = toUnicode(rel[info]) if isinstance(rel[info], str) else rel[info]
                     except:
                         log.debug('Couldn\'t add %s to ReleaseInfo: %s', (info, traceback.format_exc()))
 

@@ -47,7 +47,7 @@ class FileManager(Plugin):
             files = []
             for media in medias:
                 file_dict = media['doc'].get('files', {})
-                for x in file_dict.keys():
+                for x in list(file_dict.keys()):
                     files.extend(file_dict[x])
 
             for f in os.listdir(cache_dir):

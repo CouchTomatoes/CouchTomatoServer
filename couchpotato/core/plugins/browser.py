@@ -99,7 +99,7 @@ class FileBrowser(Plugin):
             dirs = []
 
         if soft_chroot.enabled:
-            dirs = map(soft_chroot.abs2chroot, dirs)
+            dirs = list(map(soft_chroot.abs2chroot, dirs))
 
         parent = os.path.dirname(path.rstrip(os.path.sep))
         if parent == path.rstrip(os.path.sep):
