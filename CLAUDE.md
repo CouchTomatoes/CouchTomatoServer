@@ -265,35 +265,111 @@ Rules going forward:
   the system, not the repo); temp repro scripts lived only in the scratchpad dir, not
   the repo.
 
+**2026-07-10 (cont'd, second bug batch + full provider plugin backlog cleared)**
+- Fixed the second batch of bugs from browser-testing: `tryUrlencode()`'s
+  bytes-iteration (`quote_plus` accepts bytes directly, simplified to one call
+  instead of the old char-by-char loop), the TMDB API key bytes-repr leak
+  (`base64.b64decode()` returns `bytes` in Py3, needed `.decode('utf-8')`), and two
+  independent instances of raw int/float HTTP header values (`couchpotatoapi.py`,
+  `trakt/main.py`) that `requests` rejects. The `profile.forceDefaults` `EOFError`
+  no longer reproduced — was a downstream symptom of the routing/IOLoop fixes, not
+  a separate bug. Root-caused (not fixable) the `CouchPotatoApi` "Failed to parsing"
+  error: `couchpota.to` is a permanently parked/for-sale domain now.
+- Added a tomato icon (favicon/touch icons/mask icon, light+dark) sourced from the
+  🍅 emoji in `CouchTomatoServer`'s README, rendered via headless Chromium
+  (`Noto Color Emoji` font) and resized into every format/size the templates already
+  reference — no template changes needed.
+- Attempted to mirror upstream CouchPotato's 27 git tags into this repo. Fetching
+  them works fine over plain git, but **pushing tags is hard-blocked with HTTP 403
+  at the proxy layer** this session's git traffic runs through (confirmed with
+  `GIT_CURL_VERBOSE=1` — same result on a disposable test tag, so it's not
+  content-specific). No `create_ref`/`create_release` tool exists in the GitHub MCP
+  server either. Documented options in `SUGGESTIONS.md` for the repo owner to decide
+  — this needs their input, not something to keep retrying.
+- **Fixed the entire provider/notification/downloader plugin import backlog: ~50
+  failing imports down to 0.** First widened `logger.py`'s context field (was
+  hard-truncating module names to the last 25 characters — `self.context[-25:]` —
+  making it hard to tell which module actually failed); then grouped the ~50
+  failures by root-cause exception instead of fixing file-by-file, which turned it
+  into ~8 fixes instead of ~50:
+  - 38 provider files (torrent/nzb/automation/userscript/trailer) all failed on the
+    exact same line in vendored `bs4`: `HTMLParseError` removed from `html.parser`.
+    Replaced vendored `bs4` with pip `beautifulsoup4` — one swap fixed all 38.
+  - 5 downloader clients (deluge, hadouken, qbittorrent, rtorrent, utorrent) all
+    failed on vendored `bencode` importing removed `types.StringType` etc. Replaced
+    with pip `bencode.py`, which happens to expose the exact same `bencode`/`bdecode`
+    function names the call sites already use — clean swap.
+  - `notifications.twitter`: vendored `pytwitter` imported the removed `rfc822`
+    module (`email.utils` has a drop-in `parsedate`), which transitively needed
+    vendored `httplib2`, which imported the renamed `email.Utils` → `email.utils`.
+    Replaced vendored `httplib2` with pip `httplib2` too rather than patch both.
+  - `notifications.xmpp_` / `plugins.scanner` / `plugins.subtitle`: vendored `xmpp`
+    had Python 2 string-exception `raise` syntax (`raise 'msg', arg` — 4 occurrences
+    in `debug.py`), implicit intra-package imports (`import dispatcher` instead of
+    `from . import dispatcher` — Python 3 requires explicit relative imports), and
+    the removed `sha`/`md5` modules inside its SASL DIGEST-MD5 auth code
+    (`auth.py`) — had to keep the whole `H()`/`HH()`/`C()` hash-chaining helper
+    trio consistently in bytes rather than naively encoding each call site, since
+    they feed into each other and DIGEST-MD5 needs the raw digest bytes, not a
+    decoded string, fed back into the next hash. Vendored `subliminal` had
+    `from .async import Pool` (`async` became a reserved keyword in Python 3.7) —
+    renamed the module file (`async.py` → `async_pool.py`) rather than replacing
+    vendored subliminal with the pip package, since modern subliminal 2.x's API
+    changed too much (`scanner.py`/`subtitle.py` use the old
+    `subliminal.videos.Video`-era structure throughout — a pip swap here would need
+    rewriting the calling code, not just the import).
+  - `downloaders.utorrent`: vendored `multipartpost.py` used the removed
+    `mimetools` module and old `urllib2.Request.get_data()`/`.add_data()` methods
+    (don't exist on Python 3's `urllib.request.Request` — it uses a plain `.data`
+    attribute). Rewrote the whole multipart encoder to work in bytes throughout,
+    since the actual payload (`.torrent` file content) is binary — patching just the
+    `mimetools` import would have left a silent bytes+str concatenation crash one
+    layer deeper.
+  - `_base.updater`: rewrote `GitUpdater` against GitPython's real API (`git.Repo`,
+    `.remote()`, `.active_branch`, `.head.commit`, `.refs`, etc.) — not a mechanical
+    swap since the object model differs from the old `git.repository.LocalRepository`
+    (e.g. remote branch refs come back named `origin/master`, needed `.remote_head`
+    to get the bare branch name back for comparison). This surfaced a second bug:
+    `git.refresh('git')` resolves a bare command name relative to cwd instead of
+    searching `$PATH`, silently breaking the default (most common) case — fixed by
+    only calling `git.refresh()` when a real custom git path is configured.
+  - `torrentleech`: a plain `TabError` (mixed tabs/spaces), unrelated to the above.
+- **Verified via full boot: 0 remaining loader import failures**, homepage still
+  renders 200. One new non-fatal finding, now that the updater actually runs instead
+  of being silently crash-skipped: a `profile.forceDefaults` `ElemNotFound` during
+  initial profile cleanup, possibly a timing interaction with the updater's `git
+  fetch` now running at startup — logged in `TODO.md` §5, not yet root-caused.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
-interactive in a real headless browser (setup wizard works end to end).** See
-`TODO.md` for the detailed, checkbox-tracked list — this section is now the
+interactive in a real headless browser (setup wizard works end to end). Provider
+plugin import backlog cleared same day: 0 remaining loader failures, down from ~50.**
+See `TODO.md` for the detailed, checkbox-tracked list — this section is now the
 higher-level plan for what comes after.
 
-1. Fix the three real bugs surfaced by browser-testing the now-working API layer
-   (see progress log / `TODO.md` §5): `tryUrlencode()`'s bytes-iteration bug, the
-   TMDB API key bytes-repr leak (breaks all TMDB requests — likely high priority
-   since movie info lookup is core functionality), the integer-header bug, and the
-   separate `EOFError` in `profile.forceDefaults`'s `db.all('id')` path.
+1. Root-cause the new `profile.forceDefaults` `ElemNotFound` finding (see progress
+   log) — possibly a timing interaction with the updater's `git fetch` now running
+   at startup, now that the updater plugin actually loads instead of being silently
+   skipped.
 2. Continue clicking through the actual UI in the browser (wizard → save → main app →
-   settings → try adding a movie) to find the next layer of real bugs the same way —
-   this found 3 major ones already; curl alone would never have caught them.
-3. Work through the long tail of provider/notification/downloader plugin import
-   failures listed in `TODO.md` §5 (each is independently non-fatal but disables that
-   feature) — likely the largest remaining chunk of work.
-4. Replace remaining easy vendored libs (six, dateutil, certifi, bs4, html5lib,
-   oauthlib, httplib2, rsa, pyasn1 — tornado/chardet/requests/GitPython/CodernityDB3
+   settings → try adding a movie, try triggering a real search against one of the
+   now-loading torrent/nzb providers) to find the next layer of real runtime bugs —
+   this approach found several major ones already; curl/import-success alone won't
+   catch them.
+3. Replace remaining easy vendored libs (six, dateutil, certifi, html5lib, oauthlib,
+   rsa, pyasn1 — tornado/chardet/requests/GitPython/CodernityDB3/bs4/bencode/httplib2
    already done) with real pip packages + grow `requirements.txt`.
-5. Hand-port the remaining CouchPotato-specific vendored libs with no drop-in
+4. Hand-port the remaining CouchPotato-specific vendored libs with no drop-in
    replacement (axl, caper, enzyme, pynma, gntp, etc.) with 2to3 + manual fixes.
    apscheduler is vendored+patched for now; a real swap to pip APScheduler needs an
    API rewrite (`add_interval_job` → `add_job(trigger='interval', ...)`), not just a
    dependency swap.
-6. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
+5. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
    Docker/systemd units, docs.
-7. CI + packaging.
+6. CI + packaging.
+7. Decide on the tag-mirroring question in `SUGGESTIONS.md` (blocked on repo owner
+   input, not something to keep retrying).
 
 ## Working conventions
 

@@ -154,14 +154,23 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       is now a permanently parked/for-sale domain, returning an HTML placeholder
       instead of JSON. This is a dead external service, not something fixable in
       code. This provider (suggestions/messages) will never work again as-is.
-- [ ] Provider/plugin modules still failing to import (non-fatal, loader skips them
-      individually): `scanner`/`subtitle` (vendored `subliminal` uses `from .async
-      import` — reserved keyword), `notifications.join`, `notifications.xmpp_`,
-      `notifications.twitter` (`rfc822` module removed), `downloaders.{deluge,
-      hadouken,qbittorrent_,rtorrent_,utorrent}` (`types.StringType` removed), several
-      `providers.nzb`/`providers.torrent` modules (`html.parser.HTMLParseError`
-      removed), `_base.updater` (`git.repository.LocalRepository` — vendored `git`
-      replaced by GitPython, different API, needs a real rewrite not a shim)
+- [x] **All provider/plugin import failures fixed — 0 remaining, down from ~50.**
+      Root causes were shared across many files: vendored `bs4` (→ pip
+      `beautifulsoup4`, fixed 38 providers at once), vendored `bencode` (→ pip
+      `bencode.py`, fixed 5 downloaders), vendored `httplib2`/`pytwitter` (→ pip
+      `httplib2` + `email.utils` swap), vendored `xmpp` (Py2 raise syntax, implicit
+      imports, removed `sha`/`md5` modules), vendored `subliminal` (`from .async
+      import` — reserved keyword, file renamed since a full pip swap isn't viable,
+      old `subliminal.videos.Video`-era API is used throughout scanner.py/subtitle.py),
+      `multipartpost.py` (removed `mimetools`, old `urllib2.Request` methods,
+      rewritten to work in bytes throughout), and `_base.updater` (rewrote
+      `GitUpdater` against GitPython's real API — not a mechanical swap, the object
+      model differs). Full details in `CLAUDE.md`'s progress log.
+- [ ] New non-fatal finding from the updater now actually running (was silently
+      crash-skipped before): a `profile.forceDefaults` `ElemNotFound` during initial
+      profile cleanup, likely a timing interaction with the updater's `git fetch` now
+      running at startup. Not yet root-caused — narrower runtime issue, not an import
+      failure.
 - [ ] No `ss()` bytes-vs-str landmines left in hot paths (grep `ss(` — same pattern
       already found twice in §3; expect more in providers/renamer)
 - [ ] `grep -r "__pycache__"` clean, `.gitignore` covers build artifacts
