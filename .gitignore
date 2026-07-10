@@ -1,18 +1,2 @@
+__pycache__/
 *.pyc
-/data/
-/_env/
-/_source/
-.project
-.pydevproject
-/node_modules/
-/.tmp/
-/.sass-cache/
-.coverage
-coverage.xml
-nosetests.xml
-
-# Visual Studio
-
-/.vs
-
-.DS_Store
