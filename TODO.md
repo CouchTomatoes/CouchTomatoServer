@@ -154,6 +154,11 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       is now a permanently parked/for-sale domain, returning an HTML placeholder
       instead of JSON. This is a dead external service, not something fixable in
       code. This provider (suggestions/messages) will never work again as-is.
+      **2026-07-10 update:** user found the backend's source is still public at
+      https://github.com/CouchPotato/CouchPotatoAPI — noted in README.md's
+      "Project status" section. Self-hosting a replacement is a possible future
+      task (would need its own server/deploy, not a client code change) — not
+      started, just documented so the option isn't lost.
 - [x] **All provider/plugin import failures fixed — 0 remaining, down from ~50.**
       Root causes were shared across many files: vendored `bs4` (→ pip
       `beautifulsoup4`, fixed 38 providers at once), vendored `bencode` (→ pip
