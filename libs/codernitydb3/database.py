@@ -17,6 +17,7 @@
 # limitations under the License.
 import os
 import io
+import threading
 import warnings
 import textwrap
 from inspect import getsource, getfullargspec
@@ -120,6 +121,15 @@ class Database:
         self.id_ind = None
         self.indexes_names = {}
         self.opened = False
+        # CouchTomato's event system dispatches handlers for any event with
+        # more than one subscriber across a thread pool (see axl.axel.Event
+        # in couchpotato/core/event.py), and several plugins hit the
+        # database from their app.load/app.initialize handlers. The index
+        # file I/O below (seek+read/write on shared file handles) isn't
+        # safe under concurrent access, so every public entry point is
+        # serialized with this lock. RLock because e.g. all()/get() call
+        # back into get() on the same thread while already holding it.
+        self._lock = threading.RLock()
 
     def create_new_rev(self, old_rev=None):
         """
@@ -899,26 +909,27 @@ you should check index code.""" % (index.name, ex), RuntimeWarning)
 
         :param data: data to insert
         """
-        if '_rev' in data:
-            self.__not_opened()
-            raise PreconditionsException(
-                "Can't add record with forbidden fields")
-        _rev = self.create_new_rev()
-        if not '_id' in data:
-            try:
-                _id = self.id_ind.create_key()
-            except:
+        with self._lock:
+            if '_rev' in data:
                 self.__not_opened()
-                raise DatabaseException("No id?")
-        else:
-            _id = data['_id']
-        assert _id is not None
-        data['_rev'] = _rev  # for make_key_value compat with update / delete
-        data['_id'] = _id
-        self._insert_indexes(_rev, data)
-        ret = {'_id': _id, '_rev': _rev}
-        data.update(ret)
-        return ret
+                raise PreconditionsException(
+                    "Can't add record with forbidden fields")
+            _rev = self.create_new_rev()
+            if not '_id' in data:
+                try:
+                    _id = self.id_ind.create_key()
+                except:
+                    self.__not_opened()
+                    raise DatabaseException("No id?")
+            else:
+                _id = data['_id']
+            assert _id is not None
+            data['_rev'] = _rev  # for make_key_value compat with update / delete
+            data['_id'] = _id
+            self._insert_indexes(_rev, data)
+            ret = {'_id': _id, '_rev': _rev}
+            data.update(ret)
+            return ret
 
     def update(self, data):
         """
@@ -929,19 +940,20 @@ you should check index code.""" % (index.name, ex), RuntimeWarning)
 
         :param data: data to update
         """
-        if not '_rev' in data or not '_id' in data:
-            self.__not_opened()
-            raise PreconditionsException("Can't update without _rev or _id")
-        _rev = data['_rev']
-        try:
-            _rev = bytes(_rev)
-        except:
-            self.__not_opened()
-            raise PreconditionsException("`_rev` must be valid bytes object")
-        _id, new_rev = self._update_indexes(_rev, data)
-        ret = {'_id': _id, '_rev': new_rev}
-        data.update(ret)
-        return ret
+        with self._lock:
+            if not '_rev' in data or not '_id' in data:
+                self.__not_opened()
+                raise PreconditionsException("Can't update without _rev or _id")
+            _rev = data['_rev']
+            try:
+                _rev = bytes(_rev)
+            except:
+                self.__not_opened()
+                raise PreconditionsException("`_rev` must be valid bytes object")
+            _id, new_rev = self._update_indexes(_rev, data)
+            ret = {'_id': _id, '_rev': new_rev}
+            data.update(ret)
+            return ret
 
     def get(self, index_name, key, with_doc=False, with_storage=True):
         """
@@ -954,39 +966,40 @@ you should check index code.""" % (index.name, ex), RuntimeWarning)
         """
         # if not self.indexes_names.has_key(index_name):
         #     raise DatabaseException, "Invalid index name"
-        try:
-            ind = self.indexes_names[index_name]
-        except KeyError:
-            self.__not_opened()
-            raise IndexNotFoundException("Index `%s` doesn't exists" %
-                                         index_name)
-        try:
-            l_key, _unk, start, size, status = ind.get(key)
-        except ElemNotFound as ex:
-            raise RecordNotFound(ex)
-        if not start and not size:
-            raise RecordNotFound("Not found")
-        if status == Index.STATUS_D:
-            raise RecordDeleted("Deleted")
-        if with_storage and size:
-            storage = ind.storage
-            data = storage.get(start, size, status)
-        else:
-
-            data = {}
-        if with_doc and index_name != 'id':
-            storage = ind.storage
-            doc = self.get('id', l_key, False)
-            if data:
-                data['doc'] = doc
+        with self._lock:
+            try:
+                ind = self.indexes_names[index_name]
+            except KeyError:
+                self.__not_opened()
+                raise IndexNotFoundException("Index `%s` doesn't exists" %
+                                             index_name)
+            try:
+                l_key, _unk, start, size, status = ind.get(key)
+            except ElemNotFound as ex:
+                raise RecordNotFound(ex)
+            if not start and not size:
+                raise RecordNotFound("Not found")
+            if status == Index.STATUS_D:
+                raise RecordDeleted("Deleted")
+            if with_storage and size:
+                storage = ind.storage
+                data = storage.get(start, size, status)
             else:
-                data = {'doc': doc}
-        data['_id'] = l_key
-        if index_name == 'id':
-            data['_rev'] = _unk
-        else:
-            data['key'] = _unk
-        return data
+
+                data = {}
+            if with_doc and index_name != 'id':
+                storage = ind.storage
+                doc = self.get('id', l_key, False)
+                if data:
+                    data['doc'] = doc
+                else:
+                    data = {'doc': doc}
+            data['_id'] = l_key
+            if index_name == 'id':
+                data['_rev'] = _unk
+            else:
+                data['key'] = _unk
+            return data
 
     def get_many(self,
                  index_name,
@@ -1013,42 +1026,43 @@ you should check index code.""" % (index.name, ex), RuntimeWarning)
 
         :returns: iterator over records
         """
-        if index_name == 'id':
-            self.__not_opened()
-            raise PreconditionsException("Can't get many from `id`")
-        try:
-            ind = self.indexes_names[index_name]
-        except KeyError:
-            self.__not_opened()
-            raise IndexNotFoundException("Index `%s` doesn't exists" %
-                                         index_name)
-        storage = ind.storage
-        if start is None and end is None:
-            gen = ind.get_many(key, limit, offset)
-        else:
-            gen = ind.get_between(start, end, limit, offset, **kwargs)
-        while True:
+        with self._lock:
+            if index_name == 'id':
+                self.__not_opened()
+                raise PreconditionsException("Can't get many from `id`")
             try:
-                #                l_key, start, size, status = next(gen)
-                ind_data = next(gen)
-            except StopIteration:
-                break
+                ind = self.indexes_names[index_name]
+            except KeyError:
+                self.__not_opened()
+                raise IndexNotFoundException("Index `%s` doesn't exists" %
+                                             index_name)
+            storage = ind.storage
+            if start is None and end is None:
+                gen = ind.get_many(key, limit, offset)
             else:
-                if with_storage and ind_data[-2]:
-                    data = storage.get(*ind_data[-3:])
+                gen = ind.get_between(start, end, limit, offset, **kwargs)
+            while True:
+                try:
+                    #                l_key, start, size, status = next(gen)
+                    ind_data = next(gen)
+                except StopIteration:
+                    break
                 else:
-                    data = {}
-                doc_id = ind_data[0]
-                if with_doc:
-                    doc = self.get('id', doc_id, False)
-                    if data:
-                        data['doc'] = doc
+                    if with_storage and ind_data[-2]:
+                        data = storage.get(*ind_data[-3:])
                     else:
-                        data = {'doc': doc}
-                data['_id'] = doc_id
-                if key is None:
-                    data['key'] = ind_data[1]
-                yield data
+                        data = {}
+                    doc_id = ind_data[0]
+                    if with_doc:
+                        doc = self.get('id', doc_id, False)
+                        if data:
+                            data['doc'] = doc
+                        else:
+                            data = {'doc': doc}
+                    data['_id'] = doc_id
+                    if key is None:
+                        data['key'] = ind_data[1]
+                    yield data
 
     def all(self,
             index_name,
@@ -1065,37 +1079,38 @@ you should check index code.""" % (index.name, ex), RuntimeWarning)
         :param with_doc: if ``True`` data from **id** index will be included in output
         :param with_storage: if ``True`` data from index storage will be included, otherwise just metadata
         """
-        try:
-            ind = self.indexes_names[index_name]
-        except KeyError:
-            self.__not_opened()
-            raise IndexNotFoundException("Index `%s` doesn't exists" %
-                                         index_name)
-        storage = ind.storage
-        gen = ind.all(limit, offset)
-        while True:
+        with self._lock:
             try:
-                doc_id, unk, start, size, status = next(gen)
-            except StopIteration:
-                break
-            else:
-                if index_name == 'id':
-                    if with_storage and size:
-                        data = storage.get(start, size, status)
+                ind = self.indexes_names[index_name]
+            except KeyError:
+                self.__not_opened()
+                raise IndexNotFoundException("Index `%s` doesn't exists" %
+                                             index_name)
+            storage = ind.storage
+            gen = ind.all(limit, offset)
+            while True:
+                try:
+                    doc_id, unk, start, size, status = next(gen)
+                except StopIteration:
+                    break
+                else:
+                    if index_name == 'id':
+                        if with_storage and size:
+                            data = storage.get(start, size, status)
+                        else:
+                            data = {}
+                        data['_id'] = doc_id
+                        data['_rev'] = unk
                     else:
                         data = {}
-                    data['_id'] = doc_id
-                    data['_rev'] = unk
-                else:
-                    data = {}
-                    if with_storage and size:
-                        data['value'] = storage.get(start, size, status)
-                    data['key'] = unk
-                    data['_id'] = doc_id
-                    if with_doc:
-                        doc = self.get('id', doc_id, False)
-                        data['doc'] = doc
-                yield data
+                        if with_storage and size:
+                            data['value'] = storage.get(start, size, status)
+                        data['key'] = unk
+                        data['_id'] = doc_id
+                        if with_doc:
+                            doc = self.get('id', doc_id, False)
+                            data['doc'] = doc
+                    yield data
 
     def run(self, index_name, target_funct, *args, **kwargs):
         """
@@ -1157,19 +1172,20 @@ you should check index code.""" % (index.name, ex), RuntimeWarning)
 
         :param data: data to delete
         """
-        if not '_rev' in data or not '_id' in data:
-            raise PreconditionsException("Can't delete without _rev or _id")
-        _id = data['_id']
-        _rev = data['_rev']
-        try:
-            _id = bytes(_id)
-            _rev = bytes(_rev)
-        except:
-            raise PreconditionsException(
-                "`_id` and `_rev` must be valid bytes object")
-        data['_deleted'] = True
-        self._delete_indexes(_id, _rev, data)
-        return True
+        with self._lock:
+            if not '_rev' in data or not '_id' in data:
+                raise PreconditionsException("Can't delete without _rev or _id")
+            _id = data['_id']
+            _rev = data['_rev']
+            try:
+                _id = bytes(_id)
+                _rev = bytes(_rev)
+            except:
+                raise PreconditionsException(
+                    "`_id` and `_rev` must be valid bytes object")
+            data['_deleted'] = True
+            self._delete_indexes(_id, _rev, data)
+            return True
 
     def compact(self):
         """
