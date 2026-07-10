@@ -42,9 +42,9 @@ except NameError:
     in_windows = False
 
 if in_windows:
-    from windows import RarFileImplementation
+    from .windows import RarFileImplementation
 else:
-    from unix import RarFileImplementation
+    from .unix import RarFileImplementation
 
 
 import fnmatch, time, weakref
@@ -167,11 +167,11 @@ class RarFile(RarFileImplementation):
 
 def condition2checker(condition):
     """Converts different condition types to callback"""
-    if type(condition) in [str, unicode]:
+    if type(condition) in [str, str]:
         def smatcher(info):
             return fnmatch.fnmatch(info.filename, condition)
         return smatcher
-    elif type(condition) in [list, tuple] and type(condition[0]) in [int, long]:
+    elif type(condition) in [list, tuple] and type(condition[0]) in [int, int]:
         def imatcher(info):
             return info.index in condition
         return imatcher

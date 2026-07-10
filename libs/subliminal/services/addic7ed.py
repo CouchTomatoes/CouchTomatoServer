@@ -40,7 +40,7 @@ class Addic7ed(ServiceBase):
                               'it', 'pl', 'pt', 'ro', 'ru', 'se', 'pt-br'])
     language_map = {'Portuguese (Brazilian)': Language('por-BR'), 'Greek': Language('gre'),
                     'Spanish (Latin America)': Language('spa'), 'Galego': Language('glg'),
-                    u'Català': Language('cat')}
+                    'Català': Language('cat')}
     videos = [Episode]
     require_video = False
     required_features = ['permissive']
@@ -63,12 +63,12 @@ class Addic7ed(ServiceBase):
         return self.query(video.path or video.release, languages, get_keywords(video.guess), video.series, video.season, video.episode)
 
     def query(self, filepath, languages, keywords, series, season, episode):
-        logger.debug(u'Getting subtitles for %s season %d episode %d with languages %r' % (series, season, episode, languages))
+        logger.debug('Getting subtitles for %s season %d episode %d with languages %r' % (series, season, episode, languages))
         self.init_cache()
         try:
             series_id = self.get_series_id(series.lower())
         except KeyError:
-            logger.debug(u'Could not find series id for %s' % series)
+            logger.debug('Could not find series id for %s' % series)
             return []
         r = self.session.get('%s/show/%d&season=%d' % (self.server_url, series_id, season))
         soup = BeautifulSoup(r.content, self.required_features)
@@ -78,20 +78,20 @@ class Addic7ed(ServiceBase):
             if int(cells[0].text.strip()) != season or int(cells[1].text.strip()) != episode:
                 continue
             if cells[6].text.strip():
-                logger.debug(u'Skipping hearing impaired')
+                logger.debug('Skipping hearing impaired')
                 continue
             sub_status = cells[5].text.strip()
             if sub_status != 'Completed':
-                logger.debug(u'Wrong subtitle status %s' % sub_status)
+                logger.debug('Wrong subtitle status %s' % sub_status)
                 continue
             sub_language = self.get_language(cells[3].text.strip())
             if sub_language not in languages:
-                logger.debug(u'Language %r not in wanted languages %r' % (sub_language, languages))
+                logger.debug('Language %r not in wanted languages %r' % (sub_language, languages))
                 continue
             sub_keywords = split_keyword(cells[4].text.strip().lower())
             #TODO: Maybe allow empty keywords here? (same in Subtitulos)
             if not keywords & sub_keywords:
-                logger.debug(u'None of subtitle keywords %r in %r' % (sub_keywords, keywords))
+                logger.debug('None of subtitle keywords %r in %r' % (sub_keywords, keywords))
                 continue
             sub_link = '%s/%s' % (self.server_url, cells[9].a['href'])
             sub_path = get_subtitle_path(filepath, sub_language, self.config.multi)
@@ -100,20 +100,20 @@ class Addic7ed(ServiceBase):
         return subtitles
 
     def download(self, subtitle):
-        logger.info(u'Downloading %s in %s' % (subtitle.link, subtitle.path))
+        logger.info('Downloading %s in %s' % (subtitle.link, subtitle.path))
         try:
             r = self.session.get(subtitle.link, headers={'Referer': subtitle.link, 'User-Agent': self.user_agent})
             soup = BeautifulSoup(r.content, self.required_features)
-            if soup.title is not None and u'Addic7ed.com' in soup.title.text.strip():
+            if soup.title is not None and 'Addic7ed.com' in soup.title.text.strip():
                 raise DownloadFailedError('Download limit exceeded')
             with open(subtitle.path, 'wb') as f:
                 f.write(r.content)
         except Exception as e:
-            logger.error(u'Download failed: %s' % e)
+            logger.error('Download failed: %s' % e)
             if os.path.exists(subtitle.path):
                 os.remove(subtitle.path)
             raise DownloadFailedError(str(e))
-        logger.debug(u'Download finished')
+        logger.debug('Download finished')
         return subtitle
 
 

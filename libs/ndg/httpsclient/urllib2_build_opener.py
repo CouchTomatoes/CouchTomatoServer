@@ -20,7 +20,7 @@ if sys.version_info[0] > 2:
                                 HTTPRedirectHandler)
 else:
     import types
-    class_type_ = types.ClassType
+    class_type_ = type
     
     from urllib2 import (ProxyHandler, UnknownHandler, HTTPDefaultErrorHandler, 
                          FTPHandler, FileHandler, HTTPErrorProcessor, 

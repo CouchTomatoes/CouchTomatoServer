@@ -1,15 +1,23 @@
+import json
 import os
 import time
 import traceback
 
 from couchpotato.api import api_docs, api_docs_missing, api
 from couchpotato.core.event import fireEvent
-from couchpotato.core.helpers.encoding import sp
+from couchpotato.core.helpers.encoding import jsonBytesDefault, sp
 from couchpotato.core.helpers.variable import md5, tryInt
 from couchpotato.core.logger import CPLog
 from couchpotato.environment import Env
-from tornado import template
+from tornado import escape, template
 from tornado.web import RequestHandler, authenticated
+
+# CodernityDB documents can carry raw bytes (eg. its internal _rev marker) into
+# API/template responses; tornado's json_encode has no default for bytes, so patch
+# it once here to fall back to jsonBytesDefault instead of crashing every response.
+def _bytesSafeJsonEncode(value):
+    return json.dumps(value, default = jsonBytesDefault).replace("</", "<\\/")
+escape.json_encode = _bytesSafeJsonEncode
 
 
 log = CPLog(__name__)

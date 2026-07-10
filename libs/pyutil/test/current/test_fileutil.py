@@ -5,7 +5,7 @@ import os
 from pyutil import fileutil
 
 class FileUtil(unittest.TestCase):
-    def mkdir(self, basedir, path, mode=0777):
+    def mkdir(self, basedir, path, mode=0o777):
         fn = os.path.join(basedir, path)
         fileutil.make_dirs(fn, mode)
 
@@ -29,5 +29,5 @@ class FileUtil(unittest.TestCase):
         self.touch(d, "a/c/2.txt", data="d"*13)
 
         used = fileutil.du(basedir)
-        self.failUnlessEqual(10+11+12+13, used)
+        self.assertEqual(10+11+12+13, used)
 

@@ -52,7 +52,7 @@ def gen_passphrase(entropy, allwords):
         passphrase.append(sr.choice(wl))
         passphraseentropy += wle
             
-    return (u".".join(passphrase), passphraseentropy)
+    return (".".join(passphrase), passphraseentropy)
 
 def main():
     parser = argparse.ArgumentParser(prog="chbs", description="Create a random passphrase by picking a few random words.")
@@ -68,4 +68,4 @@ def main():
 
     passphrase, bits = gen_passphrase(args.bits, allwords)
 
-    print u"Your new password is: '%s'. It is worth about %s bits." % (passphrase, bits)
+    print(("Your new password is: '%s'. It is worth about %s bits." % (passphrase, bits)))

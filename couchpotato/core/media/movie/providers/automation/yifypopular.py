@@ -1,4 +1,4 @@
-import HTMLParser
+import html.parser
 from couchpotato import fireEvent
 from couchpotato.core.logger import CPLog
 from couchpotato.core.media.movie.providers.automation.base import Automation

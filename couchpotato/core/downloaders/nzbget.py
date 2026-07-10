@@ -4,7 +4,7 @@ import re
 import shutil
 import socket
 import traceback
-import xmlrpclib
+import xmlrpc.client
 
 from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
 from couchpotato.core.helpers.encoding import ss, sp
@@ -58,7 +58,7 @@ class NZBGet(DownloaderBase):
         except socket.error:
             log.error('NZBGet is not responding. Please ensure that NZBGet is running and host setting is correct.')
             return False
-        except xmlrpclib.ProtocolError as e:
+        except xmlrpc.client.ProtocolError as e:
             if e.errcode == 401:
                 log.error('Password is incorrect.')
             else:
@@ -99,7 +99,7 @@ class NZBGet(DownloaderBase):
         except socket.error:
             log.error('NZBGet is not responding. Please ensure that NZBGet is running and host setting is correct.')
             return False
-        except xmlrpclib.ProtocolError as e:
+        except xmlrpc.client.ProtocolError as e:
             if e.errcode == 401:
                 log.error('Password is incorrect.')
             else:
@@ -129,7 +129,7 @@ class NZBGet(DownloaderBase):
         except socket.error:
             log.error('NZBGet is not responding. Please ensure that NZBGet is running and host setting is correct.')
             return []
-        except xmlrpclib.ProtocolError as e:
+        except xmlrpc.client.ProtocolError as e:
             if e.errcode == 401:
                 log.error('Password is incorrect.')
             else:
@@ -214,7 +214,7 @@ class NZBGet(DownloaderBase):
         except socket.error:
             log.error('NZBGet is not responding. Please ensure that NZBGet is running and host setting is correct.')
             return False
-        except xmlrpclib.ProtocolError as e:
+        except xmlrpc.client.ProtocolError as e:
             if e.errcode == 401:
                 log.error('Password is incorrect.')
             else:
@@ -242,7 +242,7 @@ class NZBGet(DownloaderBase):
 
     def getRPC(self):
         url = cleanHost(host = self.conf('host'), ssl = self.conf('ssl'), username = self.conf('username'), password = self.conf('password')) + self.rpc
-        return xmlrpclib.ServerProxy(url)
+        return xmlrpc.client.ServerProxy(url)
 
 
 config = [{

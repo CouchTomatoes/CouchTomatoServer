@@ -8,8 +8,8 @@ This module contains utility methods used by various parts of the OAuth 2 spec.
 import random
 import string
 import time
-import urllib
-from urlparse import urlparse, urlunparse, parse_qsl
+import urllib.request, urllib.parse, urllib.error
+from urllib.parse import urlparse, urlunparse, parse_qsl
 
 UNICODE_ASCII_CHARACTER_SET = (string.ascii_letters.decode('ascii') +
     string.digits.decode('ascii'))
@@ -46,9 +46,9 @@ def escape(u):
     .. _`section 3.6`: http://tools.ietf.org/html/rfc5849#section-3.6
 
     """
-    if not isinstance(u, unicode):
+    if not isinstance(u, str):
         raise ValueError('Only unicode objects are escapable.')
-    return urllib.quote(u.encode('utf-8'), safe='~')
+    return urllib.parse.quote(u.encode('utf-8'), safe='~')
 
 
 def generate_nonce():
@@ -61,7 +61,7 @@ def generate_nonce():
 
     .. _`section 3.2.1`: http://tools.ietf.org/html/draft-ietf-oauth-v2-http-mac-01#section-3.2.1
     """
-    return unicode(unicode(random.getrandbits(64)) + generate_timestamp())
+    return str(str(random.getrandbits(64)) + generate_timestamp())
 
 
 def generate_timestamp():
@@ -71,7 +71,7 @@ def generate_timestamp():
 
     .. _`section 3.2.1`: http://tools.ietf.org/html/draft-ietf-oauth-v2-http-mac-01#section-3.2.1
     """
-    return unicode(int(time.time()))
+    return str(int(time.time()))
 
 
 def generate_token(length=20, chars=UNICODE_ASCII_CHARACTER_SET):
@@ -86,7 +86,7 @@ def generate_token(length=20, chars=UNICODE_ASCII_CHARACTER_SET):
     .. _`section 1.5`: http://tools.ietf.org/html/draft-ietf-oauth-v2-25#section-1.5
     """
     rand = random.SystemRandom()
-    return u''.join(rand.choice(chars) for x in range(length))
+    return ''.join(rand.choice(chars) for x in range(length))
 
 
 def host_from_uri(uri):
@@ -104,13 +104,13 @@ def host_from_uri(uri):
     :return: hostname, port
     """
     default_ports = {
-        u'HTTP' : u'80',
-        u'HTTPS' : u'443',
+        'HTTP' : '80',
+        'HTTPS' : '443',
     }
 
     sch, netloc, path, par, query, fra = urlparse(uri)
-    if u':' in netloc:
-        netloc, port = netloc.split(u':', 1)
+    if ':' in netloc:
+        netloc, port = netloc.split(':', 1)
     else:
         port = default_ports.get(sch.upper())
 
@@ -124,5 +124,5 @@ def urlencode(query):
     """
     # Convert dictionaries to list of tuples
     if isinstance(query, dict):
-        query = query.items()
+        query = list(query.items())
     return "&".join(['='.join([escape(k), escape(v)]) for k, v in query])

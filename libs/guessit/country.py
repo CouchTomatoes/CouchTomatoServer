@@ -18,7 +18,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from __future__ import unicode_literals
+
 from guessit import UnicodeMixin, base_text_type, u
 from guessit.fileutils import load_file_in_same_dir
 import logging

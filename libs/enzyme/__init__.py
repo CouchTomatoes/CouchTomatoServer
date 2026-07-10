@@ -21,7 +21,7 @@
 import mimetypes
 import os
 import sys
-from exceptions import *
+from .exceptions import *
 
 
 PARSERS = [('asf', ['video/asf'], ['asf', 'wmv', 'wma']),

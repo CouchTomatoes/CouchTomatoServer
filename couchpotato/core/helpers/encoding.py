@@ -1,5 +1,5 @@
 from string import ascii_letters, digits
-from urllib import quote_plus
+from urllib.parse import quote_plus
 import os
 import re
 import traceback
@@ -11,6 +11,15 @@ import six
 
 
 log = CPLog(__name__)
+
+
+def jsonBytesDefault(o):
+    # CodernityDB internally uses raw bytes for revision markers (_rev) that can end
+    # up in documents returned to the API/templates. json.dumps() has no default
+    # handling for bytes, so decode them here instead of chasing every call site.
+    if isinstance(o, bytes):
+        return o.decode('utf-8', 'replace')
+    raise TypeError('Object of type %s is not JSON serializable' % o.__class__.__name__)
 
 
 def toSafeString(original):
@@ -29,7 +38,7 @@ def simplifyString(original):
 
 def toUnicode(original, *args):
     try:
-        if isinstance(original, unicode):
+        if isinstance(original, str):
             return original
         else:
             try:
@@ -79,7 +88,7 @@ def sp(path, *args):
     if os.path.sep == '/' and '\\' in path:
         path = '/' + path.replace(':', '').replace('\\', '/')
 
-    path = os.path.normpath(ss(path, *args))
+    path = os.path.normpath(toUnicode(path, *args))
 
     # Remove any trailing path separators
     if path != os.path.sep:
@@ -96,7 +105,7 @@ def sp(path, *args):
 
 
 def ek(original, *args):
-    if isinstance(original, (str, unicode)):
+    if isinstance(original, str):
         try:
             from couchpotato.environment import Env
             return original.decode(Env.get('encoding'), 'ignore')
@@ -119,17 +128,14 @@ def stripAccents(s):
 
 
 def tryUrlencode(s):
-    new = six.u('')
     if isinstance(s, dict):
-        for key, value in s.items():
+        new = six.u('')
+        for key, value in list(s.items()):
             new += six.u('&%s=%s') % (key, tryUrlencode(value))
 
         return new[1:]
     else:
-        for letter in ss(s):
-            try:
-                new += quote_plus(letter)
-            except:
-                new += letter
-
-    return new
+        try:
+            return quote_plus(ss(s))
+        except:
+            return s

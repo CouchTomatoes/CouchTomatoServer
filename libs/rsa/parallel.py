@@ -24,7 +24,7 @@ Introduced in Python-RSA 3.1.
 
 '''
 
-from __future__ import print_function
+
 
 import multiprocessing as mp
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
             break
         
         if count and count % 10 == 0:
-            print('%i times' % count)
+            print(('%i times' % count))
     
     print('Doctests done')
 

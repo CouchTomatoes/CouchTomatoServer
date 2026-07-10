@@ -194,7 +194,7 @@ class TheMovieDb(MovieProvider):
             'actor_roles': actors
         }
 
-        movie_data = dict((k, v) for k, v in movie_data.items() if v)
+        movie_data = dict((k, v) for k, v in list(movie_data.items()) if v)
 
         # Add alternative names
         movies = [ movie ] + movie_others if movie == movie_default else [ movie, movie_default ] + movie_others
@@ -237,7 +237,7 @@ class TheMovieDb(MovieProvider):
 
     def request(self, call = '', params = {}, return_key = None):
 
-        params = dict((k, v) for k, v in params.items() if v)
+        params = dict((k, v) for k, v in list(params.items()) if v)
         params = tryUrlencode(params)
 
         try:
@@ -260,7 +260,7 @@ class TheMovieDb(MovieProvider):
 
     def getApiKey(self):
         key = self.conf('api_key')
-        return bd(random.choice(self.ak)) if key == '' else key
+        return bd(random.choice(self.ak)).decode('utf-8') if key == '' else key
 
     def getLanguages(self):
         languages = splitString(Env.setting('languages', section = 'core'))

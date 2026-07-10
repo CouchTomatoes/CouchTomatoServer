@@ -6,7 +6,7 @@ import uuid
 from CodernityDB.database import RecordDeleted
 
 from couchpotato import get_db
-from couchpotato.api import addApiView, addNonBlockApiView
+from couchpotato.api import addApiView, addNonBlockApiView, main_ioloop
 from couchpotato.core.event import addEvent, fireEvent
 from couchpotato.core.helpers.encoding import toUnicode
 from couchpotato.core.helpers.variable import tryInt, splitString
@@ -190,7 +190,7 @@ class CoreNotifier(Notification):
         while len(self.listeners) > 0 and not self.shuttingDown():
             try:
                 listener, last_id = self.listeners.pop()
-                IOLoop.current().add_callback(listener, {
+                main_ioloop.add_callback(listener, {
                     'success': True,
                     'result': [notification],
                 })
@@ -253,7 +253,7 @@ class CoreNotifier(Notification):
 
         recent = []
         try:
-            index = map(itemgetter('message_id'), self.messages).index(last_id)
+            index = list(map(itemgetter('message_id'), self.messages)).index(last_id)
             recent = self.messages[index + 1:]
         except:
             pass

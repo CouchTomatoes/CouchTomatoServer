@@ -15,7 +15,7 @@ class MediaIndex(MultiTreeBasedIndex):
         super(MediaIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return md5(key).hexdigest()
+        return md5(key.encode('utf-8')).hexdigest().encode('utf-8')
 
     def make_key_value(self, data):
         if data.get('_t') == 'media' and (data.get('identifier') or data.get('identifiers')):
@@ -26,7 +26,7 @@ class MediaIndex(MultiTreeBasedIndex):
 
             ids = []
             for x in identifiers:
-                ids.append(md5('%s-%s' % (x, identifiers[x])).hexdigest())
+                ids.append(md5(('%s-%s' % (x, identifiers[x])).encode('utf-8')).hexdigest().encode('utf-8'))
 
             return ids, None
 
@@ -39,11 +39,11 @@ class MediaStatusIndex(TreeBasedIndex):
         super(MediaStatusIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return md5(key).hexdigest()
+        return md5(key.encode('utf-8')).hexdigest().encode('utf-8')
 
     def make_key_value(self, data):
         if data.get('_t') == 'media' and data.get('status'):
-            return md5(data.get('status')).hexdigest(), None
+            return md5(data.get('status').encode('utf-8')).hexdigest().encode('utf-8'), None
 
 
 class MediaTypeIndex(TreeBasedIndex):
@@ -54,18 +54,17 @@ class MediaTypeIndex(TreeBasedIndex):
         super(MediaTypeIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return md5(key).hexdigest()
+        return md5(key.encode('utf-8')).hexdigest().encode('utf-8')
 
     def make_key_value(self, data):
         if data.get('_t') == 'media' and data.get('type'):
-            return md5(data.get('type')).hexdigest(), None
+            return md5(data.get('type').encode('utf-8')).hexdigest().encode('utf-8'), None
 
 
 class TitleSearchIndex(MultiTreeBasedIndex):
     _version = 1
 
     custom_header = """from CodernityDB.tree_index import MultiTreeBasedIndex
-from itertools import izip
 from couchpotato.core.helpers.encoding import simplifyString"""
 
     def __init__(self, *args, **kwargs):
@@ -84,18 +83,18 @@ from couchpotato.core.helpers.encoding import simplifyString"""
 
             for x in range(len(title_split)):
                 combo = ' '.join(title_split[x:])[:32].strip()
-                out.add(combo.rjust(32, '_'))
+                out.add(combo.rjust(32, '_').encode('utf-8'))
                 combo_range = max(l, min(len(combo), 32))
 
                 for cx in range(1, combo_range):
                     ccombo = combo[:-cx].strip()
                     if len(ccombo) > l:
-                        out.add(ccombo.rjust(32, '_'))
+                        out.add(ccombo.rjust(32, '_').encode('utf-8'))
 
             return out, None
 
     def make_key(self, key):
-        return key.rjust(32, '_').lower()
+        return key.rjust(32, '_').lower().encode('utf-8')
 
 
 class TitleIndex(TreeBasedIndex):
@@ -128,7 +127,7 @@ from couchpotato.core.helpers.encoding import toUnicode, simplifyString"""
                 title = title[len(prefix):]
                 break
 
-        return str(nr_prefix + title).ljust(32, ' ')[:32]
+        return str(nr_prefix + title).ljust(32, ' ')[:32].encode('utf-8')
 
 
 class StartsWithIndex(TreeBasedIndex):
@@ -158,7 +157,7 @@ from couchpotato.core.helpers.encoding import toUnicode, simplifyString"""
                 title = title[len(prefix):]
                 break
 
-        return str(title[0] if title and len(title) > 0 and title[0] in ascii_letters else '#').lower()
+        return str(title[0] if title and len(title) > 0 and title[0] in ascii_letters else '#').lower().encode('utf-8')
 
 
 
@@ -170,11 +169,12 @@ class MediaChildrenIndex(TreeBasedIndex):
         super(MediaChildrenIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return key
+        return key.encode('utf-8') if isinstance(key, str) else key
 
     def make_key_value(self, data):
         if data.get('_t') == 'media' and data.get('parent_id'):
-            return data.get('parent_id'), None
+            parent_id = data.get('parent_id')
+            return (parent_id.encode('utf-8') if isinstance(parent_id, str) else parent_id), None
 
 
 class MediaTagIndex(MultiTreeBasedIndex):
@@ -196,4 +196,4 @@ class MediaTagIndex(MultiTreeBasedIndex):
             return list(tags), None
 
     def make_key(self, key):
-        return md5(key).hexdigest()
+        return md5(key.encode('utf-8')).hexdigest().encode('utf-8')

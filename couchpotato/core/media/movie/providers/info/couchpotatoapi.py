@@ -98,7 +98,7 @@ class CouchPotatoApi(MovieProvider):
 
         result = self.getJsonData(url, headers = self.getRequestHeaders())
         if result:
-            return dict((k, v) for k, v in result.items() if v)
+            return dict((k, v) for k, v in list(result.items()) if v)
 
         return {}
 
@@ -124,8 +124,8 @@ class CouchPotatoApi(MovieProvider):
 
     def getRequestHeaders(self):
         return {
-            'X-CP-Version': fireEvent('app.version', single = True),
-            'X-CP-API': self.api_version,
-            'X-CP-Time': time.time(),
+            'X-CP-Version': str(fireEvent('app.version', single = True)),
+            'X-CP-API': str(self.api_version),
+            'X-CP-Time': str(time.time()),
             'X-CP-Identifier': '+%s' % Env.setting('api_key', 'core')[:10],  # Use first 10 as identifier, so we don't need to use IP address in api stats
         }

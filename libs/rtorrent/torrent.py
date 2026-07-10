@@ -40,7 +40,7 @@ class Torrent:
         self._rt_obj = _rt_obj
         self.info_hash = info_hash  # : info hash for the torrent
         self.rpc_id = self.info_hash  # : unique id to pass to rTorrent
-        for k in kwargs.keys():
+        for k in list(kwargs.keys()):
             setattr(self, k, kwargs.get(k, None))
 
         self.peers = []

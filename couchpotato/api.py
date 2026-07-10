@@ -3,16 +3,23 @@ from threading import Thread
 import json
 import threading
 import traceback
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
+from couchpotato.core.helpers.encoding import jsonBytesDefault
 from couchpotato.core.helpers.request import getParams
 from couchpotato.core.logger import CPLog
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler, asynchronous
+from tornado.web import RequestHandler
 
 
 log = CPLog(__name__)
 
+# Captured on the main thread at import time (well before the IOLoop starts running
+# and before any worker threads are spawned). Background threads must schedule
+# callbacks onto *this* loop - calling IOLoop.current() from inside a worker thread
+# returns a brand new, never-started loop instead of the running one, so callbacks
+# scheduled that way silently vanish and API responses never get sent.
+main_ioloop = IOLoop.current()
 
 api = {}
 api_locks = {}
@@ -45,8 +52,8 @@ class NonBlockHandler(RequestHandler):
 
     stopper = None
 
-    @asynchronous
     def get(self, route, *args, **kwargs):
+        self._auto_finish = False
         route = route.strip('/')
         start, stop = api_nonblock[route]
         self.stopper = stop
@@ -84,8 +91,8 @@ def addNonBlockApiView(route, func_tuple, docs = None, **kwargs):
 class ApiHandler(RequestHandler):
     route = None
 
-    @asynchronous
     def get(self, route, *args, **kwargs):
+        self._auto_finish = False
         self.route = route = route.strip('/')
         if not api.get(route):
             self.write('API call doesn\'t seem to exist')
@@ -102,7 +109,7 @@ class ApiHandler(RequestHandler):
 
             kwargs = {}
             for x in self.request.arguments:
-                kwargs[x] = urllib.unquote(self.get_argument(x))
+                kwargs[x] = urllib.parse.unquote(self.get_argument(x))
 
             # Split array arguments
             kwargs = getParams(kwargs)
@@ -128,7 +135,7 @@ class ApiHandler(RequestHandler):
     post = get
 
     def taskFinished(self, result, route):
-        IOLoop.current().add_callback(self.sendData, result, route)
+        main_ioloop.add_callback(self.sendData, result, route)
         self.unlock()
 
     def sendData(self, result, route):
@@ -140,7 +147,7 @@ class ApiHandler(RequestHandler):
 
                 if jsonp_callback:
                     self.set_header('Content-Type', 'text/javascript')
-                    self.finish(str(jsonp_callback) + '(' + json.dumps(result) + ')')
+                    self.finish(str(jsonp_callback) + '(' + json.dumps(result, default = jsonBytesDefault) + ')')
                 elif isinstance(result, tuple) and result[0] == 'redirect':
                     self.redirect(result[1])
                 else:
