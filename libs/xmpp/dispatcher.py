@@ -21,7 +21,8 @@ Contains one tunable attribute: DefaultTimeout (25 seconds by default). It defin
 Dispatcher.SendAndWaitForResponce method will wait for reply stanza before giving up.
 """
 
-import simplexml,time,sys
+import time,sys
+from . import simplexml
 from .protocol import *
 from .client import PlugIn
 

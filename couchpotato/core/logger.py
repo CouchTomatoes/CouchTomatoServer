@@ -50,7 +50,7 @@ class CPLog(object):
         self.logger.critical(self.addContext(msg, replace_tuple), exc_info = 1)
 
     def addContext(self, msg, replace_tuple = ()):
-        return '[%+25.25s] %s' % (self.context[-25:], self.safeMessage(msg, replace_tuple))
+        return '[%s] %s' % (self.context, self.safeMessage(msg, replace_tuple))
 
     def safeMessage(self, msg, replace_tuple = ()):
 

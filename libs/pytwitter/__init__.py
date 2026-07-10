@@ -26,7 +26,7 @@ import calendar
 import datetime
 import http.client
 import os
-import rfc822
+import email.utils as rfc822
 import sys
 import tempfile
 import textwrap

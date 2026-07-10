@@ -1,4 +1,7 @@
 GitPython
+bencode.py
+beautifulsoup4
 chardet
+httplib2
 requests
 tornado

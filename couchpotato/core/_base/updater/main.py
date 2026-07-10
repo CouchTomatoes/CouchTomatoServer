@@ -17,7 +17,7 @@ from couchpotato.core.logger import CPLog
 from couchpotato.core.plugins.base import Plugin
 from couchpotato.environment import Env
 from dateutil.parser import parse
-from git.repository import LocalRepository
+import git
 import version
 from six.moves import filter
 
@@ -206,20 +206,22 @@ class GitUpdater(BaseUpdater):
     new_repo = 'CouchPotato/CouchPotatoServer'
 
     def __init__(self, git_command):
-        self.repo = LocalRepository(Env.get('app_dir'), command = git_command)
+        if git_command and git_command != 'git':
+            git.refresh(git_command)
+        self.repo = git.Repo(Env.get('app_dir'))
 
         remote_name = 'origin'
-        remote = self.repo.getRemoteByName(remote_name)
+        remote = self.repo.remote(remote_name)
         if self.old_repo in remote.url:
             log.info('Changing repo to new github organization: %s -> %s', (self.old_repo, self.new_repo))
             new_url = remote.url.replace(self.old_repo, self.new_repo)
-            self.repo._executeGitCommandAssertSuccess("remote set-url %s %s" % (remote_name, new_url))
+            self.repo.git.remote('set-url', remote_name, new_url)
 
     def doUpdate(self):
 
         try:
             log.info('Updating to latest version')
-            self.repo.pull()
+            self.repo.remote().pull()
 
             return True
         except:
@@ -238,12 +240,12 @@ class GitUpdater(BaseUpdater):
             branch = self.branch
 
             try:
-                output = self.repo.getHead()  # Yes, please
-                log.debug('Git version output: %s', output.hash)
+                output = self.repo.head.commit  # Yes, please
+                log.debug('Git version output: %s', output.hexsha)
 
-                hash = output.hash[:8]
-                date = output.getDate()
-                branch = self.repo.getCurrentBranch().name
+                hash = output.hexsha[:8]
+                date = output.committed_date
+                branch = self.repo.active_branch.name
             except Exception as e:
                 log.error('Failed using GIT updater, running from source, you need to have GIT installed. %s', e)
 
@@ -264,22 +266,22 @@ class GitUpdater(BaseUpdater):
 
         log.info('Checking for new version on github for %s', self.repo_name)
         if not Env.get('dev'):
-            self.repo.fetch()
+            self.repo.remote().fetch()
 
-        current_branch = self.repo.getCurrentBranch().name
+        current_branch = self.repo.active_branch.name
 
-        for branch in self.repo.getRemoteByName('origin').getBranches():
-            if current_branch == branch.name:
+        for branch in self.repo.remote('origin').refs:
+            if current_branch == branch.remote_head:
 
-                local = self.repo.getHead()
-                remote = branch.getHead()
+                local = self.repo.head.commit
+                remote = branch.commit
 
-                log.debug('Versions, local:%s, remote:%s', (local.hash[:8], remote.hash[:8]))
+                log.debug('Versions, local:%s, remote:%s', (local.hexsha[:8], remote.hexsha[:8]))
 
-                if local.getDate() < remote.getDate():
+                if local.committed_date < remote.committed_date:
                     self.update_version = {
-                        'hash': remote.hash[:8],
-                        'date': remote.getDate(),
+                        'hash': remote.hexsha[:8],
+                        'date': remote.committed_date,
                     }
                     return True
 
