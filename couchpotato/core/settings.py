@@ -352,7 +352,7 @@ class Settings(object):
         # See if a value handler is attached, use that as value
         new_value = fireEvent('setting.save.%s.%s' % (section, option), value, single = True)
 
-        self.set(section, option, (new_value if new_value else value).encode('unicode_escape'))
+        self.set(section, option, (new_value if new_value else value).encode('unicode_escape').decode('utf-8'))
         self.save()
 
         # After save (for re-interval etc)

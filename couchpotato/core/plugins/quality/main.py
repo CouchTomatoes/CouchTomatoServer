@@ -286,7 +286,6 @@ class QualityPlugin(Plugin):
         return None
 
     def containsTagScore(self, quality, words, cur_file = ''):
-        cur_file = ss(cur_file)
         score = 0.0
 
         extension = words[-1]
@@ -313,12 +312,12 @@ class QualityPlugin(Plugin):
                         log.debug('Found %s via %s %s in %s', (quality['identifier'], tag_type, quality.get(tag_type), cur_file))
                         score += points.get(tag_type)
 
-                if isinstance(alt, str) and ss(alt.lower()) in words and ss(alt.lower()) not in scored_on:
+                if isinstance(alt, str) and alt.lower() in words and alt.lower() not in scored_on:
                     log.debug('Found %s via %s %s in %s', (quality['identifier'], tag_type, quality.get(tag_type), cur_file))
                     score += points.get(tag_type)
 
                     # Don't score twice on same tag
-                    scored_on.append(ss(alt).lower())
+                    scored_on.append(alt.lower())
 
         # Check extension
         for ext in quality.get('ext', []):
@@ -329,8 +328,6 @@ class QualityPlugin(Plugin):
         return score
 
     def contains3D(self, quality, words, cur_file = ''):
-        cur_file = ss(cur_file)
-
         for key in self.threed_tags:
             tags = self.threed_tags.get(key, [])
 
