@@ -128,17 +128,14 @@ def stripAccents(s):
 
 
 def tryUrlencode(s):
-    new = six.u('')
     if isinstance(s, dict):
+        new = six.u('')
         for key, value in list(s.items()):
             new += six.u('&%s=%s') % (key, tryUrlencode(value))
 
         return new[1:]
     else:
-        for letter in ss(s):
-            try:
-                new += quote_plus(letter)
-            except:
-                new += letter
-
-    return new
+        try:
+            return quote_plus(ss(s))
+        except:
+            return s
