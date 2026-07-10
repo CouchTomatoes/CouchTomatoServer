@@ -1,87 +1,56 @@
-CouchPotato
+CouchTomato
 =====
 
-[![Join the chat at https://gitter.im/CouchPotato/CouchPotatoServer](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/CouchPotato/CouchPotatoServer?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/CouchPotato/CouchPotatoServer.svg?branch=master)](https://travis-ci.org/CouchPotato/CouchPotatoServer)
-[![Coverage Status](https://coveralls.io/repos/CouchPotato/CouchPotatoServer/badge.svg?branch=master&service=github)](https://coveralls.io/github/CouchPotato/CouchPotatoServer?branch=master)
+[![Release](https://img.shields.io/github/v/release/CodeAhmed/CouchTomato)](https://github.com/CodeAhmed/CouchTomato/releases)
+[![Release workflow](https://github.com/CodeAhmed/CouchTomato/actions/workflows/release.yml/badge.svg)](https://github.com/CodeAhmed/CouchTomato/actions/workflows/release.yml)
 
-CouchPotato (CP) is an automatic NZB and torrent downloader. You can keep a "movies I want"-list and it will search for NZBs/torrents of these movies every X hours.
-Once a movie is found, it will send it to SABnzbd or download the torrent to a specified directory.
+CouchTomato is a Python 3 port and rebrand of [CouchPotato](https://github.com/CouchPotato/CouchPotatoServer),
+the original automatic NZB and torrent downloader, which stopped receiving updates in 2020 while still on
+Python 2. This fork keeps the entire original commit history intact (see `CLAUDE.md` for details) and ports
+the codebase forward to Python 3 while working toward full feature parity with upstream.
+
+CouchTomato (like CouchPotato before it) is an automatic NZB and torrent downloader. You can keep a "movies I
+want"-list and it will search for NZBs/torrents of these movies every X hours. Once a movie is found, it will
+send it to SABnzbd or download the torrent to a specified directory.
+
+> **Note on the CouchPotatoApi provider:** upstream CouchPotato shipped with a built-in provider
+> (`couchpotato/core/media/movie/providers/info/couchpotatoapi.py`) that calls a hosted backend at
+> `api.couchpota.to` for search suggestions, release validation, ETA data, and update messages. That domain
+> is now parked/for sale and the hosted service is gone, so this provider fails in CouchTomato. The backend's
+> source code is still available at [CouchPotato/CouchPotatoAPI](https://github.com/CouchPotato/CouchPotatoAPI)
+> if it's ever worth self-hosting a replacement; tracked as a known issue rather than something fixable by a
+> client-side code change alone.
 
 
 ## Running from Source
 
-CouchPotatoServer can be run from source. This will use *git* as updater, so make sure that is installed.
+CouchTomato requires **Python 3.11+**. It can be run from source, and will use *git* as an updater, so make
+sure that is installed too.
 
-Windows, see [the CP forum](http://couchpota.to/forum/viewtopic.php?t=14) for more details:
-
-* Install [Python 2.7](http://www.python.org/download/releases/2.7.3/)
-* Then install [PyWin32 2.7](http://sourceforge.net/projects/pywin32/files/pywin32/Build%20217/) and [GIT](http://git-scm.com/)
-* If you come and ask on the forums 'why directory selection no work?', I will kill a kitten, also this is because you need PyWin32
-* Open up `Git Bash` (or CMD) and go to the folder you want to install CP. Something like Program Files.
-* Run `git clone https://github.com/CouchPotato/CouchPotatoServer.git`.
-* You can now start CP via `CouchPotatoServer\CouchPotato.py` to start
+* Install [Python 3.11+](https://www.python.org/downloads/) and [git](https://git-scm.com/)
+* Clone the repo: `git clone https://github.com/CodeAhmed/CouchTomato.git`
+* Install dependencies: `pip install -r requirements.txt`
+* Start it: `python3 CouchTomato/CouchPotato.py`
 * Your browser should open up, but if it doesn't go to `http://localhost:5050/`
-
-OS X:
-
-* If you're on Leopard (10.5) install Python 2.6+: [Python 2.6.5](http://www.python.org/download/releases/2.6.5/)
-* Install [GIT](http://git-scm.com/)
-* Install [LXML](http://lxml.de/installation.html) for better/faster website scraping 
-* Open up `Terminal`
-* Go to your App folder `cd /Applications`
-* Run `git clone https://github.com/CouchPotato/CouchPotatoServer.git`
-* Then do `python CouchPotatoServer/CouchPotato.py`
-* Your browser should open up, but if it doesn't go to `http://localhost:5050/`
-
-Linux:
-
-* (Ubuntu / Debian) Install [GIT](http://git-scm.com/) with `apt-get install git-core`
-* (Fedora / CentOS) Install [GIT](http://git-scm.com/) with `yum install git`
-* Install [LXML](http://lxml.de/installation.html) for better/faster website scraping 
-* 'cd' to the folder of your choosing.
-* Install [PyOpenSSL](https://pypi.python.org/pypi/pyOpenSSL) with `pip install --upgrade pyopenssl`
-* Run `git clone https://github.com/CouchPotato/CouchPotatoServer.git`
-* Then do `python CouchPotatoServer/CouchPotato.py` to start
-* (Ubuntu / Debian with upstart) To run on boot copy the init script `sudo cp CouchPotatoServer/init/ubuntu /etc/init.d/couchpotato`
-* (Ubuntu / Debian with upstart) Copy the default paths file `sudo cp CouchPotatoServer/init/ubuntu.default /etc/default/couchpotato`
-* (Ubuntu / Debian with upstart) Change the paths inside the default file `sudo nano /etc/default/couchpotato`
-* (Ubuntu / Debian with upstart) Make it executable `sudo chmod +x /etc/init.d/couchpotato`
-* (Ubuntu / Debian with upstart) Add it to defaults `sudo update-rc.d couchpotato defaults`
-* (Linux with systemd) To run on boot copy the systemd config `sudo cp CouchPotatoServer/init/couchpotato.service /etc/systemd/system/couchpotato.service`
-* (Linux with systemd) Update the systemd config file with your user and path to CouchPotato.py
-* (Linux with systemd) Enable it at boot with `sudo systemctl enable couchpotato`
-* Open your browser and go to `http://localhost:5050/`
 
 Docker:
-* You can use [linuxserver.io](https://github.com/linuxserver/docker-couchpotato) or [razorgirl's](https://github.com/razorgirl/docker-couchpotato) to quickly build your own isolated app container. It's based on the Linux instructions above. For more info about Docker check out the [official website](https://www.docker.com).
-
-FreeBSD:
-
-* Become root with `su`
-* Update your repo catalog `pkg update`
-* Install required tools `pkg install python py27-sqlite3 fpc-libcurl docbook-xml git-lite`
-* For default install location and running as root `cd /usr/local`
-* If running as root, expects python here `ln -s /usr/local/bin/python /usr/bin/python`
-* Run `git clone https://github.com/CouchPotato/CouchPotatoServer.git`
-* Copy the startup script `cp CouchPotatoServer/init/freebsd /usr/local/etc/rc.d/couchpotato`
-* Make startup script executable `chmod 555 /usr/local/etc/rc.d/couchpotato`
-* Add startup to boot `echo 'couchpotato_enable="YES"' >> /etc/rc.conf`
-* Read the options at the top of `more /usr/local/etc/rc.d/couchpotato`
-* If not default install, specify options with startup flags in `ee /etc/rc.conf`
-* Finally, `service couchpotato start`
-* Open your browser and go to: `http://server:5050/`
+* You can adapt the community CouchPotato Docker images (e.g. [linuxserver.io](https://github.com/linuxserver/docker-couchpotato)) as a starting point — CouchTomato hasn't published its own image yet, see `TODO.md`.
 
 
 ## Development
 
-Be sure you're running the latest version of [Python 2.7](http://python.org/).
+Be sure you're running Python 3.11 or newer.
 
 If you're going to add styling or doing some javascript work you'll need a few tools that build and compress scss -> css and combine the javascript files. [Node/NPM](https://nodejs.org/), [Grunt](http://gruntjs.com/installing-grunt), [Compass](http://compass-style.org/install/)
 
-After you've got these tools you can install the packages using `npm install`. Once this process has finished you can start CP using the command `grunt`. This will start all the needed tools and watches any files for changes.
+After you've got these tools you can install the packages using `npm install`. Once this process has finished you can start CouchTomato using the command `grunt`. This will start all the needed tools and watches any files for changes.
 You can now change css and javascript and it wil reload the page when needed.
 
 By default it will combine files used in the core folder. If you're adding a new .scss or .js file, you might need to add it and then restart the grunt process for it to combine it properly.
 
-Don't forget to enable development inside the CP settings. This disables some functions and also makes sure javascript errors are pushed to console instead of the log.
+Don't forget to enable development inside the settings. This disables some functions and also makes sure javascript errors are pushed to console instead of the log.
+
+## Project status
+
+This is an active port — see `CLAUDE.md` for the full history/architecture notes and `TODO.md` for a
+checkbox-tracked list of what's left to reach full feature parity with upstream CouchPotato.
