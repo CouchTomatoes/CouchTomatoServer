@@ -186,7 +186,7 @@ class Settings(object):
         return []
 
     def getUnicode(self, section, option):
-        value = self.p.get(section, option).decode('unicode_escape')
+        value = self.p.get(section, option)
         return toUnicode(value).strip()
 
     def getValues(self):
@@ -240,7 +240,7 @@ class Settings(object):
         return values
 
     def save(self):
-        with open(self.file, 'wb') as configfile:
+        with open(self.file, 'w') as configfile:
             self.p.write(configfile)
 
     def addSection(self, section):
@@ -454,8 +454,8 @@ class PropertyIndex(HashIndex):
         super(PropertyIndex, self).__init__(*args, **kwargs)
 
     def make_key(self, key):
-        return md5(key).hexdigest()
+        return md5(key.encode('utf-8')).hexdigest().encode('utf-8')
 
     def make_key_value(self, data):
         if data.get('_t') == 'property':
-            return md5(data['identifier']).hexdigest(), None
+            return md5(data['identifier'].encode('utf-8')).hexdigest().encode('utf-8'), None

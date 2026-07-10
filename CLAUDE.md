@@ -125,24 +125,102 @@ Rules going forward:
   return type before blindly wrapping in `toUnicode()`.
 - Opened a PR from `claude/couch-tomato-parity-e1f5bl` into `master` (draft, WIP),
   assigned to the repo owner, to make progress visible/reviewable while porting continues.
+- Added `TODO.md`: a scoped, checkbox-style checklist (separate from this file) tracking
+  specifically "what's needed to reach a runnable Python 3 app" — check it for granular
+  status instead of duplicating that detail here going forward.
+
+**2026-07-10 (cont'd, boot to a working web UI)**
+- Replaced vendored `CodernityDB` (Python 2, would have needed ~50+ manual
+  `struct.pack`/`unpack` bytes fixes across `hash_index.py`/`tree_index.py`) with
+  **`libs/codernitydb3`** — a maintained Python-3-native fork found on PyPI as
+  `CodernityDB3` (Apache 2.0). The PyPI wheel's `setup.py` doesn't build cleanly in
+  this sandbox (old distutils `install_layout` incompatibility with modern
+  setuptools), so the source was vendored directly from the sdist instead of
+  `pip install`-ed. **Important:** generated index files (via
+  `header_for_indexes()`) contain the literal string `from CodernityDB.tree_index
+  import ...` baked in as text and `exec`'d at runtime — so a plain rename wasn't an
+  option. Solved with a thin compatibility shim at `libs/CodernityDB/` (5 small files
+  re-exporting from `codernitydb3`) so every existing `from CodernityDB.X import Y`
+  import — including the ones embedded in generated files — keeps working unchanged.
+- Fixed `axl/axel.py` (CouchPotato's vendored event dispatch lib): `hashlib.md5(str(handler))`
+  needs `.encode()`. This one is high-value — nearly every event registration in the
+  app (`addEvent`) goes through this hash, so it was silently breaking most
+  `app.load`/`database.setup`/etc. event handlers even after the server "started".
+- Fixed `async` used as a bare variable name in `couchpotato/core/plugins/renamer.py`
+  (reserved keyword since Python 3.7, was a `SyntaxError` that killed the whole
+  renamer plugin's import) — renamed to `is_async`, kept the `'async'` string key in
+  the public API kwargs unchanged.
+- Fixed `Thread.isAlive()` → `.is_alive()` in vendored `libs/apscheduler` (removed in
+  Python 3.9). Apscheduler is still on the "replace with pip" list in `TODO.md`
+  eventually, but modern APScheduler 3.x changed the scheduling API significantly
+  (`add_interval_job` → `add_job(trigger='interval', ...)`), so that's a real rewrite,
+  not a drop-in swap — left as vendored + patched for now.
+- **Found and fixed the single biggest recurring bug class**: every CodernityDB index
+  class's `make_key`/`make_key_value` methods (in
+  `couchpotato/core/media/_base/media/index.py`, `couchpotato/core/settings.py`,
+  `couchpotato/core/plugins/quality/index.py`,
+  `couchpotato/core/plugins/release/index.py`) return `str`, but codernitydb3's
+  struct-based storage format requires `bytes` for lookup/storage keys (its own
+  default `make_key` does exactly `key.encode('utf8')` — our overrides need to match
+  that contract). Fixed every occurrence to `.encode('utf-8')` the final key value.
+  **If a new/updated index class ever gets added, make sure its `make_key`/
+  `make_key_value` return bytes, not str** — this is easy to get wrong again.
+- Fixed JSON serialization crashing on CodernityDB's own internal `_rev` field, which
+  is intentionally `bytes` at the storage-engine level (needed for its packed binary
+  format) but leaks into documents returned to the API/template layer. Rather than
+  fighting that through the DB internals, added `jsonBytesDefault()` in
+  `couchpotato/core/helpers/encoding.py` (decodes stray bytes to str) and wired it
+  into (a) `api.py`'s explicit `json.dumps()` call and (b) a global monkeypatch of
+  `tornado.escape.json_encode` in `couchpotato/__init__.py` — tornado's templates
+  (`index.html` etc.) and `RequestHandler.finish(dict)` both route through that
+  function, so patching it once covers both.
+- Fixed `Env.get('x', unicode = True)` calls in `couchpotato/templates/index.html` —
+  the function's actual parameter is named `str`, not `unicode` (someone modernized
+  the signature at some point but not the 3 call sites).
+- Removed a dead `from itertools import izip` (Py2-only) baked into
+  `TitleSearchIndex`'s `custom_header` — unused by the class's methods, was just
+  breaking that index's generated file.
+- Removed a stray `print(locals())` debug leftover in vendored
+  `libs/codernitydb3/storage.py` that was spamming the log with internal doc metadata
+  on every read.
+- **Result: the server now boots cleanly and the web UI actually renders.**
+  `python3 CouchPotato.py --data_dir <dir> --console_log --debug` starts, binds port
+  5050, and `curl http://127.0.0.1:5050/` returns a full rendered HTML page (verified
+  — not yet checked in an actual browser). This is the milestone `TODO.md` section 4
+  was tracking.
+- Known remaining non-fatal issue: `profile.forceDefaults` on a fresh/empty DB hits a
+  `struct.error` reading an empty B-tree leaf in `codernitydb3/tree_index.py` — caught
+  gracefully by the event system so it doesn't block boot, but likely affects
+  "first movie added" flows. See `TODO.md` §5.
+- A long tail of individual provider/notification/downloader plugin modules still fail
+  to import (each is caught and skipped independently by the loader, so none of them
+  block boot) — full list is in `TODO.md` §5, this is the "provider plugins" bucket
+  from the next-steps list below, now that the app actually runs.
 
 ## Next steps (in order)
 
-1. Fix `header_for_indexes(...)` bytes/str TypeError in `libs/CodernityDB/database.py`
-   (`_add_single_index`, line ~177) — next boot blocker, see progress log for details.
-2. Keep iterating: run `python3 CouchPotato.py --data_dir <scratch dir> --console_log --debug`,
-   fix whatever error comes next, one at a time, committing after each fix, until the
-   server actually starts and the web UI is reachable.
-3. Once it boots: replace remaining easy vendored libs (requests, six, dateutil, certifi,
-   bs4, html5lib, oauthlib, httplib2, apscheduler, rsa, pyasn1, GitPython already done)
-   with real pip packages + grow `requirements.txt`.
-4. Hand-port the CouchPotato-specific vendored libs (axl, caper, CodernityDB, enzyme,
-   pynma, gntp, etc.) with 2to3 + manual fixes since no drop-in replacement exists.
-5. Work through provider plugins (NZB/torrent/metadata/download-client) as the real bug
-   backlog — likely the largest remaining chunk of work.
-6. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
+**Boot milestone reached 2026-07-10: server starts, web UI renders.** See `TODO.md`
+for the detailed, checkbox-tracked list — this section is now the higher-level plan
+for what comes after.
+
+1. Manually verify the web UI in an actual browser (not just curl) — add a movie,
+   trigger a search, open settings pages. Fix the empty-DB `struct.error` in
+   `profile.forceDefaults` noted in the progress log / `TODO.md` §5 if it blocks
+   real usage.
+2. Work through the long tail of provider/notification/downloader plugin import
+   failures listed in `TODO.md` §5 (each is independently non-fatal but disables that
+   feature) — likely the largest remaining chunk of work.
+3. Replace remaining easy vendored libs (six, dateutil, certifi, bs4, html5lib,
+   oauthlib, httplib2, rsa, pyasn1 — tornado/chardet/requests/GitPython/CodernityDB3
+   already done) with real pip packages + grow `requirements.txt`.
+4. Hand-port the remaining CouchPotato-specific vendored libs with no drop-in
+   replacement (axl, caper, enzyme, pynma, gntp, etc.) with 2to3 + manual fixes.
+   apscheduler is vendored+patched for now; a real swap to pip APScheduler needs an
+   API rewrite (`add_interval_job` → `add_job(trigger='interval', ...)`), not just a
+   dependency swap.
+5. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
    Docker/systemd units, docs.
-7. CI + packaging.
+6. CI + packaging.
 
 ## Working conventions
 

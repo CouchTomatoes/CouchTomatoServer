@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# Copyright 2020 Nick M. (https://github.com/nickmasster)
 # Copyright 2011-2013 Codernity (http://codernity.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from CodernityDB.misc import NONE
+from codernitydb3.misc import NONE
 
 
 def __patch(obj, name, new):
@@ -35,11 +35,11 @@ def patch_cache_lfu(lock_obj):
 
     .. note::
 
-       It's internal CodernityDB mechanizm, it will be called when needed
+       It's internal codernitydb3 mechanizm, it will be called when needed
 
     """
-    from . import lfu_cache
-    from . import lfu_cache_with_lock
+    from codernitydb3 import lfu_cache
+    from codernitydb3 import lfu_cache_with_lock
     lfu_lock1lvl = lfu_cache_with_lock.create_cache1lvl(lock_obj)
     lfu_lock2lvl = lfu_cache_with_lock.create_cache2lvl(lock_obj)
     __patch(lfu_cache, 'cache1lvl', lfu_lock1lvl)
@@ -52,11 +52,11 @@ def patch_cache_rr(lock_obj):
 
     .. note::
 
-       It's internal CodernityDB mechanizm, it will be called when needed
+       It's internal codernitydb3 mechanizm, it will be called when needed
 
     """
-    from . import rr_cache
-    from . import rr_cache_with_lock
+    from codernitydb3 import rr_cache
+    from codernitydb3 import rr_cache_with_lock
     rr_lock1lvl = rr_cache_with_lock.create_cache1lvl(lock_obj)
     rr_lock2lvl = rr_cache_with_lock.create_cache2lvl(lock_obj)
     __patch(rr_cache, 'cache1lvl', rr_lock1lvl)
@@ -82,11 +82,11 @@ def patch_flush_fsync(db_obj):
         ...
 
     """
-
     def always_fsync(ind_obj):
         def _inner():
             ind_obj.orig_flush()
             ind_obj.fsync()
+
         return _inner
 
     for index in db_obj.indexes:

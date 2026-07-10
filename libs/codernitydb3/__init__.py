@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# Copyright 2020 Nick M. (https://github.com/nickmasster)
 # Copyright 2011-2013 Codernity (http://codernity.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,21 +16,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from threading import RLock
-
-from CodernityDB.env import cdb_environment
-
-cdb_environment['mode'] = "threads"
-cdb_environment['rlock_obj'] = RLock
-
-
-from .database_safe_shared import SafeDatabase
-
-
-class ThreadSafeDatabase(SafeDatabase):
-    """
-    Thread safe version of CodernityDB that uses several lock objects,
-    on different methods / different indexes etc. It's completely different
-    implementation of locking than SuperThreadSafe one.
-    """
-    pass
+__version__ = '0.6.0'
+__license__ = 'Apache 2.0'

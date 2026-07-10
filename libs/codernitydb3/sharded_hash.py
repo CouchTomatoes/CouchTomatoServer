@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# Copyright 2020 Nick M. (https://github.com/nickmasster)
 # Copyright 2011-2013 Codernity (http://codernity.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,28 +16,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
-from CodernityDB.hash_index import UniqueHashIndex, HashIndex
-from CodernityDB.sharded_index import ShardedIndex
-from CodernityDB.index import IndexPreconditionsException
-
-from random import getrandbits
 import uuid
+from random import getrandbits
+
+from codernitydb3.hash_index import UniqueHashIndex, HashIndex
+from codernitydb3.sharded_index import ShardedIndex
+from codernitydb3.index import IndexPreconditionsException
 
 
 class IU_ShardedUniqueHashIndex(ShardedIndex):
 
     custom_header = """import uuid
 from random import getrandbits
-from CodernityDB.sharded_index import ShardedIndex
+from codernitydb3.sharded_index import ShardedIndex
 """
 
     def __init__(self, db_path, name, *args, **kwargs):
         if kwargs.get('sh_nums', 0) > 255:
             raise IndexPreconditionsException("Too many shards")
         kwargs['ind_class'] = UniqueHashIndex
-        super(IU_ShardedUniqueHashIndex, self).__init__(db_path,
-                                                        name, *args, **kwargs)
+        super(IU_ShardedUniqueHashIndex,
+              self).__init__(db_path, name, *args, **kwargs)
         self.patchers.append(self.wrap_insert_id_index)
 
     @staticmethod
@@ -51,6 +51,7 @@ from CodernityDB.sharded_index import ShardedIndex
             start, size = storage.insert(value)
             db_obj.id_ind.insert(_id, _rev, start, size)
             return _id
+
         if not clean:
             if hasattr(db_obj, '_insert_id_index_orig'):
                 raise IndexPreconditionsException(
@@ -68,27 +69,28 @@ from CodernityDB.sharded_index import ShardedIndex
             trg = 0
         self.last_used = trg
         h = '%02x%30s' % (trg, h[2:])
-        return h
+        return h.encode('utf8')
 
     def delete(self, key, *args, **kwargs):
-        trg_shard = key[:2]
+        trg_shard = self.make_key(key[:2])
         op = self.shards_r[trg_shard]
         return op.delete(key, *args, **kwargs)
 
     def update(self, key, *args, **kwargs):
-        trg_shard = key[:2]
+        trg_shard = self.make_key(key[:2])
         self.last_used = int(trg_shard, 16)
         op = self.shards_r[trg_shard]
         return op.update(key, *args, **kwargs)
 
     def insert(self, key, *args, **kwargs):
-        trg_shard = key[:2]  # in most cases it's in create_key BUT not always
+        trg_shard = self.make_key(
+            key[:2])  # in most cases it's in create_key BUT not always
         self.last_used = int(key[:2], 16)
         op = self.shards_r[trg_shard]
         return op.insert(key, *args, **kwargs)
 
     def get(self, key, *args, **kwargs):
-        trg_shard = key[:2]
+        trg_shard = self.make_key(key[:2])
         self.last_used = int(trg_shard, 16)
         op = self.shards_r[trg_shard]
         return op.get(key, *args, **kwargs)
@@ -97,19 +99,19 @@ from CodernityDB.sharded_index import ShardedIndex
 class ShardedUniqueHashIndex(IU_ShardedUniqueHashIndex):
 
     # allow unique hash to be used directly
-    custom_header = 'from CodernityDB.sharded_hash import IU_ShardedUniqueHashIndex'
+    custom_header = 'from codernitydb3.sharded_hash import IU_ShardedUniqueHashIndex'
 
     pass
 
 
 class IU_ShardedHashIndex(ShardedIndex):
 
-    custom_header = """from CodernityDB.sharded_index import ShardedIndex"""
+    custom_header = """from codernitydb3.sharded_index import ShardedIndex"""
 
     def __init__(self, db_path, name, *args, **kwargs):
         kwargs['ind_class'] = HashIndex
-        super(IU_ShardedHashIndex, self).__init__(db_path, name, *
-                                                  args, **kwargs)
+        super(IU_ShardedHashIndex, self).__init__(db_path, name, *args,
+                                                  **kwargs)
 
     def calculate_shard(self, key):
         """

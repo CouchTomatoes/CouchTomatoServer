@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
+# Copyright 2020 Nick M. (https://github.com/nickmasster)
 # Copyright 2011-2013 Codernity (http://codernity.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,21 +16,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from random import getrandbits, randrange
-import uuid
+from threading import RLock
+
+from codernitydb3.database_safe_shared import SafeDatabase
+from codernitydb3.env import cdb_environment
+
+cdb_environment['mode'] = "threads"
+cdb_environment['rlock_obj'] = RLock
 
 
-class NONE:
+class ThreadSafeDatabase(SafeDatabase):
     """
-    It's inteded to be None but different,
-    for internal use only!
+    Thread safe version of codernitydb3 that uses several lock objects,
+    on different methods / different indexes etc. It's completely different
+    implementation of locking than SuperThreadSafe one.
     """
-    pass
-
-
-def random_hex_32():
-    return uuid.UUID(int=getrandbits(128), version=4).hex
-
-
-def random_hex_4(*args, **kwargs):
-    return '%04x' % randrange(256 ** 2)

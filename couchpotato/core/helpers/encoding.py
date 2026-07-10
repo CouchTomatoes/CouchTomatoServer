@@ -13,6 +13,15 @@ import six
 log = CPLog(__name__)
 
 
+def jsonBytesDefault(o):
+    # CodernityDB internally uses raw bytes for revision markers (_rev) that can end
+    # up in documents returned to the API/templates. json.dumps() has no default
+    # handling for bytes, so decode them here instead of chasing every call site.
+    if isinstance(o, bytes):
+        return o.decode('utf-8', 'replace')
+    raise TypeError('Object of type %s is not JSON serializable' % o.__class__.__name__)
+
+
 def toSafeString(original):
     valid_chars = "-_.() %s%s" % (ascii_letters, digits)
     cleaned_filename = unicodedata.normalize('NFKD', toUnicode(original)).encode('ASCII', 'ignore')
