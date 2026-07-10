@@ -67,7 +67,12 @@ jobs:
           new_lines=$(mktemp)
           fix_lines=$(mktemp)
 
-          git log "$range" --no-merges --pretty=format:'%s' | while IFS= read -r subject; do
+          # `format:` deliberately omits a trailing newline after the last
+          # entry, and a bare `while read` silently drops any final line
+          # that isn't newline-terminated — the `|| [ -n "$subject" ]` is
+          # required or a single-commit range (the common case) produces
+          # zero loop iterations and "No notable changes." every time.
+          git log "$range" --no-merges --pretty=format:'%s' | while IFS= read -r subject || [ -n "$subject" ]; do
             [ -z "$subject" ] && continue
             if printf '%s\n' "$subject" | grep -qiE '^(fix|fixed|fixes|bugfix|hotfix)\b'; then
               printf '%s %s\n' "$fix_badge" "$subject" >> "$fix_lines"
