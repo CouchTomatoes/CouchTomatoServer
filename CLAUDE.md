@@ -339,6 +339,19 @@ Rules going forward:
   of being silently crash-skipped: a `profile.forceDefaults` `ElemNotFound` during
   initial profile cleanup, possibly a timing interaction with the updater's `git
   fetch` now running at startup — logged in `TODO.md` §5, not yet root-caused.
+- **PR #1 merged into `master`.** Added `.github/workflows/release.yml` first (fires
+  on every push to `master`, auto-tags starting at `v1.0.0` then increments the patch
+  version from the latest `vN.N.N` tag each time) so it would take effect on this
+  exact merge. It did: `v1.0.0` was created successfully right after merging,
+  confirmed via the Actions run (`conclusion: success`) and `GET
+  /releases/tags/v1.0.0`. Notably, this proves the tag-push `403` documented in
+  `SUGGESTIONS.md` is specific to this session's proxied git credentials, not a
+  GitHub-side restriction — a GitHub Actions run using the repo's own `GITHUB_TOKEN`
+  can create tags fine. Added a 4th option to `SUGGESTIONS.md` on that basis (a
+  one-off `workflow_dispatch` job to mirror upstream's tags from inside an Action).
+- Branch `claude/couch-tomato-parity-e1f5bl` reset to the new `master` tip
+  (`f4b76a5f`) per the merged-PR restart convention in this file's working
+  conventions section, ready for the next round of work.
 
 ## Next steps (in order)
 
