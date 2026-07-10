@@ -158,7 +158,12 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       https://github.com/CouchPotato/CouchPotatoAPI — noted in README.md's
       "Project status" section. Self-hosting a replacement is a possible future
       task (would need its own server/deploy, not a client code change) — not
-      started, just documented so the option isn't lost.
+      started, just documented so the option isn't lost. Checked the repo:
+      archived (read-only since 2021), Node.js/Express, no license file, and
+      the author's own README says setup isn't documented ("I don't really
+      have the steps on how to get it running"). So this is a real but
+      nontrivial option — reverse-engineering an abandoned, unlicensed app —
+      not a quick self-host.
 - [x] **All provider/plugin import failures fixed — 0 remaining, down from ~50.**
       Root causes were shared across many files: vendored `bs4` (→ pip
       `beautifulsoup4`, fixed 38 providers at once), vendored `bencode` (→ pip

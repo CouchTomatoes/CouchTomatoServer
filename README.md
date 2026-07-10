@@ -19,7 +19,9 @@ send it to SABnzbd or download the torrent to a specified directory.
 > is now parked/for sale and the hosted service is gone, so this provider fails in CouchTomato. The backend's
 > source code is still available at [CouchPotato/CouchPotatoAPI](https://github.com/CouchPotato/CouchPotatoAPI)
 > if it's ever worth self-hosting a replacement; tracked as a known issue rather than something fixable by a
-> client-side code change alone.
+> client-side code change alone. That repo is archived (read-only since 2021), Node.js/Express, has no
+> license file, and its own README admits setup isn't documented ("I don't really have the steps on how to
+> get it running") — self-hosting it would mean reverse-engineering an abandoned app, not a quick deploy.
 
 
 ## Running from Source
