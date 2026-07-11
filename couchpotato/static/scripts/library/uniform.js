@@ -12,7 +12,10 @@ var Uniform = new Class({
 		var focused = this.options.focusedClass;
 		var holder = '.' + this.options.holderClass;
 
-		$(document.body).addEvents( {
+		var b = $(document.body);
+		if (!b) return; // document.body can be null here if the page is already being torn down for a redirect
+
+		b.addEvents( {
 			'focus:relay(input, select, textarea)' : function() {
 				var parent = this.getParent(holder);
 				if (parent)

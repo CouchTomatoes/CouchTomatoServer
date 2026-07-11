@@ -7,7 +7,7 @@ import time
 from couchpotato import CPLog
 from couchpotato.api import addApiView
 from couchpotato.core.event import addEvent
-from couchpotato.core.helpers.encoding import sp, ss, toUnicode
+from couchpotato.core.helpers.encoding import sp, toUnicode
 from couchpotato.core.helpers.variable import getUserDir
 from couchpotato.core.plugins.base import Plugin
 
@@ -132,7 +132,7 @@ class FileBrowser(Plugin):
 
 
     def is_hidden(self, filepath):
-        name = ss(os.path.basename(os.path.abspath(filepath)))
+        name = os.path.basename(os.path.abspath(filepath))
         return name.startswith('.') or self.has_hidden_attribute(filepath)
 
     def has_hidden_attribute(self, filepath):

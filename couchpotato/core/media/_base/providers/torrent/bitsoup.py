@@ -1,6 +1,7 @@
 import traceback
 
 from bs4 import BeautifulSoup, SoupStrainer
+from couchpotato.core.helpers.encoding import toUnicode
 from couchpotato.core.helpers.variable import tryInt
 from couchpotato.core.logger import CPLog
 from couchpotato.core.media._base.providers.torrent.base import TorrentProvider
@@ -36,7 +37,7 @@ class Base(TorrentProvider):
 
             try:
                 result_table = html.find('table', attrs = {'class': 'koptekst'})
-                if not result_table or 'nothing found!' in data.lower():
+                if not result_table or 'nothing found!' in toUnicode(data).lower():
                     return
 
                 entries = result_table.find_all('tr')

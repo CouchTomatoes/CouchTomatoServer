@@ -291,6 +291,15 @@ def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, En
         ])
     Env.set('static_path', static_path)
 
+    # Load configs & plugins (must happen before the catch-all API/web handlers
+    # below are registered - plugins like file.py's cache server register their
+    # own static routes via `application.add_handlers`, and since Tornado
+    # matches handlers in registration order, the generic `(.*)` ApiHandler
+    # catch-all would otherwise shadow every one of those routes first)
+    loader = Env.get('loader')
+    loader.preload(root = sp(base_path))
+    loader.run()
+
     # Request handlers
     application.add_handlers(".*$", [
         (r'%snonblock/(.*)(/?)' % api_base, NonBlockHandler),
@@ -308,11 +317,6 @@ def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, En
         (r'%s(.*)(/?)' % web_base, WebHandler),
         (r'(.*)', WebHandler),
     ])
-
-    # Load configs & plugins
-    loader = Env.get('loader')
-    loader.preload(root = sp(base_path))
-    loader.run()
 
     # Fill database with needed stuff
     fireEvent('database.setup')

@@ -1,2 +1,7 @@
 __pycache__/
 *.pyc
+
+# PyInstaller build output (packaging/couchtomato.spec)
+/build/
+/dist/
+packaging/windows/*.exe
