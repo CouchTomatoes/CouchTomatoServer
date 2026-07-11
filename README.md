@@ -2,21 +2,68 @@
   <img src="docs/branding/logo.png" width="140" alt="CouchTomato logo">
 </p>
 
-CouchTomato
-=====
+<h1 align="center">CouchTomato</h1>
 
-[![Release](https://img.shields.io/github/v/release/CouchTomatoes/CouchTomatoServer)](https://github.com/CouchTomatoes/CouchTomatoServer/releases)
-[![Release workflow](https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/release.yml/badge.svg)](https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/release.yml)
-[![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](license.txt)
+<p align="center">
+  <a href="https://github.com/CouchTomatoes/CouchTomatoServer/releases"><img src="https://img.shields.io/github/v/release/CouchTomatoes/CouchTomatoServer" alt="Release"></a>
+  <a href="https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/release.yml"><img src="https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/release.yml/badge.svg" alt="Release workflow"></a>
+  <a href="license.txt"><img src="https://img.shields.io/badge/license-GPLv3-blue.svg" alt="License: GPLv3"></a>
+</p>
 
-CouchTomato is a Python 3 port and rebrand of [CouchPotato](https://github.com/CouchPotato/CouchPotatoServer),
-the original automatic NZB and torrent downloader, which stopped receiving updates in 2020 while still on
-Python 2. This fork keeps the entire original commit history intact (see `CLAUDE.md` for details) and ports
-the codebase forward to Python 3 while working toward full feature parity with upstream.
+<p align="center">
+  A Python 3 port and rebrand of <a href="https://github.com/CouchPotato/CouchPotatoServer">CouchPotato</a>,
+  the automatic NZB and torrent movie downloader.
+</p>
 
-CouchTomato (like CouchPotato before it) is an automatic NZB and torrent downloader. You can keep a "movies I
-want"-list and it will search for NZBs/torrents of these movies every X hours. Once a movie is found, it will
-send it to SABnzbd or download the torrent to a specified directory.
+CouchPotato stopped receiving updates in 2020 while still stuck on Python 2, with its dependencies
+vendored in-tree instead of pip-installed. CouchTomato keeps the entire original commit history intact
+(see [`CLAUDE.md`](CLAUDE.md) for the full porting log) while bringing the codebase forward to
+Python 3, replacing dead vendored dependencies with maintained pip packages, and working toward full
+feature parity with upstream.
+
+Keep a "movies I want"-list, and CouchTomato searches for NZBs/torrents of those movies on a schedule.
+Once a good release is found, it's sent straight to your download client, then automatically renamed
+and moved into your library once it finishes downloading.
+
+## What Now?
+
+* **[Download the latest release](https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest)** —
+  Windows installer/zip, macOS universal2 DMG, or Linux tar.gz/AppImage
+* **[Wiki: Installation guide](docs/wiki/Installation.md)** — per-platform setup instructions
+* **[Wiki: Migrating from CouchPotato](docs/wiki/Migration.md)**
+* **[Wiki: FAQ / Troubleshooting](docs/wiki/FAQ.md)**
+* **[Wiki: Architecture & porting status](docs/wiki/Architecture-Overview.md)**
+* **[TODO.md](TODO.md)** — checkbox-tracked list of what's left for full parity with upstream
+
+> The links above point at markdown pages in this repo's `docs/wiki/` folder rather than a GitHub
+> Wiki tab — the Wiki feature isn't enabled on this repository yet. See `docs/wiki/README.md` for why
+> and how to move them once it is.
+
+## Providers & Downloaders
+
+CouchTomato searches across a wide range of torrent and NZB sites, and can hand releases off to
+whichever download client you already run.
+
+**Torrent providers:** AlphaRatio, AwesomeHD, BitHDTV, Bitsoup, HD4Free, HDBits, IPTorrents,
+ILoveTorrents, KickAssTorrents, MagnetDL, MoreThanTV, PassThePopcorn, RARBG, SceneAccess, SceneTime,
+ThePirateBay, TorrentBytes, TorrentDay, TorrentLeech, TorrentPotato, TorrentShack, Torrentz, YTS
+
+**NZB providers:** Binsearch, NZBClub, NZBGet-compatible Newznab indexers, OMGWTFNZBS
+
+**Download clients:** Transmission, Deluge, qBittorrent, rTorrent, uTorrent, NZBGet, NZBVortex,
+Hadouken, Synology, put.io, SABnzbd, Blackhole
+
+**Notifications:** see `couchpotato/core/notifications/` for the full list (Plex, Kodi/XBMC, Pushover,
+Twitter, and more)
+
+## Screenshots
+
+| Setup wizard | Home page charts | Movie detail |
+|---|---|---|
+| ![Wizard](docs/screenshots/2026-07-11-wizard-completed-main-app.png) | ![Charts](docs/screenshots/2026-07-11-home-charts-working.png) | ![Movie detail](docs/screenshots/2026-07-11-movie-detail-page.png) |
+
+More in [`docs/screenshots/`](docs/screenshots/), captured during real browser-driven testing sessions
+(see that folder's README for the full list and what each one verifies).
 
 > **Note on the CouchPotatoApi provider:** upstream CouchPotato shipped with a built-in provider
 > (`couchpotato/core/media/movie/providers/info/couchpotatoapi.py`) that calls a hosted backend at
@@ -27,7 +74,6 @@ send it to SABnzbd or download the torrent to a specified directory.
 > client-side code change alone. That repo is archived (read-only since 2021), Node.js/Express, has no
 > license file, and its own README admits setup isn't documented ("I don't really have the steps on how to
 > get it running") — self-hosting it would mean reverse-engineering an abandoned app, not a quick deploy.
-
 
 ## Running from Source
 
@@ -40,9 +86,12 @@ sure that is installed too.
 * Start it: `python3 CouchTomatoServer/CouchPotato.py`
 * Your browser should open up, but if it doesn't go to `http://localhost:5050/`
 
+Prefer a packaged build instead? See the [Installation wiki page](docs/wiki/Installation.md) for
+platform-specific installers, or the [latest release](https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest)
+directly.
+
 Docker:
 * You can adapt the community CouchPotato Docker images (e.g. [linuxserver.io](https://github.com/linuxserver/docker-couchpotato)) as a starting point — CouchTomato hasn't published its own image yet, see `TODO.md`.
-
 
 ## Development
 
@@ -59,8 +108,10 @@ Don't forget to enable development inside the settings. This disables some funct
 
 ## Project status
 
-This is an active port — see `CLAUDE.md` for the full history/architecture notes and `TODO.md` for a
-checkbox-tracked list of what's left to reach full feature parity with upstream CouchPotato.
+This is an active port — see [`CLAUDE.md`](CLAUDE.md) for the full history/architecture notes,
+[`docs/wiki/Architecture-Overview.md`](docs/wiki/Architecture-Overview.md) for a higher-level summary,
+and [`TODO.md`](TODO.md) for a checkbox-tracked list of what's left to reach full feature parity with
+upstream CouchPotato.
 
 ## Release History
 
@@ -81,3 +132,9 @@ Short summary of what changed and which platforms had working installer/build do
 
 For the pre-rebrand CouchPotato history (`build/2.x`–`build/3.x` tags), see the
 [full release list](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
+
+## Community
+
+Found a bug or have a question? [Open an issue](https://github.com/CouchTomatoes/CouchTomatoServer/issues) —
+check the [FAQ](docs/wiki/FAQ.md) and [`TODO.md`](TODO.md) first in case it's already a known, tracked item.
+</content>
