@@ -119,7 +119,7 @@ class Base(TorrentMagnetProvider):
         return super(Base, self).isEnabled() and self.getDomain()
 
     def correctProxy(self, data):
-        return 'title="Pirate Search"' in data
+        return 'title="Pirate Search"' in toUnicode(data)
 
     def getMoreInfo(self, item):
         full_description = self.getCache('tpb.%s' % item['id'], item['detail_url'], cache_timeout = 25920000)
@@ -140,7 +140,7 @@ class Base(TorrentMagnetProvider):
             try:
                 data = self.urlopen(url + '/search/test+search')
 
-                if 'value="test+search"' in data:
+                if 'value="test+search"' in toUnicode(data):
                     log.info('Success %s', url)
                     continue
             except:
