@@ -272,6 +272,31 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       call, no concurrent search) — looks like a race between the search threads
       and the update, not a deterministic key-encoding bug like the ones already
       fixed. Needs a targeted concurrency repro, not a speculative fix.
+- [x] Check that the Home page's "top movies" charts feature (Blu-ray.com New
+      Releases etc., via `automation.get_chart_list`) actually loads real data —
+      **2026-07-11**: it didn't. `automation/base.py`'s `search()` (called by
+      every chart provider, e.g. `bluray.py`) crashed with `AttributeError: 'str'
+      object has no attribute 'decode'` on every single call — the opposite
+      direction of the usual bytes/str bug (Py2 `.decode()`'d an already-`str`
+      value in Py3). This silently emptied `charts.view`'s response every time,
+      so the Home page's chart section just never rendered, with no visible
+      error anywhere in the UI. Fixed by removing the unneeded `.decode('utf-8')`
+      and encoding+decoding back to `str` properly. Verified: `charts.view` now
+      returns real chart data (movies, posters, metadata) and it renders on the
+      Home page.
+- [x] Found and fixed a second routing-order bug in the same class as the
+      already-fixed `/static/*` one (2026-07-11): `runner.py` registered the
+      `ApiHandler` catch-all (`/api/<key>/(.*)`) *before* plugins load, but
+      plugins like `file.py`'s cached-image server register their own static
+      routes (`/api/<key>/file.cache/(.*)`) *during* plugin loading — so the
+      earlier-registered generic catch-all always shadowed them, and every
+      locally-cached poster/backdrop image in the entire app silently failed
+      with the API's generic "doesn't seem to exist" error instead of serving
+      the image. Fixed by moving plugin loading to happen before the
+      API/web-handler `add_handlers` call, matching the existing
+      registration-order comment already in the file. Verified: `file.cache`
+      URLs now return `image/jpeg` instead of a JSON error, and posters render
+      in both the Wanted list and the Home page charts.
 
 ---
 

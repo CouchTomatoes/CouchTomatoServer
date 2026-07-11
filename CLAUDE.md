@@ -734,6 +734,56 @@ click-through + live provider search — 4 real bugs found and fixed)**
   above. Logged in `TODO.md` §5 for a future targeted concurrency repro rather
   than guessing at a fix.
 
+**2026-07-11 (cont'd, checked the Home page's "top movies" charts feature at the
+user's request — found and fixed 2 more real bugs)**
+- User specifically asked to check whether the main page's "top movies from
+  sources" feature actually works. It didn't — `charts.view` returned
+  `{"charts": [], "count": 0}` every time, so the Home page's chart section was
+  just silently absent, no visible error anywhere in the UI.
+- **Bug 5**: `couchpotato/core/media/movie/providers/automation/base.py`'s
+  `search()` — called by every chart-provider plugin (`bluray.py`, `imdb.py`,
+  etc.) — did `name.decode('utf-8').encode('ascii', 'ignore')`, but `name` is
+  already a `str` in Python 3 (this is the *opposite* direction of the usual
+  bytes/str bug in this port: Py2 code decoding an already-decoded value,
+  instead of failing to decode a still-bytes one). Crashed
+  `automation.get_chart_list` on every single call, for every provider, with
+  `AttributeError: 'str' object has no attribute 'decode'`. Fixed by encoding to
+  ASCII and decoding back to `str` instead of the unneeded `.decode()` first.
+- **Bug 6 — the bigger one**: even after fixing #5, `charts.view` returned real
+  data (confirmed via direct API call — Blu-ray.com's "New Releases" chart, full
+  TMDB metadata, real posters) but posters rendered as blank gray boxes in the
+  browser, for *both* the new charts feature and the already-added "Matrix, The"
+  movie in the Wanted list. Traced the poster `<img>` URL
+  (`/api/<key>/file.cache/<hash>.jpg`) and found it returned the API's generic
+  `"API call doesn't seem to exist"` JSON error instead of the image, even
+  though the file existed on disk in the cache directory. Root cause: the exact
+  same registration-order class of bug as the already-fixed `/static/*` issue
+  (see the 2026-07-10 entry), but in a different pair of routes.
+  `couchpotato/runner.py` registered the generic `ApiHandler` catch-all
+  (`r'/api/<key>/(.*)(/?)'`) *before* `loader.run()` loads plugins — but
+  `couchpotato/core/plugins/file.py`'s `showCacheFile()` (registered via
+  `addApiView('file.cache/(.*)', ..., static = True)`, which calls
+  `application.add_handlers()` directly instead of going through the normal
+  dynamic `api` dict) only runs *during* plugin loading, i.e. strictly after
+  that catch-all was already in place. Since Tornado's `RuleRouter` tries
+  same-host-pattern rule groups in registration order and stops at the first
+  one whose own internal routes match, and `/api/<key>/(.*)`  matches literally
+  any path under the API base, the earlier-registered `ApiHandler` catch-all
+  permanently shadowed `file.cache`'s later-registered `StaticFileHandler` —
+  meaning **every locally-cached poster/backdrop image in the entire app was
+  silently broken** the whole time, not just for charts. This is a distinct
+  instance of the same principle already documented in the file (the comment
+  right above the static-paths registration), just not applied to
+  plugin-registered static routes. Fixed by moving `loader.run()` (plugin
+  loading) to happen *before* the API/web catch-all handlers are registered,
+  so any plugin's static routes land earlier in Tornado's routing table.
+  Verified: `curl` against a `file.cache` URL now returns `image/jpeg` instead
+  of the JSON error, and posters render correctly in both the Wanted list and
+  the Home page charts (screenshots in `docs/screenshots/`).
+- Both fixes verified via a full fresh-DB run: wizard → add movie → Home page
+  showing the real Blu-ray.com chart with working poster images, and the Wanted
+  list showing The Matrix's actual poster instead of a blank box.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
