@@ -24,6 +24,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -103,3 +105,85 @@ jobs:
           name: ${{ steps.version.outputs.version }}
           body: ${{ steps.notes.outputs.body }}
           target_commitish: ${{ github.sha }}
+
+  build-windows:
+    needs: release
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller pywin32
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Install NSIS
+        run: choco install -y nsis
+
+      - name: Build installer
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          & "C:\Program Files (x86)\NSIS\makensis.exe" `
+            "/DAPP_VERSION=$version" `
+            "/DDIST_DIR=$pwd\dist\CouchTomato" `
+            "/DICON_PATH=$pwd\couchpotato\static\images\icons\favicon.ico" `
+            packaging\windows\installer.nsi
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $installer = (Get-ChildItem "packaging\windows\CouchTomato-Setup-*.exe" | Select-Object -First 1).FullName
+          gh release upload "${{ needs.release.outputs.version }}" `
+            "$installer" `
+            --repo "${{ github.repository }}" `
+            --clobber
+
+  build-macos:
+    needs: release
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Build DMG
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          dmg_name="CouchTomato-${version}.dmg"
+          mkdir -p dist/dmg
+          cp -R dist/CouchTomato.app dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "CouchTomato" -srcfolder dist/dmg -ov -format UDZO "$dmg_name"
+          echo "DMG_NAME=$dmg_name" >> "$GITHUB_ENV"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ needs.release.outputs.version }}" \
+            "$DMG_NAME" \
+            --repo "${{ github.repository }}" \
+            --clobber
