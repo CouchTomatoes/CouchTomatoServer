@@ -73,3 +73,13 @@ Full click-through sequence, in order:
   the entire app was silently broken (served the API's "doesn't seem to exist"
   error instead of the image) until this fix moved plugin loading before that
   catch-all is registered.
+
+## 2026-07-11 — directory-browser popup repositioned (design tweak, not a bug fix)
+
+- `2026-07-11-directory-popup-lower.png` — the folder-browser popup (Renamer
+  "From" shown here) after increasing `.directory_list`'s top margin at the
+  user's request, so it sits further below the field. Also fixed a pre-existing
+  drift noticed along the way: the compiled `combined.min.css` actually served
+  to the browser had `margin: 28px`, while the uncompiled `.scss` source said
+  `75px` — the two had gone out of sync at some point with no working build
+  pipeline to catch it. Both now say `90px`.
