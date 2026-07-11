@@ -245,13 +245,33 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       `ss(...)` into a list used only for a debug log message, doesn't crash,
       not yet fixed, low priority)
 - [ ] `grep -r "__pycache__"` clean, `.gitignore` covers build artifacts
-- [ ] Smoke-test core flows manually in a real browser: wizard confirmed clean
+- [x] Smoke-test core flows manually in a real browser: wizard confirmed clean
       through Welcome/General with 0 console errors; add-movie → Transmission →
       renamer confirmed working end to end, but driven via direct API calls +
       a self-seeded test torrent, not actual clicks through the UI against a
       live provider — still need Downloaders/Providers/Renamer/Automation/Finish
       wizard steps, save, and a real in-browser search/snatch against a live
       torrent/NZB provider
+      **2026-07-11 update:** done — clicked through Downloaders (Transmission)/
+      Providers (Binsearch, ThePirateBay, KickAssTorrents, YTS)/Renamer/Automation/
+      Finish, saved, landed on the main app, added "The Matrix" through the real
+      search-and-add UI, and triggered a real search against the live providers
+      enabled above. Found and fixed 4 real bugs along the way (see progress log):
+      two `domready` null-`document.body` crashes (`uniform.js`, `index.html`), a
+      `urlopen()` exception-handling bug that turned every network failure across
+      the *entire app* into an unhandled `TypeError` instead of a clean log line,
+      and a bytes/str `TypeError` in 5 torrent providers' proxy/login-check code.
+      One flaky, not-yet-reproduced-on-demand issue remains: a `struct.error`/
+      `ElemNotFound` seen once when re-adding an already-added movie while a
+      background search was concurrently running — see the entry below.
+- [ ] Investigate a `struct.error: argument for 's' must be a bytes object` /
+      `codernitydb3.index.ElemNotFound` seen once (2026-07-11) in
+      `movie/_base/main.py`'s `add()` → `db.update(m)`, when clicking "Add" on a
+      movie that was already in the library while a background provider search
+      was still running. Didn't reproduce on a clean retry (single `movie.add` API
+      call, no concurrent search) — looks like a race between the search threads
+      and the update, not a deterministic key-encoding bug like the ones already
+      fixed. Needs a targeted concurrency repro, not a speculative fix.
 
 ---
 
