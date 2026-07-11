@@ -824,6 +824,93 @@ user's request — found and fixed 2 more real bugs)**
   `directory.list` called directly now returns a real directory listing
   instead of a 500.
 
+**2026-07-11 (cont'd, Windows/macOS installer builds + a critical release-automation
+bug found along the way)**
+- User asked about packaging a Windows/macOS app and attaching it to releases.
+  Checked first rather than assuming: no `.mako` file, no PyInstaller/py2app/
+  Briefcase/Electron config, no Windows/macOS build scripts existed anywhere in
+  the repo — this was net-new work, not something to "update." Asked the user
+  to pick an approach (PyInstaller onefile vs. full installer vs. something
+  else); they chose the full-installer route (NSIS on Windows, DMG on macOS).
+- **Before touching packaging, found a much bigger, unrelated bug while
+  checking how release artifacts would actually get attached**: `release.yml`
+  has **never fired even once** in this repo. Its push trigger listened for
+  `branches: [master]`, but this repo's default branch is `main` (confirmed via
+  the Actions API — `list_workflow_runs` for `release.yml` returns
+  `total_count: 0`). Every v4.x release visible on this repo was mirrored over
+  from the old `CodeAhmed/CouchTomato` repo during the 2026-07-10 move (see that
+  day's entries) — none were ever actually cut by this workflow running here,
+  including after this session's own PR #1 merge, which silently should have
+  triggered one and didn't. Fixed with a one-line change (`master` → `main`) —
+  the highest-value fix in this whole entry, since the packaging work below is
+  pointless without a release trigger that actually fires.
+- **Packaging approach**: CouchTomato's plugin system
+  (`couchpotato/core/loader.py`) imports every provider/notification/downloader
+  module dynamically by walking the filesystem and calling `import_module()`
+  with computed names — PyInstaller's static import-graph analysis can't trace
+  any of that, so a naive frozen build would silently load zero plugins (a
+  failure mode that's easy to ship without noticing, since the server still
+  boots and the web UI still renders with an empty plugin list). Rather than
+  fight PyInstaller's analysis, `packaging/couchtomato.spec` bundles
+  `couchpotato/` and `libs/` (the vendored packages with no PyPI equivalent) as
+  **loose data trees** alongside the frozen bootstrap, exactly mirroring how
+  they sit next to `CouchPotato.py` in a normal source checkout — the app's own
+  existing `sys.path.insert(0, .../libs)` then makes the same dynamic imports
+  work at runtime inside the frozen build, unchanged.
+- **Validated the hard part locally before trusting it to CI**: this sandbox
+  has no Windows/macOS toolchain, but PyInstaller's Linux target exercises the
+  exact same risky mechanism (loose-data-tree dynamic imports), so built and
+  *ran* the frozen app here first — found and fixed 3 real gaps this way,
+  each confirmed by reading the actual `ModuleNotFoundError` the frozen build
+  produced, not by guessing:
+  - Every pip-installed dependency (`GitPython`, `beautifulsoup4`, `bencode.py`,
+    etc.) is only ever imported from *inside* the loose `couchpotato`/`libs`
+    trees, never from `CouchPotato.py`'s own static import chain — so
+    PyInstaller's analysis never traced any of them. Fixed with explicit
+    `collect_submodules()` hidden imports for each of `requirements.txt`'s
+    packages, plus a couple of stdlib modules (`xml.etree`, `distutils`,
+    `email.mime`, `telnetlib`) that turned out to only be reachable
+    dynamically too.
+  - `couchpotato/core/_base/updater/main.py` does `import version` (no dot) —
+    a bare top-level import relying on Python's implicit script-directory
+    `sys.path` entry that only exists when running `python3 CouchPotato.py`
+    directly from the repo root (where a `version.py` placeholder file lives).
+    That implicit entry doesn't exist in a frozen build. Fixed by explicitly
+    bundling `version.py` as a data file at the bundle root, next to
+    `couchpotato`/`libs`.
+  - Excluded `OpenSSL`/`cryptography` from the build entirely — PyInstaller's
+    isolated-subprocess hook collection for `cryptography` crashed with a Rust
+    `PanicException` in this sandbox even though the package imports fine
+    directly, and it's already an optional dependency
+    (`couchpotato/core/_base/_core.py` logs a warning and continues without it
+    when absent) — not worth fighting, and excluding it sidesteps the crash.
+  - **Result**: a clean local Linux PyInstaller build loads all 104 plugins (0
+    skipped, matching a from-source run) and renders the real wizard UI in a
+    real headless browser — confirmed the core packaging mechanism works
+    before ever touching a Windows or macOS runner.
+- **Windows**: `packaging/windows/installer.nsi` — a standard NSIS script that
+  installs the PyInstaller onedir output to Program Files, creates Start Menu
+  shortcuts and a registry-registered uninstaller. Syntax-verified locally by
+  installing NSIS in this sandbox (`apt-get install nsis`) and actually
+  compiling the script end to end with fake paths — Linux's NSIS compiler
+  produces real Windows `.exe` installers, it just can't run them, so this
+  validates the script itself without validating the real Windows runtime
+  behavior.
+- **macOS**: PyInstaller's `BUNDLE()` step (a no-op on Linux/Windows, real on
+  macOS) produces `CouchTomato.app` directly from the same onedir output; the
+  workflow then wraps it in a DMG via `hdiutil` (built into every macOS
+  runner, no extra tooling needed).
+- Wired both into `release.yml` as `build-windows`/`build-macos` jobs gated on
+  `needs: release`, uploading the installer/DMG to the just-created release via
+  `gh release upload`.
+- **What's genuinely unverified**: actually running the NSIS-built installer on
+  real Windows, and building/mounting the `.app`/DMG on real macOS — this
+  sandbox has no toolchain for either, so this can only be proven by the real
+  `windows-latest`/`macos-latest` GitHub Actions runners on the next push to
+  `main`. First runs of a new packaging pipeline commonly need a round or two
+  of CI-log-driven fixes even after a clean local dry run — plan to watch the
+  next release's Actions run closely rather than assume it's done.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
@@ -862,7 +949,8 @@ higher-level plan for what comes after.
    dependency swap.
 6. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
    Docker/systemd units, docs. (README.md partially rebranded 2026-07-10.)
-7. CI + packaging.
+7. CI + packaging. **2026-07-11: Windows/macOS installer builds done** — see progress
+   log. Still open: Linux packaging (.deb/AppImage) and Docker/systemd (still #6 above).
 8. Decide on the tag-mirroring question in `SUGGESTIONS.md` (blocked on repo owner
    input, not something to keep retrying) — mostly moot now, tags are already mirrored.
 
