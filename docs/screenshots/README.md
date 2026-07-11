@@ -35,12 +35,41 @@ success alone won't catch real bugs, drive the actual UI").
 
 ## 2026-07-11 — full wizard click-through + live provider search
 
+Full click-through sequence, in order:
+
+- `2026-07-11-wizard-downloaders-transmission.png` — Downloaders step with
+  Transmission enabled and its host/username/password fields filled via real
+  clicks/typing (not API calls).
+- `2026-07-11-wizard-providers-enabled.png` — Providers step with Binsearch,
+  ThePirateBay, and YTS toggled on (the providers that don't need an account).
+- `2026-07-11-wizard-renamer.png` — Renamer step with `From`/`To` folder paths
+  filled in.
 - `2026-07-11-wizard-completed-main-app.png` — the main app (`/wanted/`) reached by
-  clicking all the way through the wizard's Downloaders/Providers/Renamer/Automation/
-  Finish steps with zero console errors, after fixing the `uniform.js` and
-  `index.html` `domready` null-`document.body` crashes.
-- `2026-07-11-live-search-matrix-added.png` — "Matrix, The (1999)" in the Wanted list
-  after being added through the real search-and-add UI (not an API call) and searched
-  against Binsearch/ThePirateBay/KickAssTorrents/YTS enabled through the wizard, after
-  fixing the `urlopen()` `Timeout` import bug and the five providers' bytes/str
+  clicking all the way through to Finish with zero console errors, after fixing the
+  `uniform.js` and `index.html` `domready` null-`document.body` crashes.
+- `2026-07-11-search-add-dropdown.png` — typing "The Matrix" into the real
+  search-and-add box and getting live TMDB results.
+- `2026-07-11-search-add-quality-picker.png` — the quality-profile picker + Add
+  button that appears after clicking a search result.
+- `2026-07-11-movie-added-toast.png` — the "Successfully added" confirmation toast
+  after clicking Add.
+- `2026-07-11-live-search-matrix-added.png` — "Matrix, The (1999)" in the Wanted
+  list after being added through the real UI and searched against Binsearch/
+  ThePirateBay/KickAssTorrents/YTS enabled through the wizard, after fixing the
+  `urlopen()` `Timeout` import bug and the five providers' bytes/str
   `correctProxy`/login-check crashes.
+- `2026-07-11-movie-detail-page.png` — the movie detail page (trailer embed,
+  IMDB/Refresh/Delete actions, quality profile dropdown).
+- `2026-07-11-home-charts-working.png` — the Home page's "Blu-ray.com - New
+  Releases" chart rendering real movies with posters, after fixing a real crash
+  in `automation/base.py`'s `search()` (`name.decode('utf-8')` on an already-`str`
+  value — the Py2-vs-Py3 bug in the opposite direction from the usual ones) that
+  was silently emptying every chart provider's results.
+- `2026-07-11-movie-poster-fixed.png` — "Matrix, The" now showing its real poster
+  in the Wanted list, after fixing a routing-order bug in `runner.py`: the
+  generic `ApiHandler` catch-all (registered before plugins load) was shadowing
+  every plugin-registered static route under `/api/<key>/...`, including
+  `file.py`'s cached-image server — so every locally-cached poster/backdrop in
+  the entire app was silently broken (served the API's "doesn't seem to exist"
+  error instead of the image) until this fix moved plugin loading before that
+  catch-all is registered.
