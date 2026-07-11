@@ -1,4 +1,5 @@
 import collections
+import collections.abc
 import ctypes
 import hashlib
 import os
@@ -226,7 +227,7 @@ def natsortKey(string_):
 
 
 def toIterable(value):
-    if isinstance(value, collections.Iterable):
+    if isinstance(value, collections.abc.Iterable):
         return value
     return [value]
 
