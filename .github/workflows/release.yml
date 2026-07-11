@@ -163,7 +163,10 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          pip install pyinstaller
+          # Pillow is needed by PyInstaller's BUNDLE() step to convert the
+          # .ico icon to .icns for the macOS .app - without it, BUNDLE()
+          # raises a hard ValueError instead of just skipping the icon.
+          pip install pyinstaller pillow
 
       - name: Build with PyInstaller
         run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
