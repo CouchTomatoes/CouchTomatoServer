@@ -1,6 +1,6 @@
 name: Release
 
-# Fires on every push to master (i.e. every merged PR) and cuts a new GitHub
+# Fires on every push to main (i.e. every merged PR) and cuts a new GitHub
 # Release. CouchTomato's own version numbers start at v4.0.0 (v1.0.x was a
 # false start, retired — see SUGGESTIONS.md); after that the patch version
 # auto-increments from the latest existing v4+ tag. Release notes use the
@@ -16,7 +16,7 @@ name: Release
 on:
   push:
     branches:
-      - master
+      - main
 
 permissions:
   contents: write
