@@ -14,21 +14,53 @@ must stay GPLv3).
 
 ## Repo landscape — READ BEFORE TOUCHING OTHER REPOS
 
-There are/were three repos in play. Decisions already made with the user:
+**2026-07-10: the project moved. `CouchTomatoes/CouchTomatoServer` is now canonical.**
 
-- **`CodeAhmed/CouchTomato` (THIS repo) — canonical, active.** All Python porting work
-  happens here. Chosen over the alternative because it already has full, authentic
-  upstream history imported (see below) instead of hand-replayed commits.
+- **If you're a session working in `CouchTomatoes/CouchTomatoServer`**: that's the
+  canonical repo now — carry on exactly as the rest of this file describes, just
+  mentally substitute `CouchTomatoes/CouchTomatoServer` anywhere `CodeAhmed/
+  CouchTomato` is referenced (including in the progress log below, which predates
+  the move and still says `CodeAhmed/CouchTomato` throughout — that's accurate
+  history, not a mistake to fix). Full history — `master`, the
+  `claude/couch-tomato-parity-e1f5bl` dev branch, and every tag — was pushed there
+  directly (`git push`, not a rewrite), and all GitHub Releases were mirrored to
+  match via `.github/workflows/mirror-releases-to-target.yml` (verified beforehand:
+  its read/parse/iterate logic was dry-run tested against the real ~25-release
+  dataset here first — see the 2026-07-10 progress log entry and `SUGGESTIONS.md`).
+  Working conventions (dev branch name, PR-before-merge, etc.) all still apply
+  unchanged, just in the new repo.
+- **If you're a session working in `CodeAhmed/CouchTomato` (this repo)**: it's now
+  the **historical origin / legacy mirror**, not where active development
+  continues. Nothing here is invalidated — it still holds the authentic imported
+  upstream history and everything built on top through the move — but new work
+  should happen in `CouchTomatoServer` going forward. Why: the user wanted the
+  project living under their `CouchTomatoes` account, matching where the earlier
+  .NET scaffold and manual-replay attempt also live. This session's GitHub/git
+  access is permanently scoped to `codeahmed`-owned repos for its whole lifetime
+  (confirmed by testing both `add_repo` and a direct authenticated `git push`
+  against `CouchTomatoes/CouchTomatoServer` — both refused, independent of actual
+  GitHub collaborator permissions), so it cannot itself push further changes there;
+  a genuinely fresh session started with `CouchTomatoServer` as its *initial* repo
+  source is required to work there directly.
+
+Other repos in play:
+
 - `CouchTomatoes/CouchTomato` — an earlier manual attempt (48 commits hand-replaying
   real CouchPotato history one commit at a time while porting). **Superseded, not
-  canonical.** Don't import work from it or treat it as a merge source unless the user
-  asks — it's slower/lower-fidelity than the bulk import already done here.
-- `CouchTomatoes/CouchTomatoServer` — a .NET 8 rewrite scaffold (ASP.NET Core API,
-  early stage, tags v0.1.0–v0.3.0). **Explicitly paused** by user decision — focus is
-  Python parity first. Revisit later, possibly as a from-scratch v2 using the finished
-  Python app as the functional/feature reference (there is no mechanical way to get
-  git-history parity across a language rewrite — track feature parity via a checklist
-  instead, not via commits).
+  canonical.** Unrelated to the move above — don't confuse with `CouchTomatoServer`,
+  and don't import work from it or treat it as a merge source unless the user asks.
+- `CouchTomatoes/CouchTomatoServer-DotNet-WIP` — the .NET 8 rewrite scaffold (ASP.NET
+  Core API, early stage, tags v0.1.0–v0.3.0). Renamed from `CouchTomatoServer` by
+  the user to free up that name for the Python project's move. **Still explicitly
+  paused** by user decision — focus is Python parity first. Revisit later, possibly
+  as a from-scratch v2 using the finished Python app as the functional/feature
+  reference (there is no mechanical way to get git-history parity across a language
+  rewrite — track feature parity via a checklist instead, not via commits).
+- `CodeAhmed/CouchPotatoAPI` — a fork of the archived, unlicensed `CouchPotato/
+  CouchPotatoAPI` (source for the dead `api.couchpota.to` backend; see `TODO.md`
+  §5 and `README.md`'s "Project status" note). The user also asked for this
+  mirrored into a `CouchTomatoes` repo, same reasoning as the main move — check
+  `SUGGESTIONS.md` for whether that's been done yet.
 
 ## History policy — DO NOT VIOLATE
 
@@ -567,6 +599,71 @@ Rules going forward:
   commit's own merge) came out correct with zero manual intervention, confirming
   the fix holds going forward.
 
+**2026-07-10 (cont'd, moved canonical repo to CouchTomatoes/CouchTomatoServer)**
+- User created a fresh empty repo at `CouchTomatoes/CouchTomatoServer` (having
+  renamed the previous occupant of that name — the paused .NET scaffold — to
+  `CouchTomatoes/CouchTomatoServer-DotNet-WIP` first) and asked to move this
+  project there as the new canonical home, plus mirror the `CouchPotatoAPI` fork
+  into `CouchTomatoes` too. Clarified up front via three quick questions: target
+  repo (new one, confirmed empty and ready), move-vs-mirror (**move** —
+  `CouchTomatoServer` becomes canonical, this repo becomes historical), and
+  whether to also mirror `CouchPotatoAPI` (yes).
+- This session's git/GitHub access turned out to be **permanently locked to
+  `codeahmed`-owned repos for its whole lifetime** — confirmed by directly testing
+  both `add_repo` (refused: "cross-tier adds are not supported") and an
+  authenticated `git push` to `CouchTomatoServer` (refused by the proxy: "not in
+  this session's authorized repository set"), the second time re-tested *after*
+  the user added `CodeAhmed` as a `CouchTomatoServer` collaborator specifically to
+  rule out a permissions explanation — still refused identically, confirming it's
+  a session-tier architectural lock, not a GitHub permission gap. So the actual
+  `git push` had to be done by the user themselves, using the exact commands
+  logged in `SUGGESTIONS.md`.
+- Before handing that off, built and **verified** (rather than just handed over
+  untested) `.github/workflows/mirror-releases-to-target.yml`, since a plain
+  `git push --tags` only moves git tags — GitHub Release objects (the styled
+  NEW/FIX notes) are separate per-repo metadata that never transfers with git.
+  Verification method, since this session can't write-test against the real
+  target: added a throwaway `TEST-dry-run-mirror.yml` that ran the exact
+  read/parse/iterate logic (pagination, `jq` field extraction, the EOF-safe
+  while-read loop from the release-notes fix above) against the real ~25-release
+  dataset in *this* repo, without calling `gh release create/edit`. Result:
+  **PASS — processed all 25 releases** (10 `v4.x` + 15 mirrored upstream
+  `build/*`) with correct tag/title/body, none dropped. Deleted the test
+  workflow afterward; the real mirror workflow's only untested part is the final
+  `gh release create/edit` call, which reuses the exact command pattern already
+  proven twice elsewhere in this project.
+- **User confirmed the move is done**: pushed the full project (`master`/`main` +
+  `claude/couch-tomato-parity-e1f5bl` + tags) to `CouchTomatoServer` and ran
+  `mirror-releases-to-target.yml` there themselves. Verified from this session
+  (read-only, since public-repo `git ls-remote`/fetch works regardless of the
+  session's write-access lock): `CouchTomatoServer`'s default branch is `main`
+  (not `master`), and it has the dev branch + all tags present at the expected
+  commit. Could not independently verify the Releases page itself (same
+  write-access wall blocks reads through the GitHub API/App route too, only
+  plain anonymous git fetch/ls-remote works) — take the user's confirmation on
+  that part at face value unless they report otherwise.
+- Re-tested write access once more after the user added `CodeAhmed` as a
+  collaborator there (see above) — still refused, so **this repo's session
+  cannot do any further work in `CouchTomatoServer` directly, ever, for the rest
+  of its lifetime.** Explained this clearly to the user: the only way to get a
+  session with real working access there is to start a genuinely new session
+  with `CouchTomatoServer` as its *initial* repo source (new Claude Code Web/
+  Cowork session picking that repo, or `claude` run from a local clone of it) —
+  cannot be done by asking this session to somehow "switch."
+- Updated this file's "Repo landscape" section to formally flip canonical status
+  to `CouchTomatoServer` and demote this repo to historical/legacy, plus a note
+  in "Working conventions" about the default branch name difference (`main` vs
+  `master`). **This specific edit (the one you're reading) exists only in
+  `CodeAhmed/CouchTomato` as of when it was written** — it was NOT pushed to
+  `CouchTomatoServer` (same access wall), so if you're reading this from a fresh
+  session in `CouchTomatoServer`, its copy of `CLAUDE.md` may be one commit
+  behind this one. Worth a quick `git log`/diff check; if it's missing, the
+  fix is trivial since both repos share full git history — from a
+  `CouchTomatoServer` clone: `git fetch https://github.com/CodeAhmed/CouchTomato.git
+  claude/couch-tomato-parity-e1f5bl && git cherry-pick <this-commit-sha>` (or just
+  re-apply the same Repo-landscape/Working-conventions edits by hand — they're
+  short).
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
@@ -611,9 +708,14 @@ higher-level plan for what comes after.
 
 ## Working conventions
 
-- Development branch: `claude/couch-tomato-parity-e1f5bl`. PR into `master` when ready
-  for review (don't push directly to `master` again without the user's explicit say-so —
-  that was a one-time exception for the initial history import).
+- **Do this in whichever repo is canonical for your session** — `CouchTomatoes/
+  CouchTomatoServer` if that's where you're working (see Repo landscape above),
+  `CodeAhmed/CouchTomato` only if you're deliberately doing something in the
+  legacy/historical mirror.
+- Development branch: `claude/couch-tomato-parity-e1f5bl`. PR into `master` (or that
+  repo's default branch — note `CouchTomatoServer`'s is `main`, not `master`) when
+  ready for review (don't push directly to the default branch without the user's
+  explicit say-so — that was a one-time exception for the initial history import).
 - Commit after each mechanical/logical step, not in one giant diff — makes the porting
   process auditable and bisectable.
 - No `.env`/secrets expected in this repo; none encountered so far.
