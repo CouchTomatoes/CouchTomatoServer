@@ -12,6 +12,19 @@ name: Release
 # "before" SHA didn't match the actually-preceding release). Tag-based ranges
 # don't have that problem — they're computed from real git state, not event
 # metadata that can lag behind rapid pushes.
+#
+# Every release attaches build artifacts for every platform/arch CouchTomato
+# can currently be packaged for (see packaging/couchtomato.spec for why the
+# PyInstaller build itself works the way it does):
+#   - Windows x64: NSIS installer (.exe) + portable zip
+#   - Windows arm64: portable zip (NSIS install attempted too, best-effort -
+#     x86 NSIS under Windows-on-ARM emulation is unverified on real hardware)
+#   - Linux x64/arm64: .tar.gz + .AppImage
+#   - macOS universal2 (x64+arm64 in one binary): .dmg + .app.tar.gz, built
+#     by building natively on both an Intel and an Apple Silicon runner, then
+#     lipo-merging the two into a single universal binary (see
+#     build-macos-universal below) - a normal single-arch build can only
+#     satisfy visitors on the same CPU architecture as the build machine.
 
 on:
   push:
@@ -126,6 +139,11 @@ jobs:
       - name: Build with PyInstaller
         run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
 
+      - name: Build portable zip
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          Compress-Archive -Path "dist\CouchTomato\*" -DestinationPath "CouchTomato-$version-win_x64.zip"
+
       - name: Install NSIS
         run: choco install -y nsis
 
@@ -142,15 +160,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $installer = (Get-ChildItem "packaging\windows\CouchTomato-Setup-*.exe" | Select-Object -First 1).FullName
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
           gh release upload "${{ needs.release.outputs.version }}" `
-            "$installer" `
+            "CouchTomato-$version-win_x64.zip" `
+            "packaging\windows\CouchTomato-Setup-$version.exe" `
             --repo "${{ github.repository }}" `
             --clobber
 
-  build-macos:
+  build-windows-arm64:
     needs: release
-    runs-on: macos-latest
+    runs-on: windows-11-arm
+    continue-on-error: true # new/preview hosted runner label - don't block the rest of the release if it's unavailable
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -163,13 +183,230 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          # Pillow is needed by PyInstaller's BUNDLE() step to convert the
-          # .ico icon to .icns for the macOS .app - without it, BUNDLE()
-          # raises a hard ValueError instead of just skipping the icon.
+          pip install pyinstaller pywin32
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Build portable zip
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          Compress-Archive -Path "dist\CouchTomato\*" -DestinationPath "CouchTomato-$version-win_arm64.zip"
+
+      - name: Upload zip to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          gh release upload "${{ needs.release.outputs.version }}" `
+            "CouchTomato-$version-win_arm64.zip" `
+            --repo "${{ github.repository }}" `
+            --clobber
+
+      # Best-effort only: NSIS itself only ships x86/x64 binaries, so this
+      # relies on Windows-on-ARM's x86 emulation working inside the runner -
+      # unverified on real hardware. If it fails, the portable zip above has
+      # already been uploaded, so arm64 users aren't left with nothing.
+      - name: Install NSIS
+        run: choco install -y nsis
+        continue-on-error: true
+
+      - name: Build installer
+        continue-on-error: true
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          & "C:\Program Files (x86)\NSIS\makensis.exe" `
+            "/DAPP_VERSION=$version" `
+            "/DDIST_DIR=$pwd\dist\CouchTomato" `
+            "/DICON_PATH=$pwd\couchpotato\static\images\icons\favicon.ico" `
+            packaging\windows\installer.nsi
+
+      - name: Upload installer to release (if it built)
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          $installer = "packaging\windows\CouchTomato-Setup-$version.exe"
+          if (Test-Path $installer) {
+            gh release upload "${{ needs.release.outputs.version }}" `
+              "$installer" --repo "${{ github.repository }}" --clobber
+          }
+
+  build-linux:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Package tar.gz
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          tar czf "CouchTomato-${version}-linux_x64.tar.gz" -C dist CouchTomato
+
+      - name: Build AppImage
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          bash packaging/linux/build-appimage.sh dist/CouchTomato x86_64 "CouchTomato-${version}-x86_64.AppImage"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          gh release upload "${{ needs.release.outputs.version }}" \
+            "CouchTomato-${version}-linux_x64.tar.gz" \
+            "CouchTomato-${version}-x86_64.AppImage" \
+            --repo "${{ github.repository }}" \
+            --clobber
+
+  build-linux-arm64:
+    needs: release
+    runs-on: ubuntu-24.04-arm
+    continue-on-error: true # new/preview hosted runner label - don't block the rest of the release if it's unavailable
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Package tar.gz
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          tar czf "CouchTomato-${version}-linux_arm64.tar.gz" -C dist CouchTomato
+
+      - name: Build AppImage
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          bash packaging/linux/build-appimage.sh dist/CouchTomato aarch64 "CouchTomato-${version}-aarch64.AppImage"
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          gh release upload "${{ needs.release.outputs.version }}" \
+            "CouchTomato-${version}-linux_arm64.tar.gz" \
+            "CouchTomato-${version}-aarch64.AppImage" \
+            --repo "${{ github.repository }}" \
+            --clobber
+
+  # macOS universal2 (x64+arm64 in one binary) is built from two separate
+  # native builds - one per architecture - then merged with lipo, rather than
+  # a single cross-compiled build. PyInstaller doesn't cross-compile, and
+  # actions/setup-python's macOS interpreters are single-arch, so this is the
+  # standard way to get a universal2 PyInstaller bundle. Genuinely unverified
+  # beyond "this is the documented approach" - this sandbox has no macOS
+  # toolchain at all, so the lipo-merge step in build-macos-universal below
+  # can only be proven by a real run.
+  build-macos-x64:
+    needs: release
+    runs-on: macos-13 # last Intel-based hosted runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
           pip install pyinstaller pillow
 
       - name: Build with PyInstaller
         run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-x64-build
+          path: dist/CouchTomato.app
+          include-hidden-files: true
+
+  build-macos-arm64:
+    needs: release
+    runs-on: macos-latest # Apple Silicon
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-arm64-build
+          path: dist/CouchTomato.app
+          include-hidden-files: true
+
+  build-macos-universal:
+    needs: [release, build-macos-x64, build-macos-arm64]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download x64 build
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-x64-build
+          path: x64-app
+
+      - name: Download arm64 build
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-arm64-build
+          path: arm64-app
+
+      - name: Merge into a universal2 .app with lipo
+        run: |
+          chmod +x arm64-app/Contents/MacOS/* x64-app/Contents/MacOS/* 2>/dev/null || true
+          bash packaging/macos/merge-universal.sh arm64-app x64-app dist/CouchTomato.app
 
       - name: Build DMG
         run: |
@@ -182,11 +419,19 @@ jobs:
           hdiutil create -volname "CouchTomato" -srcfolder dist/dmg -ov -format UDZO "$dmg_name"
           echo "DMG_NAME=$dmg_name" >> "$GITHUB_ENV"
 
+      - name: Package .app.tar.gz
+        run: |
+          version="${{ needs.release.outputs.version }}"
+          version="${version#v}"
+          tar czf "CouchTomato-${version}-macos_universal.app.tar.gz" -C dist CouchTomato.app
+          echo "APP_TARBALL=CouchTomato-${version}-macos_universal.app.tar.gz" >> "$GITHUB_ENV"
+
       - name: Upload to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release upload "${{ needs.release.outputs.version }}" \
             "$DMG_NAME" \
+            "$APP_TARBALL" \
             --repo "${{ github.repository }}" \
             --clobber
