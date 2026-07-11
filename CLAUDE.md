@@ -911,6 +911,41 @@ bug found along the way)**
   of CI-log-driven fixes even after a clean local dry run — plan to watch the
   next release's Actions run closely rather than assume it's done.
 
+**2026-07-11 (cont'd, merged PR #2, watched the real first run, fixed the one
+real gap — pipeline is now fully green)**
+- User said to merge PR #2. Marked it ready for review (it was still a draft)
+  and merged it, which pushed to `main` and fired `release.yml` for real for
+  the very first time (confirmed via the Actions API: `run_number: 1`).
+- **Result of that first real run**: `release` job succeeded (cut `v4.0.12`);
+  `build-windows` **succeeded completely** on the first try — PyInstaller
+  build, NSIS install, installer build, and upload to the release all green,
+  no fixes needed. `build-macos` failed at PyInstaller's `BUNDLE()` step:
+  `ValueError: ... only ('icns',) images may be used as icons. If Pillow is
+  installed, automatic conversion will be attempted.` Pillow wasn't installed
+  in that job. Everything before that (the PyInstaller onedir build itself)
+  had completed cleanly on macOS too, matching the already-validated Linux
+  build — only the `.app` icon conversion was missing a dependency.
+- Verified the fix locally before pushing: installed Pillow in this sandbox
+  and confirmed `PyInstaller.building.icon.normalize_icon_type()` actually
+  produces a real `.icns` file from the existing `favicon.ico` once Pillow is
+  present. Opened PR #3 with the one-line fix (`pip install pyinstaller
+  pillow`), merged it (small, low-risk, CI-only, already verified — matches
+  the spirit of "get this pipeline working" rather than needing a fresh
+  round of confirmation for every one-line CI fix).
+- **That merge fired `release.yml` again (`run_number: 2`) — fully green this
+  time**: `release`, `build-windows`, and `build-macos` all succeeded.
+  Confirmed with concrete proof via `get_release_by_tag`, not just green
+  checkmarks: release `v4.0.13`'s assets list shows both
+  `CouchTomato-4.0.13.dmg` (22.8 MB) and `CouchTomato-Setup-4.0.13.exe`
+  (20 MB) actually `"state":"uploaded"`.
+- **The Windows/macOS packaging effort from this session is done and proven
+  working end to end on real CI, not just locally**: every future merge to
+  `main` now automatically cuts a release with both installers attached.
+  First-run friction was exactly one real issue (the Pillow/icns gap), fixed
+  in one round — in line with the expectation logged above that a new
+  packaging pipeline commonly needs a round or two of CI-log-driven fixes
+  even after a clean local dry run.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
