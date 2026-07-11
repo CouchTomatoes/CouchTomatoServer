@@ -664,6 +664,76 @@ Rules going forward:
   re-apply the same Repo-landscape/Working-conventions edits by hand — they're
   short).
 
+**2026-07-11 (fresh session working directly in `CouchTomatoServer`, full wizard
+click-through + live provider search — 4 real bugs found and fixed)**
+- This session's GitHub/git access was scoped to `CouchTomatoes/CouchTomatoServer`
+  directly (confirmed via `git remote -v` and a real `git push`) — the first
+  session since the move with genuine write access here, exactly the "start a
+  fresh session with `CouchTomatoServer` as the initial repo source" path the
+  previous session's entries said would be needed.
+- Small side task first: fixed stale `CodeAhmed/CouchTomato` links in `README.md`
+  (badges + clone URL, left over from before the move), added a GPLv3 license
+  badge, and added a generated social-preview image + a plain-tomato-icon logo
+  under `docs/branding/` for the repo's GitHub "About" page (that setting isn't
+  exposed via the API, so it's a manual upload — documented in
+  `docs/branding/README.md`). Merged as PR #1.
+- Rebuilt the runtime environment from scratch (fresh container had none of the
+  previously-installed pip packages or the test `transmission-daemon` from prior
+  sessions) and picked up the "click through the wizard + real provider search"
+  item from `TODO.md` §5, using Playwright against a real headless Chromium
+  exactly as established — this is what actually found the bugs below, not
+  reading the code.
+- **Bug 1 & 2**: two more instances of the `document.body` null-during-teardown
+  crash class (the same one `login.js` was already guarded against, per
+  `TODO.md`'s "there may be others further down the domready queue" note).
+  `library/uniform.js`'s `Uniform` class (initialized on every single page load,
+  not just login) crashed first, which meant `index.html`'s own inline
+  `domready` block (setting the `data-api` attribute) never got a chance to run
+  either — fixing the first one revealed the second. Both fixed with the same
+  `if (!b) return` guard pattern.
+- **Bug 3 — the big one**: `couchpotato/core/plugins/base.py`'s `urlopen()`
+  (the core HTTP helper every provider/notification/API client in the app goes
+  through) imported `Timeout` from `requests.packages.urllib3` — but that's the
+  request-timeout *config* class, not an exception. Its `except (IOError,
+  MaxRetryError, Timeout):` clause therefore raised `TypeError: catching classes
+  that do not inherit from BaseException is not allowed` on *every single
+  genuine network failure* (timeouts, proxy errors, connection errors) instead of
+  logging it cleanly and running the existing failed-host backoff logic. This has
+  silently broken graceful network-error handling for the entire app's whole
+  lifetime post-port. Found by watching KickAssTorrents'/ThePirateBay's real
+  proxy-discovery loop (which tries ~20 mirror domains, expecting most to fail)
+  flood the log with this `TypeError` instead of clean debug lines. Fixed by
+  importing `urllib3.exceptions.TimeoutError` instead (the real exception base
+  class) as `Timeout`. Verified: zero occurrences of the `TypeError` across a
+  full clean wizard + add + search run afterward, and confirmed a working proxy
+  domain now gets found and used for KickAssTorrents (`Using proxy for
+  KickAssTorrents: https://kat.how`).
+- **Bug 4**: five torrent providers did plain string-containment checks directly
+  against `urlopen()`/`getHTMLData()`'s `bytes` return value —
+  `kickasstorrents.py`'s and `thepiratebay.py`'s `correctProxy()` (used by the
+  same proxy-discovery loop above), `thepiratebay.py`'s `doTest()`, and
+  `iptorrents.py`'s/`bitsoup.py`'s "nothing found!" empty-result check. Same
+  root cause as every other bytes/str bug already fixed in this port
+  (`urlopen()` returns real `bytes` in Py3, call site never decoded back) —
+  fixed all five with `toUnicode()` at the call site.
+- Result: the wizard now completes end to end (Welcome → General → Downloaders
+  → Providers → Renamer → Automation → Finish → save) with **zero** console
+  errors, landing on the real main app. Added "The Matrix" through the actual
+  search-and-add UI (not an API call), enabled Binsearch/ThePirateBay/
+  KickAssTorrents/YTS through the wizard (the providers that don't need an
+  account), and triggered a real search against them — confirmed clean, no
+  crashes, proxy discovery working. Screenshots in `docs/screenshots/` (see its
+  README for the 2026-07-11 entry).
+- **One remaining, not-yet-root-caused finding**: a `struct.error: argument for
+  's' must be a bytes object` / `codernitydb3.index.ElemNotFound` seen once when
+  clicking "Add" on a movie that was already in the library while a background
+  provider search was still running (`movie/_base/main.py`'s `add()` →
+  `db.update(m)`). Did not reproduce on a clean retry (single `movie.add` API
+  call, no concurrent search) — looks like a race between the search threads and
+  the update, not a deterministic key-encoding bug like the ones just fixed
+  above. Logged in `TODO.md` §5 for a future targeted concurrency repro rather
+  than guessing at a fix.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified

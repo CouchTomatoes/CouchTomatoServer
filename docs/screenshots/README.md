@@ -32,3 +32,15 @@ success alone won't catch real bugs, drive the actual UI").
   rendered the literal corrupted text `b'http://localhost:9091'`).
 - `2026-07-10-settings-renamer.png` — Renamer settings page with clean `From`/`To`
   folder paths, same underlying fix.
+
+## 2026-07-11 — full wizard click-through + live provider search
+
+- `2026-07-11-wizard-completed-main-app.png` — the main app (`/wanted/`) reached by
+  clicking all the way through the wizard's Downloaders/Providers/Renamer/Automation/
+  Finish steps with zero console errors, after fixing the `uniform.js` and
+  `index.html` `domready` null-`document.body` crashes.
+- `2026-07-11-live-search-matrix-added.png` — "Matrix, The (1999)" in the Wanted list
+  after being added through the real search-and-add UI (not an API call) and searched
+  against Binsearch/ThePirateBay/KickAssTorrents/YTS enabled through the wizard, after
+  fixing the `urlopen()` `Timeout` import bug and the five providers' bytes/str
+  `correctProxy`/login-check crashes.
