@@ -21,12 +21,17 @@ cp -a "$arm64_dir" "$out_dir"
 # Mach-O binaries (the app's own executable plus any compiled .so/.dylib
 # dependencies), leave everything else (resources, .py sources, data files)
 # as copied from the arm64 tree since they're architecture-independent.
+# Some vendored data files (e.g. libs/unrar2/unrar) are legacy single-arch
+# binaries bundled as-is rather than built per-arch by PyInstaller, so both
+# trees carry byte-identical copies - lipo refuses to fat-merge two slices
+# of the same architecture, so skip those rather than fail the build.
 find "$arm64_dir" -type f | while IFS= read -r arm64_file; do
   rel_path="${arm64_file#"$arm64_dir"/}"
   x64_file="$x64_dir/$rel_path"
   out_file="$out_dir/$rel_path"
 
   [ -f "$x64_file" ] || continue
+  cmp -s "$arm64_file" "$x64_file" && continue
 
   if file -b "$arm64_file" | grep -q 'Mach-O'; then
     lipo -create "$arm64_file" "$x64_file" -output "$out_file"
