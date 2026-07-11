@@ -1,8 +1,9 @@
 CouchTomato
 =====
 
-[![Release](https://img.shields.io/github/v/release/CodeAhmed/CouchTomato)](https://github.com/CodeAhmed/CouchTomato/releases)
-[![Release workflow](https://github.com/CodeAhmed/CouchTomato/actions/workflows/release.yml/badge.svg)](https://github.com/CodeAhmed/CouchTomato/actions/workflows/release.yml)
+[![Release](https://img.shields.io/github/v/release/CouchTomatoes/CouchTomatoServer)](https://github.com/CouchTomatoes/CouchTomatoServer/releases)
+[![Release workflow](https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/release.yml/badge.svg)](https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/release.yml)
+[![License: GPLv3](https://img.shields.io/badge/license-GPLv3-blue.svg)](license.txt)
 
 CouchTomato is a Python 3 port and rebrand of [CouchPotato](https://github.com/CouchPotato/CouchPotatoServer),
 the original automatic NZB and torrent downloader, which stopped receiving updates in 2020 while still on
@@ -30,9 +31,9 @@ CouchTomato requires **Python 3.11+**. It can be run from source, and will use *
 sure that is installed too.
 
 * Install [Python 3.11+](https://www.python.org/downloads/) and [git](https://git-scm.com/)
-* Clone the repo: `git clone https://github.com/CodeAhmed/CouchTomato.git`
+* Clone the repo: `git clone https://github.com/CouchTomatoes/CouchTomatoServer.git`
 * Install dependencies: `pip install -r requirements.txt`
-* Start it: `python3 CouchTomato/CouchPotato.py`
+* Start it: `python3 CouchTomatoServer/CouchPotato.py`
 * Your browser should open up, but if it doesn't go to `http://localhost:5050/`
 
 Docker:
