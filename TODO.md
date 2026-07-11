@@ -297,6 +297,29 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       registration-order comment already in the file. Verified: `file.cache`
       URLs now return `image/jpeg` instead of a JSON error, and posters render
       in both the Wanted list and the Home page charts.
+- [x] Enumerated every API call the Home page makes on load (2026-07-11, via
+      Playwright network capture): `media.list`, `dashboard.soon`,
+      `suggestion.view`, `notification.listener`, `charts.view`, `file.cache/*`
+      (one per poster), `updater.info`. All return 200 with a clean log (only
+      the already-documented external-service noise: dead `couchpota.to`,
+      IMDB blocking automated boxoffice-page scraping, invalid/placeholder
+      OMDB API key). Found and fixed 2 more real bugs along the way:
+      - `couchpotato/core/plugins/browser.py`'s `is_hidden()` (used by the
+        Directory-type settings field's folder-browser popup) wrapped a path
+        in `ss()` (bytes) then called `.startswith('.')` with a `str` literal —
+        another instance of the recurring `ss()`-misuse pattern flagged
+        earlier in this file. Crashed `directory.list` on every call, which
+        also crashed the corresponding frontend code trying to render the
+        (never-received) response.
+      - `static/scripts/page/settings.js`'s `Option.Directory.filterDirectory()`
+        and `.fillBrowser()` referenced `self.dir_list`/`self.back_button` —
+        both only created once the folder-browser popup has been opened via
+        `showBrowser()` — but `filterDirectory` runs on every `change`/`keyup`/
+        `paste` of the plain text input regardless of whether the popup was
+        ever opened (i.e., a user typing or pasting a path directly, a normal
+        workflow). Same class of bug as the `show_hidden` fix earlier in this
+        session, just two more unguarded references in sibling methods.
+        Guarded all of them the same way.
 
 ---
 
