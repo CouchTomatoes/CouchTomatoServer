@@ -784,6 +784,46 @@ user's request — found and fixed 2 more real bugs)**
   showing the real Blu-ray.com chart with working poster images, and the Wanted
   list showing The Matrix's actual poster instead of a blank box.
 
+**2026-07-11 (cont'd, enumerated every Home-page API call, found 2 more real bugs)**
+- User asked to check for any other APIs the Home page loads, and to re-verify
+  the added movie's poster + the server log. Captured every network request via
+  Playwright: `media.list`, `dashboard.soon`, `suggestion.view`,
+  `notification.listener`, `charts.view`, one `file.cache/*` per poster, and
+  `updater.info` — all 200, and the log was clean apart from the
+  already-documented external-service noise (dead `couchpota.to`, IMDB blocking
+  automated `/boxoffice/` scraping, an invalid/placeholder OMDB API key).
+- While confirming that, the wizard run surfaced two new frontend JS errors
+  ("Cannot read properties of undefined (reading 'getElements')" and "...
+  (reading 'set')") paired with a server-side "Failed getting directory" error.
+  Root cause, found by reading the traceback: `couchpotato/core/plugins/
+  browser.py`'s `is_hidden()` wrapped a path in `ss()` (bytes) then called
+  `.startswith('.')` with a `str` literal — yet another instance of the
+  recurring `ss()`-misuse pattern this file's progress log has flagged
+  repeatedly ("expect this pattern elsewhere, grep for `ss(`"). This crashed
+  `directory.list` on every single call, which is the API behind every
+  Directory-type settings field's folder-browser popup. Fixed by dropping the
+  unnecessary `ss()` (matches the established fix pattern: paths should stay
+  `str` throughout in Py3).
+- Fixing that revealed the frontend errors were only *partly* a downstream
+  symptom — `static/scripts/page/settings.js`'s `Option.Directory.
+  filterDirectory()` and `.fillBrowser()` both unconditionally reference
+  `self.dir_list`/`self.back_button`, which are only created once the
+  folder-browser *popup* has actually been opened via `showBrowser()`. But
+  `filterDirectory()` runs on every `change`/`keyup`/`paste` of the plain text
+  input regardless of whether the popup was ever opened — i.e., any real user
+  who types or pastes a directory path directly (a completely normal workflow)
+  hits this. This is the same underlying class of bug as the `show_hidden` fix
+  earlier in this session (`getDirs()`'s `self.show_hidden.checked`) — just two
+  more unguarded references in sibling methods of the same widget that hadn't
+  been audited yet. Guarded both the same way (early-return / conditional
+  branch when the popup-only elements don't exist). Hand-patched
+  `combined.base.min.js` to match, as with every other frontend fix this
+  session.
+- Verified via a full fresh-DB wizard + add-movie run: zero "Failed getting
+  directory" errors, zero frontend JS errors reported to the API log, and
+  `directory.list` called directly now returns a real directory listing
+  instead of a 500.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
