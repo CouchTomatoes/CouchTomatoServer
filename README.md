@@ -29,15 +29,11 @@ and moved into your library once it finishes downloading.
 
 * **[Download the latest release](https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest)** —
   Windows installer/zip, macOS universal2 DMG, or Linux tar.gz/AppImage
-* **[Wiki: Installation guide](docs/wiki/Installation.md)** — per-platform setup instructions
-* **[Wiki: Migrating from CouchPotato](docs/wiki/Migration.md)**
-* **[Wiki: FAQ / Troubleshooting](docs/wiki/FAQ.md)**
-* **[Wiki: Architecture & porting status](docs/wiki/Architecture-Overview.md)**
+* **[Wiki: Installation guide](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Installation)** — per-platform setup instructions
+* **[Wiki: Migrating from CouchPotato](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Migration)**
+* **[Wiki: FAQ / Troubleshooting](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ)**
+* **[Wiki: Architecture & porting status](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Architecture-Overview)**
 * **[TODO.md](TODO.md)** — checkbox-tracked list of what's left for full parity with upstream
-
-> The links above point at markdown pages in this repo's `docs/wiki/` folder rather than a GitHub
-> Wiki tab — the Wiki feature isn't enabled on this repository yet. See `docs/wiki/README.md` for why
-> and how to move them once it is.
 
 ## Providers & Downloaders
 
@@ -86,7 +82,7 @@ sure that is installed too.
 * Start it: `python3 CouchTomatoServer/CouchPotato.py`
 * Your browser should open up, but if it doesn't go to `http://localhost:5050/`
 
-Prefer a packaged build instead? See the [Installation wiki page](docs/wiki/Installation.md) for
+Prefer a packaged build instead? See the [Installation wiki page](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Installation) for
 platform-specific installers, or the [latest release](https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest)
 directly.
 
@@ -109,9 +105,9 @@ Don't forget to enable development inside the settings. This disables some funct
 ## Project status
 
 This is an active port — see [`CLAUDE.md`](CLAUDE.md) for the full history/architecture notes,
-[`docs/wiki/Architecture-Overview.md`](docs/wiki/Architecture-Overview.md) for a higher-level summary,
-and [`TODO.md`](TODO.md) for a checkbox-tracked list of what's left to reach full feature parity with
-upstream CouchPotato.
+the [Architecture Overview wiki page](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Architecture-Overview)
+for a higher-level summary, and [`TODO.md`](TODO.md) for a checkbox-tracked list of what's left to
+reach full feature parity with upstream CouchPotato.
 
 ## Release History
 
@@ -136,5 +132,6 @@ For the pre-rebrand CouchPotato history (`build/2.x`–`build/3.x` tags), see th
 ## Community
 
 Found a bug or have a question? [Open an issue](https://github.com/CouchTomatoes/CouchTomatoServer/issues) —
-check the [FAQ](docs/wiki/FAQ.md) and [`TODO.md`](TODO.md) first in case it's already a known, tracked item.
+check the [FAQ](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ) and [`TODO.md`](TODO.md)
+first in case it's already a known, tracked item.
 </content>
