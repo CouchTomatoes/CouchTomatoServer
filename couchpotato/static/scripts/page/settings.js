@@ -732,6 +732,8 @@ Option.Directory = new Class({
 		if(e.key == 'enter' || e.key == 'tab'){
 			(e).stop();
 
+			if(!self.dir_list) return;
+
 			first = self.dir_list.getElement(active_selector);
 			if(first){
 				self.selectDirectory(first.get('data-value'));
@@ -748,6 +750,8 @@ Option.Directory = new Class({
 				var pd = self.getParentDir(value);
 				if(self.current_dir != pd)
 					self.getDirs(pd);
+
+				if(!self.dir_list) return;
 
 				var folder_filter = value.split(path_sep).getLast();
 				self.dir_list.getElements('li').each(function(li){
@@ -902,20 +906,22 @@ Option.Directory = new Class({
 		if(v === '')
 			self.input.set('value', json.home);
 
-		if(previous_dir.length >= 1 && !json.is_root){
+		if(self.back_button){
+			if(previous_dir.length >= 1 && !json.is_root){
 
-			var prev_dirname = self.getCurrentDirname(previous_dir);
-			if(previous_dir == json.home)
-				prev_dirname = 'Home Folder';
-			else if(previous_dir == '/' && json.platform == 'nt')
-				prev_dirname = 'Computer';
+				var prev_dirname = self.getCurrentDirname(previous_dir);
+				if(previous_dir == json.home)
+					prev_dirname = 'Home Folder';
+				else if(previous_dir == '/' && json.platform == 'nt')
+					prev_dirname = 'Computer';
 
-			self.back_button.set('data-value', previous_dir);
-			self.back_button.set('html', '&laquo; ' + prev_dirname);
-			self.back_button.show();
-		}
-		else {
-			self.back_button.hide();
+				self.back_button.set('data-value', previous_dir);
+				self.back_button.set('html', '&laquo; ' + prev_dirname);
+				self.back_button.show();
+			}
+			else {
+				self.back_button.hide();
+			}
 		}
 
 		if(self.use_cache)
@@ -923,6 +929,8 @@ Option.Directory = new Class({
 				json = self.cached[v];
 			else
 				self.cached[v] = json;
+
+		if(!self.dir_list) return;
 
 		self.dir_list.empty();
 		if(json.dirs.length > 0)
@@ -954,7 +962,7 @@ Option.Directory = new Class({
 			Api.request('directory.list', {
 				'data': {
 					'path': c,
-					'show_hidden': +self.show_hidden.checked
+					'show_hidden': self.show_hidden ? +self.show_hidden.checked : 0
 				},
 				'onComplete': function(json){
 					self.current_dir = c;

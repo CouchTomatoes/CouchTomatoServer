@@ -2,6 +2,7 @@ import re
 import traceback
 
 from bs4 import BeautifulSoup
+from couchpotato.core.helpers.encoding import toUnicode
 from couchpotato.core.helpers.variable import tryInt, getIdentifier
 from couchpotato.core.logger import CPLog
 from couchpotato.core.media._base.providers.torrent.base import TorrentMagnetProvider
@@ -136,7 +137,7 @@ class Base(TorrentMagnetProvider):
         return super(Base, self).isEnabled() and self.getDomain()
 
     def correctProxy(self, data):
-        return 'search query' in data.lower()
+        return 'search query' in toUnicode(data).lower()
 
 
 config = [{

@@ -245,13 +245,81 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
       `ss(...)` into a list used only for a debug log message, doesn't crash,
       not yet fixed, low priority)
 - [ ] `grep -r "__pycache__"` clean, `.gitignore` covers build artifacts
-- [ ] Smoke-test core flows manually in a real browser: wizard confirmed clean
+- [x] Smoke-test core flows manually in a real browser: wizard confirmed clean
       through Welcome/General with 0 console errors; add-movie → Transmission →
       renamer confirmed working end to end, but driven via direct API calls +
       a self-seeded test torrent, not actual clicks through the UI against a
       live provider — still need Downloaders/Providers/Renamer/Automation/Finish
       wizard steps, save, and a real in-browser search/snatch against a live
       torrent/NZB provider
+      **2026-07-11 update:** done — clicked through Downloaders (Transmission)/
+      Providers (Binsearch, ThePirateBay, KickAssTorrents, YTS)/Renamer/Automation/
+      Finish, saved, landed on the main app, added "The Matrix" through the real
+      search-and-add UI, and triggered a real search against the live providers
+      enabled above. Found and fixed 4 real bugs along the way (see progress log):
+      two `domready` null-`document.body` crashes (`uniform.js`, `index.html`), a
+      `urlopen()` exception-handling bug that turned every network failure across
+      the *entire app* into an unhandled `TypeError` instead of a clean log line,
+      and a bytes/str `TypeError` in 5 torrent providers' proxy/login-check code.
+      One flaky, not-yet-reproduced-on-demand issue remains: a `struct.error`/
+      `ElemNotFound` seen once when re-adding an already-added movie while a
+      background search was concurrently running — see the entry below.
+- [ ] Investigate a `struct.error: argument for 's' must be a bytes object` /
+      `codernitydb3.index.ElemNotFound` seen once (2026-07-11) in
+      `movie/_base/main.py`'s `add()` → `db.update(m)`, when clicking "Add" on a
+      movie that was already in the library while a background provider search
+      was still running. Didn't reproduce on a clean retry (single `movie.add` API
+      call, no concurrent search) — looks like a race between the search threads
+      and the update, not a deterministic key-encoding bug like the ones already
+      fixed. Needs a targeted concurrency repro, not a speculative fix.
+- [x] Check that the Home page's "top movies" charts feature (Blu-ray.com New
+      Releases etc., via `automation.get_chart_list`) actually loads real data —
+      **2026-07-11**: it didn't. `automation/base.py`'s `search()` (called by
+      every chart provider, e.g. `bluray.py`) crashed with `AttributeError: 'str'
+      object has no attribute 'decode'` on every single call — the opposite
+      direction of the usual bytes/str bug (Py2 `.decode()`'d an already-`str`
+      value in Py3). This silently emptied `charts.view`'s response every time,
+      so the Home page's chart section just never rendered, with no visible
+      error anywhere in the UI. Fixed by removing the unneeded `.decode('utf-8')`
+      and encoding+decoding back to `str` properly. Verified: `charts.view` now
+      returns real chart data (movies, posters, metadata) and it renders on the
+      Home page.
+- [x] Found and fixed a second routing-order bug in the same class as the
+      already-fixed `/static/*` one (2026-07-11): `runner.py` registered the
+      `ApiHandler` catch-all (`/api/<key>/(.*)`) *before* plugins load, but
+      plugins like `file.py`'s cached-image server register their own static
+      routes (`/api/<key>/file.cache/(.*)`) *during* plugin loading — so the
+      earlier-registered generic catch-all always shadowed them, and every
+      locally-cached poster/backdrop image in the entire app silently failed
+      with the API's generic "doesn't seem to exist" error instead of serving
+      the image. Fixed by moving plugin loading to happen before the
+      API/web-handler `add_handlers` call, matching the existing
+      registration-order comment already in the file. Verified: `file.cache`
+      URLs now return `image/jpeg` instead of a JSON error, and posters render
+      in both the Wanted list and the Home page charts.
+- [x] Enumerated every API call the Home page makes on load (2026-07-11, via
+      Playwright network capture): `media.list`, `dashboard.soon`,
+      `suggestion.view`, `notification.listener`, `charts.view`, `file.cache/*`
+      (one per poster), `updater.info`. All return 200 with a clean log (only
+      the already-documented external-service noise: dead `couchpota.to`,
+      IMDB blocking automated boxoffice-page scraping, invalid/placeholder
+      OMDB API key). Found and fixed 2 more real bugs along the way:
+      - `couchpotato/core/plugins/browser.py`'s `is_hidden()` (used by the
+        Directory-type settings field's folder-browser popup) wrapped a path
+        in `ss()` (bytes) then called `.startswith('.')` with a `str` literal —
+        another instance of the recurring `ss()`-misuse pattern flagged
+        earlier in this file. Crashed `directory.list` on every call, which
+        also crashed the corresponding frontend code trying to render the
+        (never-received) response.
+      - `static/scripts/page/settings.js`'s `Option.Directory.filterDirectory()`
+        and `.fillBrowser()` referenced `self.dir_list`/`self.back_button` —
+        both only created once the folder-browser popup has been opened via
+        `showBrowser()` — but `filterDirectory` runs on every `change`/`keyup`/
+        `paste` of the plain text input regardless of whether the popup was
+        ever opened (i.e., a user typing or pasting a path directly, a normal
+        workflow). Same class of bug as the `show_hidden` fix earlier in this
+        session, just two more unguarded references in sibling methods.
+        Guarded all of them the same way.
 
 ---
 

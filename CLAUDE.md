@@ -664,6 +664,253 @@ Rules going forward:
   re-apply the same Repo-landscape/Working-conventions edits by hand — they're
   short).
 
+**2026-07-11 (fresh session working directly in `CouchTomatoServer`, full wizard
+click-through + live provider search — 4 real bugs found and fixed)**
+- This session's GitHub/git access was scoped to `CouchTomatoes/CouchTomatoServer`
+  directly (confirmed via `git remote -v` and a real `git push`) — the first
+  session since the move with genuine write access here, exactly the "start a
+  fresh session with `CouchTomatoServer` as the initial repo source" path the
+  previous session's entries said would be needed.
+- Small side task first: fixed stale `CodeAhmed/CouchTomato` links in `README.md`
+  (badges + clone URL, left over from before the move), added a GPLv3 license
+  badge, and added a generated social-preview image + a plain-tomato-icon logo
+  under `docs/branding/` for the repo's GitHub "About" page (that setting isn't
+  exposed via the API, so it's a manual upload — documented in
+  `docs/branding/README.md`). Merged as PR #1.
+- Rebuilt the runtime environment from scratch (fresh container had none of the
+  previously-installed pip packages or the test `transmission-daemon` from prior
+  sessions) and picked up the "click through the wizard + real provider search"
+  item from `TODO.md` §5, using Playwright against a real headless Chromium
+  exactly as established — this is what actually found the bugs below, not
+  reading the code.
+- **Bug 1 & 2**: two more instances of the `document.body` null-during-teardown
+  crash class (the same one `login.js` was already guarded against, per
+  `TODO.md`'s "there may be others further down the domready queue" note).
+  `library/uniform.js`'s `Uniform` class (initialized on every single page load,
+  not just login) crashed first, which meant `index.html`'s own inline
+  `domready` block (setting the `data-api` attribute) never got a chance to run
+  either — fixing the first one revealed the second. Both fixed with the same
+  `if (!b) return` guard pattern.
+- **Bug 3 — the big one**: `couchpotato/core/plugins/base.py`'s `urlopen()`
+  (the core HTTP helper every provider/notification/API client in the app goes
+  through) imported `Timeout` from `requests.packages.urllib3` — but that's the
+  request-timeout *config* class, not an exception. Its `except (IOError,
+  MaxRetryError, Timeout):` clause therefore raised `TypeError: catching classes
+  that do not inherit from BaseException is not allowed` on *every single
+  genuine network failure* (timeouts, proxy errors, connection errors) instead of
+  logging it cleanly and running the existing failed-host backoff logic. This has
+  silently broken graceful network-error handling for the entire app's whole
+  lifetime post-port. Found by watching KickAssTorrents'/ThePirateBay's real
+  proxy-discovery loop (which tries ~20 mirror domains, expecting most to fail)
+  flood the log with this `TypeError` instead of clean debug lines. Fixed by
+  importing `urllib3.exceptions.TimeoutError` instead (the real exception base
+  class) as `Timeout`. Verified: zero occurrences of the `TypeError` across a
+  full clean wizard + add + search run afterward, and confirmed a working proxy
+  domain now gets found and used for KickAssTorrents (`Using proxy for
+  KickAssTorrents: https://kat.how`).
+- **Bug 4**: five torrent providers did plain string-containment checks directly
+  against `urlopen()`/`getHTMLData()`'s `bytes` return value —
+  `kickasstorrents.py`'s and `thepiratebay.py`'s `correctProxy()` (used by the
+  same proxy-discovery loop above), `thepiratebay.py`'s `doTest()`, and
+  `iptorrents.py`'s/`bitsoup.py`'s "nothing found!" empty-result check. Same
+  root cause as every other bytes/str bug already fixed in this port
+  (`urlopen()` returns real `bytes` in Py3, call site never decoded back) —
+  fixed all five with `toUnicode()` at the call site.
+- Result: the wizard now completes end to end (Welcome → General → Downloaders
+  → Providers → Renamer → Automation → Finish → save) with **zero** console
+  errors, landing on the real main app. Added "The Matrix" through the actual
+  search-and-add UI (not an API call), enabled Binsearch/ThePirateBay/
+  KickAssTorrents/YTS through the wizard (the providers that don't need an
+  account), and triggered a real search against them — confirmed clean, no
+  crashes, proxy discovery working. Screenshots in `docs/screenshots/` (see its
+  README for the 2026-07-11 entry).
+- **One remaining, not-yet-root-caused finding**: a `struct.error: argument for
+  's' must be a bytes object` / `codernitydb3.index.ElemNotFound` seen once when
+  clicking "Add" on a movie that was already in the library while a background
+  provider search was still running (`movie/_base/main.py`'s `add()` →
+  `db.update(m)`). Did not reproduce on a clean retry (single `movie.add` API
+  call, no concurrent search) — looks like a race between the search threads and
+  the update, not a deterministic key-encoding bug like the ones just fixed
+  above. Logged in `TODO.md` §5 for a future targeted concurrency repro rather
+  than guessing at a fix.
+
+**2026-07-11 (cont'd, checked the Home page's "top movies" charts feature at the
+user's request — found and fixed 2 more real bugs)**
+- User specifically asked to check whether the main page's "top movies from
+  sources" feature actually works. It didn't — `charts.view` returned
+  `{"charts": [], "count": 0}` every time, so the Home page's chart section was
+  just silently absent, no visible error anywhere in the UI.
+- **Bug 5**: `couchpotato/core/media/movie/providers/automation/base.py`'s
+  `search()` — called by every chart-provider plugin (`bluray.py`, `imdb.py`,
+  etc.) — did `name.decode('utf-8').encode('ascii', 'ignore')`, but `name` is
+  already a `str` in Python 3 (this is the *opposite* direction of the usual
+  bytes/str bug in this port: Py2 code decoding an already-decoded value,
+  instead of failing to decode a still-bytes one). Crashed
+  `automation.get_chart_list` on every single call, for every provider, with
+  `AttributeError: 'str' object has no attribute 'decode'`. Fixed by encoding to
+  ASCII and decoding back to `str` instead of the unneeded `.decode()` first.
+- **Bug 6 — the bigger one**: even after fixing #5, `charts.view` returned real
+  data (confirmed via direct API call — Blu-ray.com's "New Releases" chart, full
+  TMDB metadata, real posters) but posters rendered as blank gray boxes in the
+  browser, for *both* the new charts feature and the already-added "Matrix, The"
+  movie in the Wanted list. Traced the poster `<img>` URL
+  (`/api/<key>/file.cache/<hash>.jpg`) and found it returned the API's generic
+  `"API call doesn't seem to exist"` JSON error instead of the image, even
+  though the file existed on disk in the cache directory. Root cause: the exact
+  same registration-order class of bug as the already-fixed `/static/*` issue
+  (see the 2026-07-10 entry), but in a different pair of routes.
+  `couchpotato/runner.py` registered the generic `ApiHandler` catch-all
+  (`r'/api/<key>/(.*)(/?)'`) *before* `loader.run()` loads plugins — but
+  `couchpotato/core/plugins/file.py`'s `showCacheFile()` (registered via
+  `addApiView('file.cache/(.*)', ..., static = True)`, which calls
+  `application.add_handlers()` directly instead of going through the normal
+  dynamic `api` dict) only runs *during* plugin loading, i.e. strictly after
+  that catch-all was already in place. Since Tornado's `RuleRouter` tries
+  same-host-pattern rule groups in registration order and stops at the first
+  one whose own internal routes match, and `/api/<key>/(.*)`  matches literally
+  any path under the API base, the earlier-registered `ApiHandler` catch-all
+  permanently shadowed `file.cache`'s later-registered `StaticFileHandler` —
+  meaning **every locally-cached poster/backdrop image in the entire app was
+  silently broken** the whole time, not just for charts. This is a distinct
+  instance of the same principle already documented in the file (the comment
+  right above the static-paths registration), just not applied to
+  plugin-registered static routes. Fixed by moving `loader.run()` (plugin
+  loading) to happen *before* the API/web catch-all handlers are registered,
+  so any plugin's static routes land earlier in Tornado's routing table.
+  Verified: `curl` against a `file.cache` URL now returns `image/jpeg` instead
+  of the JSON error, and posters render correctly in both the Wanted list and
+  the Home page charts (screenshots in `docs/screenshots/`).
+- Both fixes verified via a full fresh-DB run: wizard → add movie → Home page
+  showing the real Blu-ray.com chart with working poster images, and the Wanted
+  list showing The Matrix's actual poster instead of a blank box.
+
+**2026-07-11 (cont'd, enumerated every Home-page API call, found 2 more real bugs)**
+- User asked to check for any other APIs the Home page loads, and to re-verify
+  the added movie's poster + the server log. Captured every network request via
+  Playwright: `media.list`, `dashboard.soon`, `suggestion.view`,
+  `notification.listener`, `charts.view`, one `file.cache/*` per poster, and
+  `updater.info` — all 200, and the log was clean apart from the
+  already-documented external-service noise (dead `couchpota.to`, IMDB blocking
+  automated `/boxoffice/` scraping, an invalid/placeholder OMDB API key).
+- While confirming that, the wizard run surfaced two new frontend JS errors
+  ("Cannot read properties of undefined (reading 'getElements')" and "...
+  (reading 'set')") paired with a server-side "Failed getting directory" error.
+  Root cause, found by reading the traceback: `couchpotato/core/plugins/
+  browser.py`'s `is_hidden()` wrapped a path in `ss()` (bytes) then called
+  `.startswith('.')` with a `str` literal — yet another instance of the
+  recurring `ss()`-misuse pattern this file's progress log has flagged
+  repeatedly ("expect this pattern elsewhere, grep for `ss(`"). This crashed
+  `directory.list` on every single call, which is the API behind every
+  Directory-type settings field's folder-browser popup. Fixed by dropping the
+  unnecessary `ss()` (matches the established fix pattern: paths should stay
+  `str` throughout in Py3).
+- Fixing that revealed the frontend errors were only *partly* a downstream
+  symptom — `static/scripts/page/settings.js`'s `Option.Directory.
+  filterDirectory()` and `.fillBrowser()` both unconditionally reference
+  `self.dir_list`/`self.back_button`, which are only created once the
+  folder-browser *popup* has actually been opened via `showBrowser()`. But
+  `filterDirectory()` runs on every `change`/`keyup`/`paste` of the plain text
+  input regardless of whether the popup was ever opened — i.e., any real user
+  who types or pastes a directory path directly (a completely normal workflow)
+  hits this. This is the same underlying class of bug as the `show_hidden` fix
+  earlier in this session (`getDirs()`'s `self.show_hidden.checked`) — just two
+  more unguarded references in sibling methods of the same widget that hadn't
+  been audited yet. Guarded both the same way (early-return / conditional
+  branch when the popup-only elements don't exist). Hand-patched
+  `combined.base.min.js` to match, as with every other frontend fix this
+  session.
+- Verified via a full fresh-DB wizard + add-movie run: zero "Failed getting
+  directory" errors, zero frontend JS errors reported to the API log, and
+  `directory.list` called directly now returns a real directory listing
+  instead of a 500.
+
+**2026-07-11 (cont'd, Windows/macOS installer builds + a critical release-automation
+bug found along the way)**
+- User asked about packaging a Windows/macOS app and attaching it to releases.
+  Checked first rather than assuming: no `.mako` file, no PyInstaller/py2app/
+  Briefcase/Electron config, no Windows/macOS build scripts existed anywhere in
+  the repo — this was net-new work, not something to "update." Asked the user
+  to pick an approach (PyInstaller onefile vs. full installer vs. something
+  else); they chose the full-installer route (NSIS on Windows, DMG on macOS).
+- **Before touching packaging, found a much bigger, unrelated bug while
+  checking how release artifacts would actually get attached**: `release.yml`
+  has **never fired even once** in this repo. Its push trigger listened for
+  `branches: [master]`, but this repo's default branch is `main` (confirmed via
+  the Actions API — `list_workflow_runs` for `release.yml` returns
+  `total_count: 0`). Every v4.x release visible on this repo was mirrored over
+  from the old `CodeAhmed/CouchTomato` repo during the 2026-07-10 move (see that
+  day's entries) — none were ever actually cut by this workflow running here,
+  including after this session's own PR #1 merge, which silently should have
+  triggered one and didn't. Fixed with a one-line change (`master` → `main`) —
+  the highest-value fix in this whole entry, since the packaging work below is
+  pointless without a release trigger that actually fires.
+- **Packaging approach**: CouchTomato's plugin system
+  (`couchpotato/core/loader.py`) imports every provider/notification/downloader
+  module dynamically by walking the filesystem and calling `import_module()`
+  with computed names — PyInstaller's static import-graph analysis can't trace
+  any of that, so a naive frozen build would silently load zero plugins (a
+  failure mode that's easy to ship without noticing, since the server still
+  boots and the web UI still renders with an empty plugin list). Rather than
+  fight PyInstaller's analysis, `packaging/couchtomato.spec` bundles
+  `couchpotato/` and `libs/` (the vendored packages with no PyPI equivalent) as
+  **loose data trees** alongside the frozen bootstrap, exactly mirroring how
+  they sit next to `CouchPotato.py` in a normal source checkout — the app's own
+  existing `sys.path.insert(0, .../libs)` then makes the same dynamic imports
+  work at runtime inside the frozen build, unchanged.
+- **Validated the hard part locally before trusting it to CI**: this sandbox
+  has no Windows/macOS toolchain, but PyInstaller's Linux target exercises the
+  exact same risky mechanism (loose-data-tree dynamic imports), so built and
+  *ran* the frozen app here first — found and fixed 3 real gaps this way,
+  each confirmed by reading the actual `ModuleNotFoundError` the frozen build
+  produced, not by guessing:
+  - Every pip-installed dependency (`GitPython`, `beautifulsoup4`, `bencode.py`,
+    etc.) is only ever imported from *inside* the loose `couchpotato`/`libs`
+    trees, never from `CouchPotato.py`'s own static import chain — so
+    PyInstaller's analysis never traced any of them. Fixed with explicit
+    `collect_submodules()` hidden imports for each of `requirements.txt`'s
+    packages, plus a couple of stdlib modules (`xml.etree`, `distutils`,
+    `email.mime`, `telnetlib`) that turned out to only be reachable
+    dynamically too.
+  - `couchpotato/core/_base/updater/main.py` does `import version` (no dot) —
+    a bare top-level import relying on Python's implicit script-directory
+    `sys.path` entry that only exists when running `python3 CouchPotato.py`
+    directly from the repo root (where a `version.py` placeholder file lives).
+    That implicit entry doesn't exist in a frozen build. Fixed by explicitly
+    bundling `version.py` as a data file at the bundle root, next to
+    `couchpotato`/`libs`.
+  - Excluded `OpenSSL`/`cryptography` from the build entirely — PyInstaller's
+    isolated-subprocess hook collection for `cryptography` crashed with a Rust
+    `PanicException` in this sandbox even though the package imports fine
+    directly, and it's already an optional dependency
+    (`couchpotato/core/_base/_core.py` logs a warning and continues without it
+    when absent) — not worth fighting, and excluding it sidesteps the crash.
+  - **Result**: a clean local Linux PyInstaller build loads all 104 plugins (0
+    skipped, matching a from-source run) and renders the real wizard UI in a
+    real headless browser — confirmed the core packaging mechanism works
+    before ever touching a Windows or macOS runner.
+- **Windows**: `packaging/windows/installer.nsi` — a standard NSIS script that
+  installs the PyInstaller onedir output to Program Files, creates Start Menu
+  shortcuts and a registry-registered uninstaller. Syntax-verified locally by
+  installing NSIS in this sandbox (`apt-get install nsis`) and actually
+  compiling the script end to end with fake paths — Linux's NSIS compiler
+  produces real Windows `.exe` installers, it just can't run them, so this
+  validates the script itself without validating the real Windows runtime
+  behavior.
+- **macOS**: PyInstaller's `BUNDLE()` step (a no-op on Linux/Windows, real on
+  macOS) produces `CouchTomato.app` directly from the same onedir output; the
+  workflow then wraps it in a DMG via `hdiutil` (built into every macOS
+  runner, no extra tooling needed).
+- Wired both into `release.yml` as `build-windows`/`build-macos` jobs gated on
+  `needs: release`, uploading the installer/DMG to the just-created release via
+  `gh release upload`.
+- **What's genuinely unverified**: actually running the NSIS-built installer on
+  real Windows, and building/mounting the `.app`/DMG on real macOS — this
+  sandbox has no toolchain for either, so this can only be proven by the real
+  `windows-latest`/`macos-latest` GitHub Actions runners on the next push to
+  `main`. First runs of a new packaging pipeline commonly need a round or two
+  of CI-log-driven fixes even after a clean local dry run — plan to watch the
+  next release's Actions run closely rather than assume it's done.
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
@@ -702,7 +949,8 @@ higher-level plan for what comes after.
    dependency swap.
 6. Rebrand: package name, `~/.couchpotato` → `~/.couchtomato` config dir, UI strings,
    Docker/systemd units, docs. (README.md partially rebranded 2026-07-10.)
-7. CI + packaging.
+7. CI + packaging. **2026-07-11: Windows/macOS installer builds done** — see progress
+   log. Still open: Linux packaging (.deb/AppImage) and Docker/systemd (still #6 above).
 8. Decide on the tag-mirroring question in `SUGGESTIONS.md` (blocked on repo owner
    input, not something to keep retrying) — mostly moot now, tags are already mirrored.
 
