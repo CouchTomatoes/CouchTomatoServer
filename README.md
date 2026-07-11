@@ -61,3 +61,23 @@ Don't forget to enable development inside the settings. This disables some funct
 
 This is an active port — see `CLAUDE.md` for the full history/architecture notes and `TODO.md` for a
 checkbox-tracked list of what's left to reach full feature parity with upstream CouchPotato.
+
+## Release History
+
+Full release notes and downloads are on the [Releases page](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
+Short summary of what changed and which platforms had working installer/build downloads at each version:
+
+| Version | Highlights | Downloads available |
+|---|---|---|
+| [v4.0.18](https://github.com/CouchTomatoes/CouchTomatoServer/releases/tag/v4.0.18) | Fixed `lipo` rejecting an identical vendored binary — full platform matrix finally green | **All platforms**: Windows x64 (installer + zip) & arm64 (zip), Linux x64 & arm64 (tar.gz + AppImage), **macOS universal2** (DMG + app.tar.gz — Intel + Apple Silicon combined) |
+| [v4.0.17](https://github.com/CouchTomatoes/CouchTomatoServer/releases/tag/v4.0.17) | Fixed missing `dist/` dir in the macOS merge job | Windows x64/arm64, Linux x64/arm64 — macOS still missing (lipo bug) |
+| [v4.0.16](https://github.com/CouchTomatoes/CouchTomatoServer/releases/tag/v4.0.16) | Fixed retired `macos-13` GitHub Actions runner label | Windows x64/arm64, Linux x64/arm64 — macOS still missing (dist/ bug) |
+| [v4.0.15](https://github.com/CouchTomatoes/CouchTomatoServer/releases/tag/v4.0.15) | Expanded release pipeline to a full platform/arch matrix | Windows x64/arm64, Linux x64/arm64 — macOS job never ran (runner retired) |
+| [v4.0.14](https://github.com/CouchTomatoes/CouchTomatoServer/releases/tag/v4.0.14) | Fixed a `RecursionError` in vendored `dateutil` + a Python 3.10 `collections` removal | Windows installer (.exe), macOS DMG (Apple Silicon only) |
+| [v4.0.13](https://github.com/CouchTomatoes/CouchTomatoServer/releases/tag/v4.0.13) | Fixed macOS build failing on `.app` icon conversion | Windows installer (.exe), macOS DMG (Apple Silicon only) |
+| [v4.0.12](https://github.com/CouchTomatoes/CouchTomatoServer/releases/tag/v4.0.12) | First Windows/macOS installer builds attached to a release | Windows installer (.exe) — macOS build failed (icon bug) |
+| v4.0.4 – v4.0.11 | Core Python 3 porting: DB race fix, download-to-library pipeline bugs, wizard crashes, release-notes automation fixes | Source only (no packaged builds yet) |
+| v4.0.0 – v4.0.3 | Initial CouchTomato numbering; release automation and CouchPotatoAPI status docs | Source only (no packaged builds yet) |
+
+For the pre-rebrand CouchPotato history (`build/2.x`–`build/3.x` tags), see the
+[full release list](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
