@@ -332,7 +332,7 @@ jobs:
   # can only be proven by a real run.
   build-macos-x64:
     needs: release
-    runs-on: macos-13 # last Intel-based hosted runner
+    runs-on: macos-15-intel # macos-13 was retired Dec 2025; this is the current Intel label
     steps:
       - name: Checkout
         uses: actions/checkout@v4
