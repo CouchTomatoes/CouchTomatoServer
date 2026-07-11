@@ -14,6 +14,7 @@ x64_dir="$2"
 out_dir="$3"
 
 rm -rf "$out_dir"
+mkdir -p "$(dirname "$out_dir")"
 cp -a "$arm64_dir" "$out_dir"
 
 # Walk every file present in both trees; lipo-merge the ones that are actual
