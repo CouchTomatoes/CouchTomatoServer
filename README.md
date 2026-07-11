@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/branding/logo.png" width="140" alt="CouchTomato logo">
+</p>
+
 CouchTomato
 =====
 
