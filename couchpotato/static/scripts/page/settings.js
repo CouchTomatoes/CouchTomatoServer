@@ -954,7 +954,7 @@ Option.Directory = new Class({
 			Api.request('directory.list', {
 				'data': {
 					'path': c,
-					'show_hidden': +self.show_hidden.checked
+					'show_hidden': self.show_hidden ? +self.show_hidden.checked : 0
 				},
 				'onComplete': function(json){
 					self.current_dir = c;

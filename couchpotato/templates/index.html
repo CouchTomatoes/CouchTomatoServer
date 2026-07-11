@@ -49,7 +49,9 @@
 					'is_remote': false
 				});
 
-				$(document.body).set('data-api', window.location.protocol + '//' + window.location.host + Api.createUrl().replace('/default/', '/'));
+				var body = $(document.body);
+				if (!body) return; // document.body can be null here if the page is already being torn down for a redirect
+				body.set('data-api', window.location.protocol + '//' + window.location.host + Api.createUrl().replace('/default/', '/'));
 
 				// Catch errors
 				var dev = {{ json_encode(Env.get('dev')) }};
