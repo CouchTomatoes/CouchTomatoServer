@@ -408,6 +408,19 @@ jobs:
           chmod +x arm64-app/Contents/MacOS/* x64-app/Contents/MacOS/* 2>/dev/null || true
           bash packaging/macos/merge-universal.sh arm64-app x64-app dist/CouchTomato.app
 
+      # The app isn't signed with a paid Apple Developer ID (no certificate
+      # available here), so this can't pass real Gatekeeper/notarization
+      # checks - but an ad-hoc signature (identity "-") is still worth
+      # applying: without ANY signature at all, recent macOS shows a hard
+      # "is damaged and can't be opened" dialog with no way to launch it.
+      # With an ad-hoc signature, Gatekeeper instead falls back to the
+      # normal "unidentified developer" prompt, which users can bypass via
+      # right-click > Open (see the wiki FAQ). lipo doesn't preserve
+      # per-slice signatures across a merge, so this has to happen after
+      # merging, not on the two single-arch builds beforehand.
+      - name: Ad-hoc sign the merged app
+        run: codesign --force --deep --sign - dist/CouchTomato.app
+
       - name: Build DMG
         run: |
           version="${{ needs.release.outputs.version }}"
