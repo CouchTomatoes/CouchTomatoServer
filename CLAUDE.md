@@ -946,6 +946,115 @@ real gap — pipeline is now fully green)**
   packaging pipeline commonly needs a round or two of CI-log-driven fixes
   even after a clean local dry run.
 
+**2026-07-11/14 (full platform/arch release matrix — Windows/Linux/macOS
+x64+arm64, macOS universal2, wiki setup — 6 real CI bugs found and fixed)**
+- User asked to expand the release matrix to match another project's page
+  (Ryujinx/ryubing-ci style): Windows x64 (installer + portable zip) and
+  arm64 (zip, best-effort installer), Linux x64/arm64 (tar.gz + AppImage),
+  macOS **universal2** (dmg + app.tar.gz, x64+arm64 merged into one binary).
+  Scoped via `AskUserQuestion` first; user picked all four options (not just
+  the easy subset), so full scope was explicitly authorized. Implemented in
+  PR #5: rewrote `release.yml` to 8 jobs, added `packaging/linux/
+  build-appimage.sh` (AppDir + `appimagetool`, validated locally minus the
+  actual `appimagetool` download which this sandbox's proxy blocks) and
+  `packaging/macos/merge-universal.sh` (lipo-merge two single-arch builds
+  file-by-file). ARM64 jobs use `continue-on-error: true` since
+  `windows-11-arm`/`ubuntu-24.04-arm` were unverified preview labels.
+- **`build-macos-universal` took 4 real-CI rounds to get green the first
+  time** (all found via actually watching the run, not assumed from a clean
+  local dry run — this sandbox has zero macOS/ARM toolchain so none of this
+  was testable locally beyond syntax checks):
+  1. **PR #6**: `build-macos-x64`'s `macos-13` runner label was fully
+     retired by GitHub on 2025-12-04 (confirmed via web search) — the job
+     queued forever, never got a runner. Fixed by switching to
+     `macos-15-intel`, GitHub's current Intel-runner replacement.
+  2. **PR #7**: with the runner fixed, the merge job then failed
+     `cp: dist/CouchTomato.app: No such file or directory` — `build-macos-
+     universal` only downloads artifacts, it never runs a PyInstaller build,
+     so `dist/` never gets created. Fixed with `mkdir -p
+     "$(dirname "$out_dir")"` before the copy.
+  3. **PR #8**: next, `lipo` fatally refused to merge
+     `libs/unrar2/unrar` (a legacy vendored i386-only tool bundled as a data
+     file, not built per-arch by PyInstaller) because both arch trees
+     carried the *same* architecture — lipo won't fat-merge two slices of
+     one arch. Fixed by `cmp -s`-skipping byte-identical files before
+     attempting the lipo merge. **v4.0.18 shipped fully green — all 10
+     assets, verified via `get_release_by_tag`.**
+  4. User later noticed (comparing asset *counts* across releases, 11 vs 9)
+     that every release after v4.0.18 (v4.0.19/20/21) had silently lost the
+     macOS assets again, with the *exact same* "same architectures (i386)"
+     error. **Root cause of the regression**: `cmp -s`'s byte-equality check
+     was never reliable — PyInstaller/macOS apparently apply per-build
+     ad-hoc signing or embed build-specific metadata into bundled Mach-O
+     binaries, so the *same* vendored `unrar` tool comes out byte-different
+     between the independently-run x64/arm64 jobs even though it's still the
+     same single architecture. **PR #12** fixed this properly: compare
+     actual architectures via `lipo -archs` (the same check `lipo` itself
+     makes) instead of raw bytes — robust to signing/metadata churn, still
+     correctly lipo-merges genuinely different-arch files. Verified via a
+     real CI run: `build-macos-universal` succeeded, "Architectures in the
+     fat file: ... are: x86_64 arm64" confirmed in the job log.
+- **Real-world Gatekeeper bug, caught by the user actually running the
+  downloaded app on a Mac** (a class of bug this whole project's testing
+  philosophy says to expect — CI green ≠ works for a real user): extracting
+  `.app.tar.gz` and opening it showed **"CouchTomato is damaged and can't be
+  opened. You should move it to the Trash"** — a harsher, no-bypass Gatekeeper
+  dialog than the already-documented "unidentified developer" one, shown
+  specifically when a downloaded app has *zero* code signature at all (not
+  even ad-hoc). Gave the user an immediate unblock (`xattr -cr
+  CouchTomato.app` strips the quarantine flag Safari applies) while fixing
+  the pipeline:
+  - **PR #13** added a `codesign --force --deep --sign - dist/CouchTomato.app`
+    step after the lipo merge (lipo doesn't preserve per-slice signatures
+    across a merge, so signing must happen post-merge). This **immediately
+    broke the job**: `--deep` recursively signs every subcomponent, and
+    PyInstaller's bundle includes non-standard ones (`Contents/Frameworks/
+    python3.11`) that don't parse as valid nested bundles —
+    `bundle format unrecognized, invalid, or unsuitable`.
+  - **PR #14** fixed it by dropping `--deep` — signing just the top-level
+    `.app` is what Gatekeeper's basic launch check actually looks at, and is
+    the standard workaround for ad-hoc-signing PyInstaller apps for this
+    exact reason. **Not yet verified by a real CI run as of this write-up —
+    check the next release run's `build-macos-universal` job first thing
+    next session** (the codesign step specifically) before assuming it's
+    fixed. This is still only an ad-hoc signature (no paid Apple Developer
+    ID cert available), so the normal "unidentified developer, right-click
+    to open" Gatekeeper prompt is expected and correct — that's the
+    documented, acceptable UX, not a bug to chase further.
+- **README + wiki, SickGear-style** (user wanted the repo/docs polished to
+  match github.com/sickgear/sickgear as a reference): scoped via
+  `AskUserQuestion` (structure+polish only, reuse existing content, no new
+  marketing copy) then implemented:
+  - PR #9: added a release-history table (per-version highlights + which
+    platform downloads actually worked at that version — useful precisely
+    because the macOS asset availability kept flipping during the rounds
+    above).
+  - PR #10: restructured `README.md` into SickGear-style sections (quick
+    links, Providers & Downloaders list pulled from the real plugin
+    directories — not invented, screenshots gallery, Community section).
+    Also wrote 4 wiki pages (Installation, Migration, FAQ, Architecture
+    Overview) plus a Home landing page, staged under `docs/wiki/` since the
+    GitHub Wiki feature wasn't enabled on the repo yet, and this session's
+    git access can't push to the `.wiki.git` companion repo even once it is
+    (tested: real auth error, `add_repo`/direct GitHub tools both refused
+    it — `.wiki` repos aren't addressable as normal repos through any tool
+    available this session). Documented the exact enable+push steps in
+    `docs/wiki/README.md` for whoever has real access.
+  - User enabled the Wiki feature and pushed the pages themselves (note:
+    a plain `git clone .wiki.git` 404s until the *first* page is saved via
+    the web UI at least once — GitHub doesn't provision the wiki's git repo
+    until then, which briefly looked like a contradiction of "wiki already
+    enabled" but isn't). **PR #11**: once confirmed live (`https://github.com/
+    CouchTomatoes/CouchTomatoServer/wiki` showing all 5 pages), updated
+    `README.md`'s links to point at the real wiki and deleted the now-
+    redundant `docs/wiki/` staging folder.
+- General pattern reconfirmed this session: **the user catching real-world
+  discrepancies (asset counts across releases, an actual Gatekeeper error on
+  real hardware) found bugs that green CI checkmarks alone did not** — same
+  lesson as this file's established testing philosophy, just now extended to
+  "the user actually running the shipped artifact," not just "browser-testing
+  the web UI."
+
 ## Next steps (in order)
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
