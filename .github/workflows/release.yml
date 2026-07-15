@@ -418,8 +418,16 @@ jobs:
       # right-click > Open (see the wiki FAQ). lipo doesn't preserve
       # per-slice signatures across a merge, so this has to happen after
       # merging, not on the two single-arch builds beforehand.
+      #
+      # Deliberately no --deep: PyInstaller's bundle includes non-standard
+      # subcomponents (e.g. Contents/Frameworks/python3.11) that codesign's
+      # recursive deep-signing can't parse ("bundle format unrecognized,
+      # invalid, or unsuitable"), failing the whole signature. Signing just
+      # the top-level bundle is what Gatekeeper's basic launch check
+      # actually looks at, and is the standard approach for ad-hoc-signing
+      # PyInstaller apps for exactly this reason.
       - name: Ad-hoc sign the merged app
-        run: codesign --force --deep --sign - dist/CouchTomato.app
+        run: codesign --force --sign - dist/CouchTomato.app
 
       - name: Build DMG
         run: |
