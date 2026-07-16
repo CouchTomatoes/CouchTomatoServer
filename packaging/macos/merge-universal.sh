@@ -85,5 +85,38 @@ find "$out_dir/Contents/Frameworks" -mindepth 1 -maxdepth 1 -type d \( -name '*.
     rm -rf "$metadir"
   done
 
+# Root cause of the persistent "Python.framework: bundle format is
+# ambiguous (could be app or framework)" codesign failure, confirmed by
+# dumping the actual merged tree: a real macOS framework's "current
+# version" indirection is supposed to be symlinks (Versions/Current ->
+# <version>, plus top-level Python and Resources symlinking through
+# Versions/Current/) - but actions/upload-artifact and
+# download-artifact round-trip the .app tree through a zip archive
+# between the single-arch build jobs and this merge job, and zip
+# doesn't preserve symlinks. What arrives here has Versions/Current as
+# a real, fully duplicated directory (own _CodeSignature and all)
+# instead of a symlink, and three byte-identical copies of the Python
+# binary (top-level, Versions/<ver>/, Versions/Current/) instead of one
+# real file plus two symlinks. That's structurally invalid - codesign
+# can't tell whether the duplicated "Current" is the framework's version
+# indirection or a second nested bundle, hence "ambiguous". Rebuild the
+# real symlink structure: keep exactly one real copy (the versioned
+# directory whose name isn't literally "Current") and point everything
+# else at it the way a genuine Python.framework actually lays out.
+py_framework="$out_dir/Contents/Frameworks/Python.framework"
+if [ -d "$py_framework/Versions" ]; then
+  version_dir=$(find "$py_framework/Versions" -mindepth 1 -maxdepth 1 -type d ! -name Current -print -quit)
+  if [ -n "$version_dir" ]; then
+    version_name="$(basename "$version_dir")"
+    echo "Rebuilding Python.framework symlink structure (version $version_name)"
+    rm -rf "$py_framework/Versions/Current"
+    ln -s "$version_name" "$py_framework/Versions/Current"
+    rm -f "$py_framework/Python"
+    ln -s "Versions/Current/Python" "$py_framework/Python"
+    rm -rf "$py_framework/Resources"
+    ln -s "Versions/Current/Resources" "$py_framework/Resources"
+  fi
+fi
+
 echo "Universal2 app written to $out_dir"
 lipo -info "$out_dir/Contents/MacOS/CouchTomato"
