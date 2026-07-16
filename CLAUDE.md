@@ -1055,7 +1055,149 @@ x64+arm64, macOS universal2, wiki setup — 6 real CI bugs found and fixed)**
   "the user actually running the shipped artifact," not just "browser-testing
   the web UI."
 
+**2026-07-16 (macOS codesign: 9 rounds to a real fix, plus a process change so
+future rounds don't cost real releases)**
+- User reported v4.0.25 still had no macOS assets, restarting the macOS-signing
+  saga from the 2026-07-11/14 entry. Root-caused via actual CI runs (not
+  guessing) across **9 fix rounds, merged as PRs #16–#22 directly to `main`**
+  before the process change below — each merge cut a real release
+  (v4.0.26–v4.0.32) purely to test one `build-macos-universal` CI step, which
+  is exactly the waste the process change at the end of this entry exists to
+  stop happening again.
+  1. **PR #16/#17**: signing every direct `Frameworks/*` entry (dir or file)
+     hit "bundle format unrecognized" on plain data dirs like `certifi` —
+     `codesign` can't interpret a non-bundle directory as one. Fix: only sign
+     actual Mach-O *files* (checked via `file`, not extension guessing).
+  2. **PR #18**: that got past ~60 loose `.so` files, then hit
+     `Python.framework/Python`: "bundle format is ambiguous (could be app or
+     framework)" — signing a raw binary *inside* a `.framework` dir directly
+     is ambiguous to codesign. Fix: sign `.framework` directories as their own
+     whole bundle unit first.
+  3. **PR #19**: `Python.framework` itself hit the same "ambiguous" error when
+     signed as a directory. Root cause not yet understood at this point — made
+     the failure non-fatal (warn, continue) as a stopgap, which incidentally
+     stopped it from blocking anything *by coincidence* (the top-level seal
+     just hadn't reached far enough into the tree yet to hit it again — see
+     round 7).
+  4. **PR #20**: top-level seal then failed with "code object is not signed at
+     all" on `chardet/models/models.bin` — a **plain data file**, not a
+     binary. Guessed the mechanism was the executable permission bit; stripped
+     `+x` from non-Mach-O files. Fixed *that one file* only.
+  5. **PR #21**: identical error on a *different* file in the same dir
+     (`chardet/models/idf.bin`), never touched by the `+x` filter — proving
+     permission bits weren't the real mechanism, just a coincidence. Stopped
+     guessing file-by-file: sign **every** flat file under `Frameworks/`
+     unconditionally, Mach-O or not (only directories need bundle-format
+     interpretation, per round 1's finding).
+  6. **PR #22**: cleared every per-file complaint, but the top-level seal then
+     hit an untouched *directory*: `Frameworks/python3.11` — "bundle format
+     unrecognized". Extended round 3's tolerant-directory-signing to *every*
+     `Frameworks/` subdirectory, not just `.framework`-named ones.
+  - **Process change, before continuing**: at this point the user asked how
+    v4.0.18 (the one release that had shipped a working macOS build, before
+    codesigning existed at all — confirmed via git history, `7a08eda` added
+    `codesign` *after* v4.0.18) had worked, and asked for a way to iterate on
+    CI fixes without cutting a real release per attempt. Built
+    **`.github/workflows/test-macos-package.yml`**: the same
+    build → lipo-merge → sign pipeline, triggered on `pull_request` (path-
+    filtered to macOS packaging files) + `workflow_dispatch`, uploading the
+    signed `.dmg`/`.app.tar.gz` as a plain workflow artifact (no version
+    number) instead of a release asset. Also added two checks the old
+    pipeline never had: `codesign --verify --verbose=4` (proves the signature
+    is actually valid, not just "the script didn't error"), and a runtime
+    smoke-test (`CouchTomato --help`, which exercises the full
+    couchpotato/libs/stdlib import chain). **All further iteration happened on
+    one PR (#23) using this workflow's own checks — zero releases cut for the
+    rest of this saga.**
+  7. Still on the `python3.11` directory: found it's a **duplicate** of
+     `python3__dot__11` (identical lib-dynload content, dot escaped in the
+     name). First attempt *deleted* `python3.11`, keeping only the escaped
+     copy — codesign went green, but the new runtime smoke-test immediately
+     caught what that broke: `ModuleNotFoundError: No module named '_struct'`
+     on every launch. PyInstaller's frozen bootstrap hardcodes the literal
+     `pythonX.Y` path to find stdlib C extensions; the two directories are
+     **not** interchangeable at the runtime-lookup level despite looking
+     identical on disk. This is the exact kind of mistake the smoke-test step
+     was added to catch, and it worked on the very first opportunity.
+  8. Also found and fixed the same collision on `setuptools-65.5.0.dist-info`
+     (dotted version number in the name, same "bundle format unrecognized").
+     `.dist-info`/`.egg-info` dirs are pure pip metadata, never read by
+     CouchTomato's own code — safe to delete outright (unlike `python3.11`,
+     nothing at runtime looks them up by path).
+  9. **Root cause of `Python.framework`'s "ambiguous" error, finally
+     confirmed via a temporary diagnostic step** (dumped the real on-disk tree
+     + `ls -la` + symlink targets + `Info.plist` contents) rather than another
+     guess: **`actions/upload-artifact`/`download-artifact` round-trip the
+     `.app` tree through a zip archive between the two single-arch build jobs
+     and the merge job, and zip doesn't preserve symlinks.** A real
+     `Python.framework`'s "current version" indirection
+     (`Versions/Current -> <version>`, plus top-level `Python`/`Resources`
+     symlinking through it) arrived fully dereferenced: three byte-identical
+     14MB copies of the `Python` binary (top-level, `Versions/3.11/`,
+     `Versions/Current/`) instead of one real file plus two symlinks. codesign
+     can't structurally validate that as a framework, hence "ambiguous." Fixed
+     by rebuilding the real symlink structure in `merge-universal.sh` right
+     after the merge: keep exactly one real copy (the versioned dir not
+     literally named `Current`), symlink everything else to it.
+  10. Fixed `python3.11` the same *correct* way, informed by both the
+      `Python.framework` root cause and the smoke-test's catch: rename the real
+      directory to a dot-free name and put a **symlink** at the original
+      `python3.11` path pointing to it. Every existing runtime lookup at that
+      literal path still resolves exactly as before (through the symlink), but
+      the on-disk item codesign inspects there is now a symlink, not a
+      directory, so it no longer matches the naming pattern that trips the
+      false positive. Confirmed this is the same underlying fix shape as
+      `Python.framework` (indirection, not deletion) — a real, general pattern
+      for this whole class of bug, not a one-off.
+  - **Result, verified via CI on PR #23 (not merged yet as of this writing)**:
+    `build-macos-universal (test)` fully green — `codesign` succeeds,
+    `codesign --verify` passes (`valid on disk`, `satisfies its Designated
+    Requirement`), and the `--help` smoke-test runs clean. First fully-passing
+    macOS build/sign/verify/run cycle since codesigning was added. **Merging
+    PR #23 is the next step** — that will be the first real release built
+    entirely from a pre-verified, CI-tested fix rather than another blind
+    merge-and-see attempt.
+  - `packaging/macos/merge-universal.sh` now has 4 post-lipo-merge fixups, in
+    order: rebuild `Python.framework`'s symlink structure → symlink-ify any
+    other dotted-name PyInstaller directory (`python3.11` etc.) → drop
+    `.dist-info`/`.egg-info` dirs. `.github/workflows/release.yml`'s "Ad-hoc
+    sign the merged app" step and `test-macos-package.yml`'s copy of it must
+    be kept in lockstep by hand (no shared/reusable-workflow refactor yet) —
+    **when merging PR #23, copy its exact signing step and
+    `merge-universal.sh` changes into `release.yml` too**, don't just merge
+    the branch and assume `release.yml` already matches (check the diff).
+  - **Known process gap**: making `test-macos-package.yml`'s
+    `build-macos-universal (test)` check an actual merge *gate* (red run
+    blocks the merge button) needs GitHub branch-protection's "require status
+    checks to pass" enabled on `main` — a repo-admin setting with no API this
+    session's tools can reach. Needs a human to click it once in Settings →
+    Branches. Until then the workflow gives visibility but doesn't
+    technically block a merge.
+  - **Process convention added as a result of this session — see "Working
+    conventions" below**: going forward, sessions should update this file with
+    enough detail before ending (or right after a merge) that a **completely
+    fresh session with zero chat history** can resume seamlessly from this
+    file plus the repo/PR state alone.
+
 ## Next steps (in order)
+
+**2026-07-16, most urgent — macOS codesign fix is CI-verified on PR #23 but not
+yet merged.** See the 2026-07-16 progress log entry for the full 9-round story.
+Concretely, in order:
+1. Merge PR #23. Its branch already has the working `merge-universal.sh` fixes
+   and `test-macos-package.yml`, but `release.yml`'s own "Ad-hoc sign the merged
+   app" step is a **hand-kept-in-lockstep copy**, not shared code — diff it
+   against the PR branch's version of the same step and copy over anything
+   that changed, don't assume the merge alone brings `release.yml` up to date.
+2. Watch the resulting real release (will be v4.0.33) actually ship working
+   `.dmg`/`.app.tar.gz` assets — this will be the first macOS release built from
+   a pre-verified fix rather than another blind attempt, but "verified on a PR
+   runner" and "verified in the exact release.yml job" are still two different
+   things worth confirming once for real.
+3. Ask the repo owner to enable branch protection on `main` (Settings →
+   Branches → require status check `build-macos-universal (test)` to pass
+   before merging) — flagged in the progress log as a gap no available tool
+   can close programmatically.
 
 **Boot milestone reached 2026-07-10: server starts, web UI renders and is verified
 interactive in a real headless browser (setup wizard works end to end). Provider
@@ -1117,3 +1259,33 @@ higher-level plan for what comes after.
   verified (not every frame). See `docs/screenshots/README.md` for the full
   convention. This makes "I tested it and it works" checkable by the user without
   them having to re-run anything.
+- **Sessions are disposable; this file and the repo/PR state are not.** The
+  user's working model going forward is: one focused task per session, then
+  start a fresh session for the next task rather than continuing an old,
+  increasingly long chat. For that to work without losing context, treat every
+  session as if its own chat history will be permanently discarded the moment
+  it ends:
+  - **Before ending a session** (task done, or handing off mid-task), update
+    this file's progress log with enough detail that a brand-new session —
+    zero prior messages, only this file plus the actual repo/PR state — could
+    pick up exactly where you left off. That means: what was tried, what
+    failed and why (root causes, not just symptoms), what actually fixed it,
+    and what's still open. The 2026-07-16 macOS-codesign entry is the model to
+    follow: it records not just the final fix but the 9 discarded hypotheses
+    in between, because "we already tried X, it doesn't work, here's why" is
+    exactly the context a fresh session most needs to not repeat dead ends.
+  - **PRs must be self-contained.** Write the PR description assuming the
+    reader (human or a future fresh session) has no chat context at all — the
+    "why", not just the diff. This is already this repo's practice; keep doing
+    it.
+  - **Once a PR is merged, its branch/session context is safe to discard** —
+    but only if the merge's outcome (what shipped, what it fixed, anything
+    still unverified) made it into this file's progress log *before* or
+    *immediately after* the merge, not left implicit in a chat transcript
+    nobody will reread. If you're ending a session with unmerged work still in
+    flight, say so explicitly in the log (branch name, PR number, current
+    CI/review state) rather than leaving it to be inferred.
+  - Don't rely on this file's "Next steps" section alone for handoff — it's a
+    living, editable summary and gets rewritten as priorities shift. The
+    progress log is the append-only source of truth for *why* things are the
+    way they are; "Next steps" is just *what's next* right now.
