@@ -457,13 +457,21 @@ jobs:
       # different path to point codesign at.
       #
       # Every *other* embedded Mach-O binary (~60 .so files) signs cleanly as
-      # a flat file. Rather than keep guessing at codesign invocations for
-      # this one specific inherently-ambiguous item, make individual signing
-      # failures non-fatal and let the final top-level seal be the actual
-      # gate: if leaving Python.framework's own (pre-merge, possibly stale)
-      # signature alone doesn't in fact block sealing the top bundle, this
-      # resolves it without needing to perfectly satisfy codesign's bundle-
-      # type detection on it.
+      # a flat file. Making individual signing failures non-fatal (so
+      # Python.framework's own stale pre-merge state is left alone) got
+      # further, but the top-level seal then failed with the *original*
+      # v4.0.25 error again - "code object is not signed at all" on
+      # chardet/models/models.bin - just now surfacing at the very end
+      # instead of during per-item signing. That means this file isn't
+      # actually Mach-O (this loop's `file` check correctly leaves it alone),
+      # yet codesign's resource-sealing scan still classifies it as "nested
+      # code requiring a signature" it can't generate. codesign makes that
+      # call based on the executable permission bit, not file content - a
+      # plain data file PyInstaller happened to leave +x on gets flagged as
+      # code with no way to actually sign it as such. Fix: strip the exec bit
+      # from any non-Mach-O file so it drops out of that classification
+      # entirely, before doing the real Mach-O signing pass and the final
+      # top-level seal.
       - name: Ad-hoc sign the merged app
         run: |
           while IFS= read -r -d '' fw; do
@@ -473,8 +481,10 @@ jobs:
           while IFS= read -r -d '' f; do
             if file -b "$f" | grep -q "Mach-O"; then
               codesign --force --sign - "$f" || echo "warning: could not sign $f, continuing"
+            else
+              chmod -x "$f" 2>/dev/null || true
             fi
-          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f ! -path "*.framework/*" -print0)
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f ! -path "*.framework/*" -perm -u+x -print0)
 
           codesign --force --sign - dist/CouchTomato.app
 
