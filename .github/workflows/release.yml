@@ -461,17 +461,26 @@ jobs:
       # Python.framework's own stale pre-merge state is left alone) got
       # further, but the top-level seal then failed with the *original*
       # v4.0.25 error again - "code object is not signed at all" on
-      # chardet/models/models.bin - just now surfacing at the very end
-      # instead of during per-item signing. That means this file isn't
-      # actually Mach-O (this loop's `file` check correctly leaves it alone),
-      # yet codesign's resource-sealing scan still classifies it as "nested
-      # code requiring a signature" it can't generate. codesign makes that
-      # call based on the executable permission bit, not file content - a
-      # plain data file PyInstaller happened to leave +x on gets flagged as
-      # code with no way to actually sign it as such. Fix: strip the exec bit
-      # from any non-Mach-O file so it drops out of that classification
-      # entirely, before doing the real Mach-O signing pass and the final
-      # top-level seal.
+      # chardet/models/models.bin. Stripping the executable bit from
+      # non-Mach-O files (on the theory codesign classifies "nested code" by
+      # permission bit) fixed *that* file, but the very next run hit the
+      # exact same error on a *different*, unrelated file in the same
+      # directory - chardet/models/idf.bin - which the u+x filter never even
+      # matched. So permission bits aren't the real mechanism; codesign's
+      # resource-sealing scan is flagging plain data files as needing a
+      # signature for some other reason, and which specific file it
+      # complains about next is essentially unpredictable (it just stops at
+      # the first one it finds each run). Trying to guess which individual
+      # files need this is a losing game.
+      #
+      # Only *directories* need bundle-format interpretation (that's what
+      # made signing "certifi" fail outright) - a flat, non-directory file
+      # can always be ad-hoc-signed regardless of content, the same
+      # mechanism that already works for the real Mach-O binaries. So: stop
+      # trying to distinguish "real code" from "plain data" and just sign
+      # every flat file under Frameworks (outside .framework dirs), Mach-O
+      # or not - codesign accepts or rejects each individually and per-item
+      # failures are already non-fatal here.
       - name: Ad-hoc sign the merged app
         run: |
           while IFS= read -r -d '' fw; do
@@ -479,12 +488,8 @@ jobs:
           done < <(find dist/CouchTomato.app/Contents/Frameworks -type d -name "*.framework" -print0)
 
           while IFS= read -r -d '' f; do
-            if file -b "$f" | grep -q "Mach-O"; then
-              codesign --force --sign - "$f" || echo "warning: could not sign $f, continuing"
-            else
-              chmod -x "$f" 2>/dev/null || true
-            fi
-          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f ! -path "*.framework/*" -perm -u+x -print0)
+            codesign --force --sign - "$f" || echo "warning: could not sign $f, continuing"
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f ! -path "*.framework/*" -print0)
 
           codesign --force --sign - dist/CouchTomato.app
 
