@@ -1,0 +1,150 @@
+name: Test macOS Package
+
+# Runs the exact same macOS build -> lipo-merge -> ad-hoc-sign pipeline as
+# release.yml's build-macos-x64/build-macos-arm64/build-macos-universal jobs,
+# but on every PR that touches anything macOS-packaging-related, instead of
+# only on push to main. This exists so a macOS codesign fix can be iterated
+# on and verified entirely on a PR branch - watching this workflow's checks
+# go green or red - without cutting a real version tag/release for every
+# attempt. The real release.yml is untouched: it still only fires on push to
+# main, and only it ever creates a GitHub Release or attaches versioned
+# assets. This workflow's output is a plain workflow-run artifact (visible
+# in the PR's Checks tab / Actions run, no version number attached to it),
+# not a release asset - nothing here is user-facing until the fix actually
+# merges.
+#
+# To make this a hard gate (PR can't merge unless this is green), enable
+# branch protection on `main`: Settings -> Branches -> add/edit a rule for
+# `main` -> "Require status checks to pass before merging" -> select
+# "build-macos-universal (test)". That's a repo-admin setting with no API
+# exposed to this session's tools, so it has to be done once by hand.
+
+on:
+  pull_request:
+    paths:
+      - 'packaging/macos/**'
+      - 'packaging/couchtomato.spec'
+      - 'requirements.txt'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/test-macos-package.yml'
+  workflow_dispatch:
+
+jobs:
+  build-macos-x64:
+    runs-on: macos-15-intel # macos-13 was retired Dec 2025; this is the current Intel label
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-macos-x64-build
+          path: dist/CouchTomato.app
+          include-hidden-files: true
+
+  build-macos-arm64:
+    runs-on: macos-latest # Apple Silicon
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Build with PyInstaller
+        run: pyinstaller --clean --noconfirm packaging/couchtomato.spec
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-macos-arm64-build
+          path: dist/CouchTomato.app
+          include-hidden-files: true
+
+  # This is the job to select as a required status check in branch
+  # protection - it's the one that actually exercises the lipo merge and
+  # the full ad-hoc codesign sequence that's been the source of every
+  # macOS packaging bug so far.
+  build-macos-universal:
+    name: build-macos-universal (test)
+    needs: [build-macos-x64, build-macos-arm64]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download x64 build
+        uses: actions/download-artifact@v4
+        with:
+          name: test-macos-x64-build
+          path: x64-app
+
+      - name: Download arm64 build
+        uses: actions/download-artifact@v4
+        with:
+          name: test-macos-arm64-build
+          path: arm64-app
+
+      - name: Merge into a universal2 .app with lipo
+        run: |
+          chmod +x arm64-app/Contents/MacOS/* x64-app/Contents/MacOS/* 2>/dev/null || true
+          bash packaging/macos/merge-universal.sh arm64-app x64-app dist/CouchTomato.app
+
+      # Keep this in lockstep with the "Ad-hoc sign the merged app" step in
+      # release.yml - see that step's comments for the full history of why
+      # it's written this way. Any codesign fix should land here first,
+      # get proven green on this PR-only workflow, then be copied over to
+      # release.yml as part of the same PR.
+      - name: Ad-hoc sign the merged app
+        run: |
+          while IFS= read -r -d '' d; do
+            codesign --force --sign - "$d" || echo "warning: could not sign $d, continuing"
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -mindepth 1 -maxdepth 1 -type d -print0)
+
+          while IFS= read -r -d '' f; do
+            codesign --force --sign - "$f" || echo "warning: could not sign $f, continuing"
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f ! -path "*.framework/*" -print0)
+
+          codesign --force --sign - dist/CouchTomato.app
+
+      - name: Verify the signature actually seals (this is the real check)
+        run: codesign --verify --verbose=4 dist/CouchTomato.app
+
+      - name: Package test artifacts (no version number - not a release)
+        run: |
+          ref="${{ github.event.pull_request.head.sha || github.sha }}"
+          short_sha="${ref:0:7}"
+          mkdir -p dist/dmg
+          cp -R dist/CouchTomato.app dist/dmg/
+          ln -s /Applications dist/dmg/Applications
+          hdiutil create -volname "CouchTomato" -srcfolder dist/dmg -ov -format UDZO "CouchTomato-test-${short_sha}.dmg"
+          tar czf "CouchTomato-test-${short_sha}-macos_universal.app.tar.gz" -C dist CouchTomato.app
+
+      - name: Upload test build (workflow artifact, not a release asset)
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-universal-test-build
+          path: |
+            CouchTomato-test-*.dmg
+            CouchTomato-test-*-macos_universal.app.tar.gz
