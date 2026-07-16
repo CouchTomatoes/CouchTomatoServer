@@ -419,15 +419,29 @@ jobs:
       # per-slice signatures across a merge, so this has to happen after
       # merging, not on the two single-arch builds beforehand.
       #
-      # Deliberately no --deep: PyInstaller's bundle includes non-standard
-      # subcomponents (e.g. Contents/Frameworks/python3.11) that codesign's
-      # recursive deep-signing can't parse ("bundle format unrecognized,
-      # invalid, or unsuitable"), failing the whole signature. Signing just
-      # the top-level bundle is what Gatekeeper's basic launch check
-      # actually looks at, and is the standard approach for ad-hoc-signing
-      # PyInstaller apps for exactly this reason.
+      # Deliberately no --deep on the top-level call: PyInstaller's bundle
+      # includes non-standard subcomponents (e.g. Contents/Frameworks/
+      # python3.11) that codesign's recursive deep-signing can't parse
+      # ("bundle format unrecognized, invalid, or unsuitable"), failing the
+      # whole signature.
+      #
+      # But signing *only* the top level isn't enough either: macOS treats
+      # every direct entry under Contents/Frameworks as "nested code" that
+      # must carry its own valid signature before the parent bundle can be
+      # sealed - regardless of whether that entry is an actual Mach-O binary
+      # or (as with PyInstaller's onedir layout, which puts the whole
+      # couchpotato/libs data trees there too) a plain data directory. Without
+      # this, sealing the top bundle fails with "code object is not signed at
+      # all" on whichever Frameworks entry it reaches first (e.g. chardet's
+      # bundled models.bin). Signing each direct child individually first -
+      # one flat level, no recursion into it - satisfies that requirement
+      # without hitting --deep's parsing problem.
       - name: Ad-hoc sign the merged app
-        run: codesign --force --sign - dist/CouchTomato.app
+        run: |
+          for item in dist/CouchTomato.app/Contents/Frameworks/*; do
+            codesign --force --sign - "$item"
+          done
+          codesign --force --sign - dist/CouchTomato.app
 
       - name: Build DMG
         run: |
