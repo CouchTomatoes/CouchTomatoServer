@@ -425,22 +425,28 @@ jobs:
       # ("bundle format unrecognized, invalid, or unsuitable"), failing the
       # whole signature.
       #
-      # But signing *only* the top level isn't enough either: macOS treats
-      # every direct entry under Contents/Frameworks as "nested code" that
-      # must carry its own valid signature before the parent bundle can be
-      # sealed - regardless of whether that entry is an actual Mach-O binary
-      # or (as with PyInstaller's onedir layout, which puts the whole
-      # couchpotato/libs data trees there too) a plain data directory. Without
-      # this, sealing the top bundle fails with "code object is not signed at
-      # all" on whichever Frameworks entry it reaches first (e.g. chardet's
-      # bundled models.bin). Signing each direct child individually first -
-      # one flat level, no recursion into it - satisfies that requirement
-      # without hitting --deep's parsing problem.
+      # But signing *only* the top level isn't enough: sealing it fails with
+      # "code object is not signed at all" on whichever embedded Mach-O file
+      # codesign's resource scan finds first that isn't already signed (e.g.
+      # a stray .so under Contents/Frameworks). A first attempt at fixing this
+      # by ad-hoc-signing every direct entry under Frameworks (whether file or
+      # directory) was wrong: plain data directories PyInstaller drops there
+      # (e.g. certifi's package data) aren't valid signing targets at all -
+      # `codesign` on a directory that isn't a real bundle/framework fails
+      # with the same "bundle format unrecognized" error --deep hits, since
+      # codesign tries to interpret it as one. Only actual Mach-O files need
+      # (and can) be signed; codesign's resource-sealing scan only requires
+      # code it recognizes as such to be signed, at any depth, and otherwise
+      # treats a file as inert data needing no signature. So: find every real
+      # Mach-O file anywhere under Frameworks (via `file`, not extension/perm
+      # guessing) and sign each one individually, then seal the top bundle.
       - name: Ad-hoc sign the merged app
         run: |
-          for item in dist/CouchTomato.app/Contents/Frameworks/*; do
-            codesign --force --sign - "$item"
-          done
+          while IFS= read -r -d '' f; do
+            if file -b "$f" | grep -q "Mach-O"; then
+              codesign --force --sign - "$f"
+            fi
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f -print0)
           codesign --force --sign - dist/CouchTomato.app
 
       - name: Build DMG
