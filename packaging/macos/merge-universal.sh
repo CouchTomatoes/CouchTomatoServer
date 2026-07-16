@@ -70,5 +70,20 @@ if [ -n "$dotted_pydir" ]; then
   fi
 fi
 
+# Same underlying problem, different shape: pip/setuptools .dist-info and
+# .egg-info directories (e.g. "setuptools-65.5.0.dist-info") carry a
+# dotted version number in their own name, which trips the exact same
+# codesign structural-validation false positive as the python3.11 case
+# above ("bundle format unrecognized, invalid, or unsuitable") once
+# python3.11 itself stopped being the first thing it tripped over. These
+# are pure packaging metadata (version/dependency info for pip's own
+# bookkeeping) - CouchTomato's own code never reads them at runtime - so
+# they're safe to drop entirely rather than rename around the collision.
+find "$out_dir/Contents/Frameworks" -mindepth 1 -maxdepth 1 -type d \( -name '*.dist-info' -o -name '*.egg-info' \) -print0 |
+  while IFS= read -r -d '' metadir; do
+    echo "Removing packaging metadata dir $metadir (not needed at runtime)"
+    rm -rf "$metadir"
+  done
+
 echo "Universal2 app written to $out_dir"
 lipo -info "$out_dir/Contents/MacOS/CouchTomato"
