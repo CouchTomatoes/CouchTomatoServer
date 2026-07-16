@@ -49,5 +49,26 @@ find "$arm64_dir" -type f | while IFS= read -r arm64_file; do
   lipo -create "$arm64_file" "$x64_file" -output "$out_file"
 done
 
+# PyInstaller has been observed producing two copies of the same
+# lib-dynload directory in a single build - one named literally
+# "pythonX.Y" and one with the dot escaped as "pythonX__dot__Y" - with
+# identical content. The literal-dot name matches Apple's own
+# Python.framework version-directory convention closely enough that
+# macOS's codesign bundle-format validation tries to structurally
+# interpret it as nested code and hard-fails signing the whole app, while
+# the escaped name is treated as ordinary data and signs fine. Since the
+# escaped copy is a complete functional duplicate, drop the literal-dot
+# one before signing - but only when the escaped fallback actually
+# exists, so this is a no-op if a future PyInstaller version stops
+# producing the duplicate (or only ever produces the escaped name).
+dotted_pydir=$(find "$out_dir/Contents/Frameworks" -mindepth 1 -maxdepth 1 -type d -name 'python[0-9].[0-9]*' 2>/dev/null | head -n1)
+if [ -n "$dotted_pydir" ]; then
+  escaped_pydir="$(dirname "$dotted_pydir")/$(basename "$dotted_pydir" | sed 's/\./__dot__/')"
+  if [ -d "$escaped_pydir" ]; then
+    echo "Removing duplicate $dotted_pydir (escaped copy $escaped_pydir already present)"
+    rm -rf "$dotted_pydir"
+  fi
+fi
+
 echo "Universal2 app written to $out_dir"
 lipo -info "$out_dir/Contents/MacOS/CouchTomato"

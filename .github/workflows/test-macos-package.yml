@@ -131,6 +131,17 @@ jobs:
       - name: Verify the signature actually seals (this is the real check)
         run: codesign --verify --verbose=4 dist/CouchTomato.app
 
+      # A valid signature only proves the bundle is sealed correctly - it
+      # says nothing about whether the app still works. Anything that
+      # touches the merged tree before signing (e.g. dropping the
+      # duplicate python3.11 dir in merge-universal.sh) could silently
+      # break module imports without tripping codesign at all. --help
+      # exercises CouchPotato.py's full import chain (couchpotato/,
+      # libs/, the frozen stdlib) without needing a data dir or network.
+      - name: Smoke-test the signed app actually starts
+        timeout-minutes: 2
+        run: dist/CouchTomato.app/Contents/MacOS/CouchTomato --help
+
       - name: Package test artifacts (no version number - not a release)
         run: |
           ref="${{ github.event.pull_request.head.sha || github.sha }}"
