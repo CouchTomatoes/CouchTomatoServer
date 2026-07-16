@@ -480,12 +480,25 @@ jobs:
       # trying to distinguish "real code" from "plain data" and just sign
       # every flat file under Frameworks (outside .framework dirs), Mach-O
       # or not - codesign accepts or rejects each individually and per-item
-      # failures are already non-fatal here.
+      # failures are already non-fatal here. This cleared every "code object
+      # is not signed at all" complaint on individual files, but the
+      # top-level seal then hit a *directory* it was never asked to sign:
+      # Contents/Frameworks/python3.11 (distinct from python3__dot__11,
+      # which holds the lib-dynload .so files already signed above) -
+      # "bundle format unrecognized, invalid, or unsuitable", the same class
+      # of error --deep originally hit and "certifi" hit when signed
+      # directly. Making Python.framework's per-item signing failure
+      # non-fatal was enough to stop the top-level seal complaining about
+      # it specifically in later rounds - so extend that same tolerant
+      # attempt to every other direct-child directory of Frameworks, not
+      # just ones named *.framework: try to sign each as a whole unit,
+      # accept that most of them (plain data dirs, non-standard PyInstaller
+      # layout dirs) will fail to do so, and let that be fine.
       - name: Ad-hoc sign the merged app
         run: |
-          while IFS= read -r -d '' fw; do
-            codesign --force --sign - "$fw" || echo "warning: could not sign $fw, continuing"
-          done < <(find dist/CouchTomato.app/Contents/Frameworks -type d -name "*.framework" -print0)
+          while IFS= read -r -d '' d; do
+            codesign --force --sign - "$d" || echo "warning: could not sign $d, continuing"
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -mindepth 1 -maxdepth 1 -type d -print0)
 
           while IFS= read -r -d '' f; do
             codesign --force --sign - "$f" || echo "warning: could not sign $f, continuing"
