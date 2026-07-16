@@ -49,5 +49,88 @@ find "$arm64_dir" -type f | while IFS= read -r arm64_file; do
   lipo -create "$arm64_file" "$x64_file" -output "$out_file"
 done
 
+# PyInstaller produces a lib-dynload directory named literally "pythonX.Y"
+# alongside a dot-escaped "pythonX__dot__Y" copy. The literal-dot name
+# matches Apple's own Python.framework version-directory convention
+# closely enough that macOS's codesign bundle-format validation tries to
+# structurally interpret it as nested code and hard-fails signing the
+# whole app, while the escaped name is treated as ordinary data and signs
+# fine.
+#
+# A first attempt deleted the dotted-name directory outright (keeping
+# only the escaped copy) - codesign was happy, but the runtime smoke-test
+# then caught what that broke: PyInstaller's frozen bootstrap looks up
+# stdlib C extensions via the literal "pythonX.Y" path specifically, so
+# removing it produced "ModuleNotFoundError: No module named '_struct'"
+# on every single run. The two directories are not interchangeable at
+# the runtime-lookup level, whatever their content looks like on disk.
+#
+# Fix properly, using the same technique that resolved the identical
+# "bundle format" complaint on Python.framework: codesign's structural
+# check is tripped by a *real directory* with a dotted version-like name,
+# not by a plain symlink with that name. Rename the real directory to a
+# dot-free name and put a symlink at the original "pythonX.Y" path
+# pointing to it - every existing lookup at that literal path still
+# resolves exactly as before, but the on-disk item codesign inspects at
+# that name is now a symlink, not a directory, so its naming no longer
+# matches the pattern that triggers the false positive.
+dotted_pydir=$(find "$out_dir/Contents/Frameworks" -mindepth 1 -maxdepth 1 -type d -name 'python[0-9].[0-9]*' 2>/dev/null | head -n1)
+if [ -n "$dotted_pydir" ]; then
+  dir_name="$(basename "$dotted_pydir")"
+  safe_name="${dir_name//./-dot-}"
+  safe_path="$(dirname "$dotted_pydir")/$safe_name"
+  echo "Renaming $dotted_pydir -> $safe_name, symlinking $dir_name back to it"
+  mv "$dotted_pydir" "$safe_path"
+  ln -s "$safe_name" "$dotted_pydir"
+fi
+
+# Same underlying problem, different shape: pip/setuptools .dist-info and
+# .egg-info directories (e.g. "setuptools-65.5.0.dist-info") carry a
+# dotted version number in their own name, which trips the exact same
+# codesign structural-validation false positive as the python3.11 case
+# above ("bundle format unrecognized, invalid, or unsuitable") once
+# python3.11 itself stopped being the first thing it tripped over. These
+# are pure packaging metadata (version/dependency info for pip's own
+# bookkeeping) - CouchTomato's own code never reads them at runtime - so
+# they're safe to drop entirely rather than rename around the collision.
+find "$out_dir/Contents/Frameworks" -mindepth 1 -maxdepth 1 -type d \( -name '*.dist-info' -o -name '*.egg-info' \) -print0 |
+  while IFS= read -r -d '' metadir; do
+    echo "Removing packaging metadata dir $metadir (not needed at runtime)"
+    rm -rf "$metadir"
+  done
+
+# Root cause of the persistent "Python.framework: bundle format is
+# ambiguous (could be app or framework)" codesign failure, confirmed by
+# dumping the actual merged tree: a real macOS framework's "current
+# version" indirection is supposed to be symlinks (Versions/Current ->
+# <version>, plus top-level Python and Resources symlinking through
+# Versions/Current/) - but actions/upload-artifact and
+# download-artifact round-trip the .app tree through a zip archive
+# between the single-arch build jobs and this merge job, and zip
+# doesn't preserve symlinks. What arrives here has Versions/Current as
+# a real, fully duplicated directory (own _CodeSignature and all)
+# instead of a symlink, and three byte-identical copies of the Python
+# binary (top-level, Versions/<ver>/, Versions/Current/) instead of one
+# real file plus two symlinks. That's structurally invalid - codesign
+# can't tell whether the duplicated "Current" is the framework's version
+# indirection or a second nested bundle, hence "ambiguous". Rebuild the
+# real symlink structure: keep exactly one real copy (the versioned
+# directory whose name isn't literally "Current") and point everything
+# else at it the way a genuine Python.framework actually lays out.
+py_framework="$out_dir/Contents/Frameworks/Python.framework"
+if [ -d "$py_framework/Versions" ]; then
+  version_dir=$(find "$py_framework/Versions" -mindepth 1 -maxdepth 1 -type d ! -name Current -print -quit)
+  if [ -n "$version_dir" ]; then
+    version_name="$(basename "$version_dir")"
+    echo "Rebuilding Python.framework symlink structure (version $version_name)"
+    rm -rf "$py_framework/Versions/Current"
+    ln -s "$version_name" "$py_framework/Versions/Current"
+    rm -f "$py_framework/Python"
+    ln -s "Versions/Current/Python" "$py_framework/Python"
+    rm -rf "$py_framework/Resources"
+    ln -s "Versions/Current/Resources" "$py_framework/Resources"
+  fi
+fi
+
 echo "Universal2 app written to $out_dir"
 lipo -info "$out_dir/Contents/MacOS/CouchTomato"
