@@ -111,23 +111,6 @@ jobs:
           chmod +x arm64-app/Contents/MacOS/* x64-app/Contents/MacOS/* 2>/dev/null || true
           bash packaging/macos/merge-universal.sh arm64-app x64-app dist/CouchTomato.app
 
-      # Temporary diagnostic: codesign's top-level seal calls
-      # Python.framework's bundle format "ambiguous (could be app or
-      # framework)" - dump its actual on-disk layout so the next fix is
-      # based on what's really there instead of another guess. Remove
-      # once the framework's ambiguity is actually resolved.
-      - name: Dump Python.framework structure for diagnosis
-        run: |
-          fw="dist/CouchTomato.app/Contents/Frameworks/Python.framework"
-          echo "--- find (full tree) ---"
-          find "$fw" | sort
-          echo "--- ls -la at each level ---"
-          find "$fw" -maxdepth 3 -type d -exec sh -c 'echo "[$1]"; ls -la "$1"' _ {} \;
-          echo "--- symlink targets ---"
-          find "$fw" -type l -exec sh -c 'echo -n "$1 -> "; readlink "$1"' _ {} \;
-          echo "--- any Info.plist content ---"
-          find "$fw" -name 'Info.plist' -exec sh -c 'echo "[$1]"; cat "$1"' _ {} \;
-
       # Keep this in lockstep with the "Ad-hoc sign the merged app" step in
       # release.yml - see that step's comments for the full history of why
       # it's written this way. Any codesign fix should land here first,
