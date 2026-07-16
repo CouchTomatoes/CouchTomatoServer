@@ -1181,14 +1181,16 @@ future rounds don't cost real releases)**
 
 ## Next steps (in order)
 
-**2026-07-16, most urgent — macOS codesign fix is CI-verified on PR #23 but not
-yet merged.** See the 2026-07-16 progress log entry for the full 9-round story.
-Concretely, in order:
-1. Merge PR #23. Its branch already has the working `merge-universal.sh` fixes
-   and `test-macos-package.yml`, but `release.yml`'s own "Ad-hoc sign the merged
-   app" step is a **hand-kept-in-lockstep copy**, not shared code — diff it
-   against the PR branch's version of the same step and copy over anything
-   that changed, don't assume the merge alone brings `release.yml` up to date.
+**2026-07-16, most urgent — PR #23 merged; confirm the real release actually
+works.** See the 2026-07-16 progress log entry for the full 9-round story.
+1. ~~Merge PR #23~~ — **done 2026-07-16**, `main` is at `cd14133`. Checked
+   `release.yml`'s "Ad-hoc sign the merged app" step against the merged
+   version right after merging: it already matched exactly (only
+   `merge-universal.sh`, which both workflows share, needed rounds 7-10's
+   fixes — the signing step itself hadn't changed since PR #22, which was
+   already on `main`). No manual porting was actually needed this time, but
+   keep checking this by hand on future signing-step changes since it's still
+   two independent copies, not shared code.
 2. Watch the resulting real release (will be v4.0.33) actually ship working
    `.dmg`/`.app.tar.gz` assets — this will be the first macOS release built from
    a pre-verified fix rather than another blind attempt, but "verified on a PR
