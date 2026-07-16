@@ -49,25 +49,39 @@ find "$arm64_dir" -type f | while IFS= read -r arm64_file; do
   lipo -create "$arm64_file" "$x64_file" -output "$out_file"
 done
 
-# PyInstaller has been observed producing two copies of the same
-# lib-dynload directory in a single build - one named literally
-# "pythonX.Y" and one with the dot escaped as "pythonX__dot__Y" - with
-# identical content. The literal-dot name matches Apple's own
-# Python.framework version-directory convention closely enough that
-# macOS's codesign bundle-format validation tries to structurally
-# interpret it as nested code and hard-fails signing the whole app, while
-# the escaped name is treated as ordinary data and signs fine. Since the
-# escaped copy is a complete functional duplicate, drop the literal-dot
-# one before signing - but only when the escaped fallback actually
-# exists, so this is a no-op if a future PyInstaller version stops
-# producing the duplicate (or only ever produces the escaped name).
+# PyInstaller produces a lib-dynload directory named literally "pythonX.Y"
+# alongside a dot-escaped "pythonX__dot__Y" copy. The literal-dot name
+# matches Apple's own Python.framework version-directory convention
+# closely enough that macOS's codesign bundle-format validation tries to
+# structurally interpret it as nested code and hard-fails signing the
+# whole app, while the escaped name is treated as ordinary data and signs
+# fine.
+#
+# A first attempt deleted the dotted-name directory outright (keeping
+# only the escaped copy) - codesign was happy, but the runtime smoke-test
+# then caught what that broke: PyInstaller's frozen bootstrap looks up
+# stdlib C extensions via the literal "pythonX.Y" path specifically, so
+# removing it produced "ModuleNotFoundError: No module named '_struct'"
+# on every single run. The two directories are not interchangeable at
+# the runtime-lookup level, whatever their content looks like on disk.
+#
+# Fix properly, using the same technique that resolved the identical
+# "bundle format" complaint on Python.framework: codesign's structural
+# check is tripped by a *real directory* with a dotted version-like name,
+# not by a plain symlink with that name. Rename the real directory to a
+# dot-free name and put a symlink at the original "pythonX.Y" path
+# pointing to it - every existing lookup at that literal path still
+# resolves exactly as before, but the on-disk item codesign inspects at
+# that name is now a symlink, not a directory, so its naming no longer
+# matches the pattern that triggers the false positive.
 dotted_pydir=$(find "$out_dir/Contents/Frameworks" -mindepth 1 -maxdepth 1 -type d -name 'python[0-9].[0-9]*' 2>/dev/null | head -n1)
 if [ -n "$dotted_pydir" ]; then
-  escaped_pydir="$(dirname "$dotted_pydir")/$(basename "$dotted_pydir" | sed 's/\./__dot__/')"
-  if [ -d "$escaped_pydir" ]; then
-    echo "Removing duplicate $dotted_pydir (escaped copy $escaped_pydir already present)"
-    rm -rf "$dotted_pydir"
-  fi
+  dir_name="$(basename "$dotted_pydir")"
+  safe_name="${dir_name//./-dot-}"
+  safe_path="$(dirname "$dotted_pydir")/$safe_name"
+  echo "Renaming $dotted_pydir -> $safe_name, symlinking $dir_name back to it"
+  mv "$dotted_pydir" "$safe_path"
+  ln -s "$safe_name" "$dotted_pydir"
 fi
 
 # Same underlying problem, different shape: pip/setuptools .dist-info and
