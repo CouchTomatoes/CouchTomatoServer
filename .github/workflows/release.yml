@@ -434,19 +434,34 @@ jobs:
       # (e.g. certifi's package data) aren't valid signing targets at all -
       # `codesign` on a directory that isn't a real bundle/framework fails
       # with the same "bundle format unrecognized" error --deep hits, since
-      # codesign tries to interpret it as one. Only actual Mach-O files need
-      # (and can) be signed; codesign's resource-sealing scan only requires
-      # code it recognizes as such to be signed, at any depth, and otherwise
-      # treats a file as inert data needing no signature. So: find every real
-      # Mach-O file anywhere under Frameworks (via `file`, not extension/perm
-      # guessing) and sign each one individually, then seal the top bundle.
+      # codesign tries to interpret it as one. Only actual Mach-O binaries
+      # need (and can) be signed; codesign's resource-sealing scan only
+      # requires code it recognizes as such to be signed, at any depth, and
+      # otherwise treats a file as inert data needing no signature.
+      #
+      # A second attempt (find every Mach-O *file* via `file`, sign each one)
+      # got past ~60 loose .so files cleanly, then failed on
+      # Contents/Frameworks/Python.framework/Python: "bundle format is
+      # ambiguous (could be app or framework)". Signing the raw binary
+      # *inside* a .framework directory directly is ambiguous to codesign -
+      # it can't tell whether that file is a stray loose binary or the
+      # framework's primary executable, and refuses to guess. Frameworks
+      # must be signed as their enclosing directory (one bundle unit), not
+      # via the file inside them. So: sign each *.framework directory as a
+      # whole first, then sign every other Mach-O file that isn't inside one
+      # of those, then seal the top bundle.
       - name: Ad-hoc sign the merged app
         run: |
+          while IFS= read -r -d '' fw; do
+            codesign --force --sign - "$fw"
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -type d -name "*.framework" -print0)
+
           while IFS= read -r -d '' f; do
             if file -b "$f" | grep -q "Mach-O"; then
               codesign --force --sign - "$f"
             fi
-          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f -print0)
+          done < <(find dist/CouchTomato.app/Contents/Frameworks -type f ! -path "*.framework/*" -print0)
+
           codesign --force --sign - dist/CouchTomato.app
 
       - name: Build DMG
