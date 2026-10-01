@@ -321,6 +321,29 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
         session, just two more unguarded references in sibling methods.
         Guarded all of them the same way.
 
+## 6. Production backlog (found running it for real, 2026-09-30 → 10-01)
+
+From a live install on a Raspberry Pi 4. Evidence, file:line references and the fix direction for every item:
+[`docs/production-backlog.md`](docs/production-backlog.md) — the section numbers below match it.
+
+- [ ] **⭐ First:** live notifications (bell count + popup) only update after a page reload —
+      `CoreNotifier.notify()` pushes the listener name (`movie.snatched`…) as the event type, but the bell only
+      listens for `'notification'`. Inherited from CouchPotato. (§1)
+- [ ] Finish the rebrand the UI still shows: hover logo "Couch/Potato", page titles, About/restart prompts,
+      bookmarklet, images, default data dir / log name — source **and** the combined bundles. (§2)
+- [ ] TMDB search keeps only the first 3 results (`themoviedb.py` `limit = 3`) — real titles ranked 4th never show. (§3)
+- [ ] External APIs: `api.couchpota.to` is parked (73 failing calls/hour), OMDb 401 not surfaced, magnetdl behind
+      Cloudflare, YTS base URL moving, IMDb chart scraper blocked, torcache dead. (§4)
+- [ ] Python 3 port bugs: `dashboard.py:88` NoneType `<` float; bytes repr in `validate/` URL; blackhole writes
+      `str` to `'wb'`; DB needs `PYTHONHASHSEED` fixed outside the app; 40–80 s shutdown (un-awaited coroutine);
+      `"is" with a literal` warnings. (§5)
+- [ ] Make it download out of the box: a working torrent provider (TPB/apibay via FlareSolverr); add `lxml` and
+      `pyOpenSSL` to `requirements.txt`. (§6)
+- [ ] Fix the wiki Migration page — pointing `--data_dir` at a CouchPotato dir damages that DB; document
+      export/import instead. (§7)
+- [ ] Self-host the API backend (`CouchTomatoes/CouchTomatoAPI`) and make the API base URL a setting; widen its
+      7-digit IMDb id routes, replace the blank private `mdb` sources. (§8)
+
 ---
 
 **Not in scope for "runnable"** — tracked in `CLAUDE.md`'s next-steps for after this
