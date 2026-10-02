@@ -339,6 +339,9 @@ From a live install on a Raspberry Pi 4. Evidence, file:line references and the 
       `"is" with a literal` warnings. (§5)
 - [ ] Make it download out of the box: a working torrent provider (TPB/apibay via FlareSolverr); add `lxml` and
       `pyOpenSSL` to `requirements.txt`. (§6)
+- [ ] **FlareSolverr support** — a `flaresolverr_host` setting, a Cloudflare-challenge retry in `base.py` `urlopen`
+      (unwrap `<pre>` for JSON), TPB rewritten on apibay's JSON API. Done = a non-YTS movie **snatched**, not a
+      green Test button. Evidence + design: (§6a)
 - [ ] Fix the wiki Migration page — pointing `--data_dir` at a CouchPotato dir damages that DB; document
       export/import instead. (§7)
 - [ ] Self-host the API backend (`CouchTomatoes/CouchTomatoAPI`) and make the API base URL a setting; widen its
