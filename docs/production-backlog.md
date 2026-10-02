@@ -89,6 +89,37 @@ Counts are calls; status is the HTTP code the log recorded; endpoints are what `
 
 - A working torrent provider: TPB via apibay + FlareSolverr — the approach that fixed the same Cloudflare problem in
   SickGear. YTS already works (yts.am → yts.gg redirect; proven snatch to Transmission).
+
+### 6a. FlareSolverr support (requested 2026-10-02)
+
+**Why:** YTS is the only provider that answers. It posts a movie only after the digital/Blu-ray release, so
+anything YTS lacks is never found. MagnetDL is the only other enabled provider, and every search returns **403**
+(Cloudflare challenge): `Failed opening url in MagnetDL: … 403 Client Error: Forbidden` (live log, 2026-10-02).
+CouchTomato has **no FlareSolverr support at all**: no setting, and grep finds no `flaresolverr`/`cloudscraper` anywhere.
+
+**Evidence that FlareSolverr solves it** (one request each through a FlareSolverr 3.5.2 instance, from the same home IP):
+
+| Site | Result |
+|---|---|
+| `apibay.org/q.php?q=…&cat=200` (TPB's JSON search API) | HTTP 200 in 2.5 s, "Challenge not detected", real JSON results |
+| `www.magnetdl.com/i/<slug>/se/desc/1/` | HTTP 200 in 21.8 s, but the page had **0 magnet links**. The provider's scraper may be stale too; check before relying on it |
+
+**What to build:**
+1. A `flaresolverr_host` setting (core or searcher section, empty = off), shown in Settings.
+2. In the shared URL fetch (`couchpotato/core/plugins/base.py` `urlopen`), when a response is a Cloudflare challenge
+   (403/503 with `cf-mitigated` / "Just a moment…") and the host is set, retry as FlareSolverr `request.get`
+   and return `solution.response`. ⚠ For JSON APIs the browser wraps the body in `<pre>…</pre>`; strip that
+   before `json.loads`. SickGear needed exactly this, and passing only the browser flag still crashed its TPB
+   provider on the wrapped body.
+3. Rewrite `thepiratebay.py` against apibay's JSON API (`q.php`, then build the magnet from `info_hash`) instead
+   of the dead HTML site. Then re-check `magnetdl.py`'s parser.
+4. Never route through FlareSolverr when the host is empty. Plain requests must stay the default.
+
+**Done means:** a real movie that YTS does not have is found through TPB and **snatched to Transmission**. "No
+errors" and a passing Test button are not proof: SickGear's Test button passed while its searches still failed.
+
+**Note:** for a movie still in cinemas, TPB has only TELESYNC/CAM releases. The default quality profiles reject
+those, correctly. FlareSolverr widens what can be found; it does not make early releases appear.
 - Add `lxml` and `pyOpenSSL` to `requirements.txt` (both logged as missing at every boot).
 
 ## 7. Docs
