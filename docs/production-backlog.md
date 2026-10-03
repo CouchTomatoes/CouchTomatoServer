@@ -153,6 +153,51 @@ original author's README: "I don't really have the steps on how to get it runnin
   validation), trakt `api-v2launch`, Twitter/put.io OAuth — each UNVERIFIED alive; check before relying on it.
 - `whitelisted_ips` + `libs/restrict.js` gate access — set for the LAN it runs on.
 
+## 9. Auto-update deploys every merge to `main`, unattended (found 2026-10-02)
+
+**Observed:** the live install showed *"CouchPotato: Updated to a new version with hash …"* on two nights in a row.
+Both were docs-only merges (#25, #26). The log, about 23:10 each night:
+
+```
+10-01 23:09:59 Checking for new version on github for CouchPotatoServer
+10-01 23:10:00 Updating to latest version            → 49112dd3, then restart
+10-02 23:10:10 Checking for new version on github for CouchPotatoServer
+10-02 23:10:11 Updating to latest version            → 779579dc, then restart
+```
+
+The dead `api.couchpota.to` (item 4) plays no part in this. Updates go straight to GitHub through git.
+
+**How it works** (`couchpotato/core/_base/updater/`):
+- **Choosing a method** (`main.py:36-44`): desktop build → `DesktopUpdater`; app dir contains `.git` → `GitUpdater`;
+  otherwise `SourceUpdater` (a GitHub zip). A `git clone` install, the documented install method, always gets `GitUpdater`.
+- **Schedule** (`main.py:76`): every 24 h, counted from the last app start. `main.py:85` skips the run if a check
+  happened in the last 12 h.
+- **Check** (`main.py:262-291`): `git fetch` on `origin`, then compare the **commit date** of `HEAD` with that of
+  `origin/<current branch>` (`main.py:281`). If the remote's date is newer, an update is available. It does not check ancestry or versions.
+- **Apply** (`main.py:79-109`, `224`): if `automatic` is on (**default `True`**, `__init__.py:32-33`), it runs
+  `git pull`, fires the `updater.updated` notification (`main.py:101`, text still says "CouchPotato"), then
+  `app.restart`. If the pull fails (for example local edits conflict), it sets `update_failed` (`main.py:230`) and does
+  not retry until the next restart. It never forces anything.
+- With `automatic` off and `notification` on, it only reports *"A new update … is available"* and waits for a manual
+  update (`main.py:116-119`, or the `updater.update` API).
+- The log line names `CouchPotato/CouchPotatoServer` because `repo_user`/`repo_name` are hard-coded labels
+  (`main.py:172-173`). The repo it actually fetches from is the clone's real `origin`. This is part of the branding work in item 2.
+
+**Why it matters:** with the defaults, **every merge to `main` reaches every git-cloned install within 24 h, then
+restarts it**, with no test on a real install in between. The gaps:
+1. **It never runs `pip install -r requirements.txt`.** A PR that adds a dependency (`lxml`/`pyOpenSSL` in item 6, a
+   FlareSolverr client in 6a) pulls fine, then the restart crashes on the import. The service is down overnight
+   and nobody is watching.
+2. **It has no migration step and no health check.** It does not verify that the app came back up, and it does not roll back if the app fails to start.
+3. **It has no release channel.** `main` is both the development branch and what production installs follow.
+
+**Fix direction (pick one, or combine):**
+- Default `automatic` to `False`. Keep `notification` on so users are told about updates and choose when to apply them.
+- Or follow a release branch or tags (`stable` / latest `v*` tag) instead of `main`. That matches the
+  "tag-driven release from main" pattern.
+- Either way, after a pull: install requirements if `requirements.txt` changed. If the app fails to start, check out the previous `HEAD` again and log
+  why.
+
 ## Not a bug — quality-profile defaults
 
 The default 1080p profile minimum of 4000 MB rejects YTS 1080p encodes (~2.3 GB) as "too small to be 1080p".
