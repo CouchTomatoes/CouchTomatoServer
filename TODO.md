@@ -346,6 +346,9 @@ From a live install on a Raspberry Pi 4. Evidence, file:line references and the 
       export/import instead. (§7)
 - [ ] Self-host the API backend (`CouchTomatoes/CouchTomatoAPI`) and make the API base URL a setting; widen its
       7-digit IMDb id routes, replace the blank private `mdb` sources. (§8)
+- [ ] Auto-update ships every merge to `main` to live installs within 24 h, unattended. `GitUpdater` does
+      `git pull` + restart with `automatic = True` by default, never runs `pip install`, and has no health check or
+      rollback. Default it off, or follow a release branch/tag; install requirements and roll back on a failed start. (§9)
 
 ---
 
