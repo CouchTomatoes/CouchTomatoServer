@@ -405,8 +405,9 @@
 			url = self.getOption('dereferer') + el.get('href');
 		}
 
+		// noreferrer: the outside site never learns this install's address
 		if(el.get('target') == '_blank' || (e.meta && self.isMac()) || (e.control && !self.isMac()))
-			window.open(url);
+			window.open(url, '_blank', 'noopener,noreferrer');
 		else
 			window.location = url;
 	},

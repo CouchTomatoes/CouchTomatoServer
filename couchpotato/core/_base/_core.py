@@ -53,6 +53,7 @@ class Core(Plugin):
         addEvent('app.version', self.version)
         addEvent('app.load', self.checkDataDir)
         addEvent('app.load', self.cleanUpFolders)
+        addEvent('app.load', self.dropDeadDereferer)
         addEvent('app.load.after', self.dependencies)
 
         addEvent('setting.save.core.password', self.md5Password)
@@ -106,6 +107,17 @@ class Core(Plugin):
             log.error('You should NOT use your CouchPotato directory to save your settings in. Files will get overwritten or be deleted.')
 
         return True
+
+    # Link anonymizers that were once the suggested values and are now dead or parked:
+    # nullrefer.com (the old default) bounces every link to a parking page, so clicking
+    # IMDb or any other outside link never loaded, and the new owner saw each URL.
+    dead_dereferers = ['nullrefer.com', 'dereferer.org']
+
+    def dropDeadDereferer(self):
+        current = Env.setting('dereferer') or ''
+        if any(dead in current.lower() for dead in self.dead_dereferers):
+            log.info('Removing dead link dereferer "%s"; outside links now open directly without a referrer', current)
+            Env.setting('dereferer', value = '')
 
     def cleanUpFolders(self):
         only_clean = ['couchpotato', 'libs', 'init']
@@ -304,8 +316,8 @@ config = [{
                 },
                 {
                     'name': 'dereferer',
-                    'default': 'http://www.nullrefer.com/?',
-                    'description': 'Derefer links to external sites, keep empty for no dereferer. Example: http://www.dereferer.org/? or http://www.nullrefer.com/?.',
+                    'default': '',
+                    'description': 'Derefer links to external sites, keep empty for no dereferer (links already open without a referrer). Prefix the link is appended to, e.g. https://example.com/?',
                 },
                 {
                     'name': 'use_proxy',
