@@ -40,7 +40,7 @@ var NotificationBase = new Class({
 		var self = this;
 
 		var added = new Date();
-			added.setTime(result.added*1000);
+			added.setTime((result.added || result.time)*1000);
 
 		result.el = App.getBlock('notification').addLink(
 			new Element('span.'+(result.read ? 'read' : '' )).adopt(
@@ -156,6 +156,15 @@ var NotificationBase = new Class({
 				App.trigger(result._t || result.type, [result]);
 				if(result.message && result.read === undefined && !init)
 					self.showMessage(result.message);
+
+				// A live notification arrives wrapped, typed with the event that caused it
+				// ('movie.snatched'...), so hand the stored doc inside to the bell as well
+				var doc = result.data;
+				if(!init && !result._t && doc && doc._t == 'notification'){
+					App.trigger('notification', [doc]);
+					if(doc.message && !result.message && doc.important === undefined && doc.sticky === undefined)
+						self.showMessage(doc.message);
+				}
 			});
 
 			if(json.result.length > 0)
