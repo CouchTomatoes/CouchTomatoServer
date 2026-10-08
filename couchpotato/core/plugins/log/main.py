@@ -167,7 +167,7 @@ class Logging(Plugin):
             try:
 
                 # Create empty file for current logging
-                if x is 0:
+                if x == 0:
                     self.createFile(path, '')
                 else:
                     os.remove(path)
