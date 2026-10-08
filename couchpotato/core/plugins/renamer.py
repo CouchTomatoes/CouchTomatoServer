@@ -560,6 +560,11 @@ class Renamer(Plugin):
                                 elif release_download['status'] == 'seeding':
                                     # Set the release to seeding
                                     fireEvent('release.update_status', release['_id'], status = 'seeding', single = True)
+                                    # Hand the snatch to the library step too: without it, the renamed copy was
+                                    # identified by name and given the quality guessed from the filename
+                                    # ("1080p BrRip" -> brrip), so the movie never finished and could even land
+                                    # on a different movie. Its status stays with checkSnatched (see manage).
+                                    group['release_download'] = release_download
                                     mark_as_recent = True
 
                         elif release.get('quality') == group['meta_data']['quality']['identifier']:
