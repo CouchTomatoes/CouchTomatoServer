@@ -206,6 +206,38 @@ restarts it**, with no test on a real install in between. The gaps:
 - Either way, after a pull: install requirements if `requirements.txt` changed. If the app fails to start, check out the previous `HEAD` again and log
   why.
 
+## 10. Standalone: drop the CouchTomato API dependency (planned 2026-10-08, do last)
+
+Goal: run standalone like SickGear, with **no API server and no sign-ups**. SickGear works without the user ever
+registering with TMDB or any other database, so CouchTomato must ship its own keys too (the TMDB key is already
+bundled in `themoviedb.py`).
+
+The answer in short: yes, the API can go without losing anything that still works. The "shared votes" part (crowd
+suggestions) already died with the original service in 2020. A self-hosted copy can't bring it back, because the
+crowd it relies on is gone.
+
+Every call the app makes to the API, and what replaces it:
+
+| Feature | What the API does today | Standalone replacement | Lost? |
+|---|---|---|---|
+| **Movie info & search** | Merges TMDB and OMDb results | The app already has its own TMDB and OMDb providers. The API layer just sits on top of them | Nothing |
+| **"Is it a movie?"** (charts, adding a movie) | Asks TMDB/OMDb (added 2026-10-07) | Look up the IMDb id on TMDB directly: it says whether the id is a movie or a TV show | Nothing |
+| **Release dates** (cinema / DVD / Blu-ray, used for Soon/Late) | Guesses them by scraping Google results (`veta`, `mi`). Fragile, probably already broken | TMDB's release dates for each movie, which include cinema, digital and disc dates per country | Nothing; it gets **better** |
+| **Suggestions** (the shared-votes feature) | Counts which movies appear together across *every user's* library | TMDB's own recommendations for each movie in the library, built from millions of TMDB users | The crowd version is already gone: with one user it can only suggest pairs from that user's own library. TMDB's version is **better** than what works now |
+| **Scene-release check** (a small scoring bonus) | Checks the release name against public lists of real scene releases (orlydb, corrupt-net) | Call one of those lists directly from the app, or drop the check | At worst a small bonus that helps pick a real release over a fake one. Whether orlydb.com still works is unchecked; confirm before deciding |
+| **Trakt / put.io login** | The API holds the shared developer secret and passes the login through | Bundle a project-registered client id, the way SickGear does, so users don't need their own. Trakt supports sign-in with a code shown in the app | Nothing for the user, as long as the project registers the apps once |
+| **Announcements** | Serves a fixed message file from 2014 | Remove | Nothing |
+| **Updater download link** | Builds a GitHub zip link | Build the link in the app, one line | Nothing |
+
+What changes rather than what is lost:
+- No API server to run: the CouchTomatoAPI container on the Pi5, its Redis, its `.env` keys and the `api_base_url`
+  setting (#32) all go away.
+- Each install caches its own lookups, as the app already does. For one user this makes no difference.
+
+Work, three or four PRs: (1) "Is it a movie?" and release dates from TMDB; (2) suggestions from TMDB
+recommendations; (3) the scene-release check, kept or dropped once those lists are checked; (4) Trakt/put.io
+sign-in with bundled keys, then remove the `CouchPotatoApi` provider and its setting.
+
 ## Not a bug — quality-profile defaults
 
 The default 1080p profile minimum of 4000 MB rejects YTS 1080p encodes (~2.3 GB) as "too small to be 1080p".
