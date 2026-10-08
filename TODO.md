@@ -326,7 +326,7 @@ actively maintained PyPI equivalents now. `libs/` is prepended to `sys.path`, so
 From a live install on a Raspberry Pi 4. Evidence, file:line references and the fix direction for every item:
 [`docs/production-backlog.md`](docs/production-backlog.md) — the section numbers below match it.
 
-- [ ] **⭐ First:** live notifications (bell count + popup) only update after a page reload —
+- [x] **⭐ First:** live notifications (bell count + popup) only update after a page reload —
       `CoreNotifier.notify()` pushes the listener name (`movie.snatched`…) as the event type, but the bell only
       listens for `'notification'`. Inherited from CouchPotato. (§1)
 - [ ] Finish the rebrand the UI still shows: hover logo "Couch/Potato", page titles, About/restart prompts,

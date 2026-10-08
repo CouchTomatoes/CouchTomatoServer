@@ -31,6 +31,11 @@ Nothing here is fixed yet. The checklist is in [`TODO.md`](../TODO.md) §6; tick
   UI code wants it), or have `processData` route results whose `data._t == 'notification'` to the bell.
   The bell's `notify()` expects the stored doc shape (`_id`, `message`, `read`), so pass `n`.
 - **Done =** snatch (or `notify.<core>.test`) with the page open → badge +1 and popup **without a reload**.
+- **Fixed 2026-10-07 (`fix/live-notifications`):** `processData` hands a live result's stored doc (`data._t ==
+  'notification'`) to the bell and pops its message. Proven in a fresh browser context against a local instance —
+  unpatched: `notify.corenotifier.test` changes nothing; patched: badge 1 + popup within 1.5 s, opening the bell sends
+  `markread?ids=<doc _id>` and clears it. Also fixed the bell's timestamp (read `added`, docs store `time`).
+  Note the core notifier's test endpoint is `notify.corenotifier.test`, not `notify.core.test`.
 - Ruled out on the way: the Tornado loop handle (`main_ioloop` is the serving loop — the blocking API uses it fine);
   bytes in the JSON (`couchpotato/__init__.py:16-20` patches `escape.json_encode` for bytes).
 
@@ -84,6 +89,9 @@ Counts are calls; status is the HTTP code the log recorded; endpoints are what `
   (deterministic hash, or re-exec with the seed) — an existing seed-0 DB must stay readable.
 - Shutdown takes 40–80 s; `runner.py:366` "coroutine 'HTTPServer.close_all_connections' was never awaited".
 - `SyntaxWarning: "is" with a literal` in renamer.py, providers, media, sabnzbd, scanner, log, notifications.
+
+- **Found 2026-10-07:** `helpers/variable.py:420` `compareVersions` uses `cmp()` (gone in Py3) → `NameError` at boot
+  in `_core.py:87` whenever `pyOpenSSL` is installed (so it fires once §6 adds `pyOpenSSL` to requirements).
 
 ## 6. Make it actually download
 
