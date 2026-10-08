@@ -412,7 +412,7 @@ class Scanner(Plugin):
 
             # Leftover "sorted" files
             for file_type in group['files']:
-                if not file_type is 'leftover':
+                if file_type != 'leftover':
                     group['files']['leftover'] -= set(group['files'][file_type])
                     group['files'][file_type] = list(group['files'][file_type])
             group['files']['leftover'] = list(group['files']['leftover'])

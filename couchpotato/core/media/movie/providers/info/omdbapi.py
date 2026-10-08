@@ -143,7 +143,7 @@ class OMDBAPI(MovieProvider):
         matches = re.findall(regex, runtime_str)
         for match in matches:
             nr, size = match
-            runtime += tryInt(nr) * (60 if 'h' is str(size)[0] else 1)
+            runtime += tryInt(nr) * (60 if 'h' == str(size)[0] else 1)
 
         return runtime
 
