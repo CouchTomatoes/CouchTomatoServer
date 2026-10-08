@@ -331,12 +331,17 @@ From a live install on a Raspberry Pi 4. Evidence, file:line references and the 
       listens for `'notification'`. Inherited from CouchPotato. (§1)
 - [ ] Finish the rebrand the UI still shows: hover logo "Couch/Potato", page titles, About/restart prompts,
       bookmarklet, images, default data dir / log name — source **and** the combined bundles. (§2)
-- [ ] TMDB search keeps only the first 3 results (`themoviedb.py` `limit = 3`) — real titles ranked 4th never show. (§3)
-- [ ] External APIs: `api.couchpota.to` is parked (73 failing calls/hour), OMDb 401 not surfaced, magnetdl behind
-      Cloudflare, YTS base URL moving, IMDb chart scraper blocked, torcache dead. (§4)
-- [ ] Python 3 port bugs: `dashboard.py:88` NoneType `<` float; bytes repr in `validate/` URL; blackhole writes
-      `str` to `'wb'`; DB needs `PYTHONHASHSEED` fixed outside the app; 40–80 s shutdown (un-awaited coroutine);
-      `"is" with a literal` warnings. (§5)
+- [x] TMDB search keeps only the first 3 results — now 6, with direct-to-video extras last (#41). (§3)
+      Follow-up: the startup library scan can't identify numbered collection files ("1 harry potter and the
+      sorcerer s stone 2001 …"): the leading number gives TMDB 0 results.
+- [x] External APIs (§4): `api.couchpota.to` → self-hosted API setting (#32; going standalone in §10);
+      OMDb key visible + rejected key reported once in the bell (#44); YTS → `movies-api.accel.li` (#42);
+      IMDb charts → TMDB lists (#43); torcache dropped and magnet→torrent fixed (#45); fanart.tv checked, works.
+      Still open: magnetdl behind Cloudflare (§6a); IMDb **watchlist** import probably blocked too (unchecked);
+      the magnet tracker list in `yts.py` is mostly dead trackers and ends with a stray `]`.
+- [x] Python 3 port bugs (§5): dashboard date crash (#33); SIGTERM shutdown, no more SIGKILL (#35); `cmp()` (#37);
+      `PYTHONHASHSEED` set by the app itself (#38); `validate/` URL + blackhole `'wb'` (#39); 21× `is` literal (#40).
+      Still open: frozen (PyInstaller) builds don't get the hash seed; 93 "invalid escape sequence" warnings.
 - [ ] Make it download out of the box: a working torrent provider (TPB/apibay via FlareSolverr); add `lxml` and
       `pyOpenSSL` to `requirements.txt`. (§6)
 - [ ] **FlareSolverr support** — a `flaresolverr_host` setting, a Cloudflare-challenge retry in `base.py` `urlopen`
