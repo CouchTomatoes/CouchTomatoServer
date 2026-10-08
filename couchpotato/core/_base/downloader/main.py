@@ -24,9 +24,10 @@ class DownloaderBase(Provider):
     http_time_between_calls = 0
     status_support = True
 
+    # torcache.net is gone (no longer resolves)
     torrent_sources = [
-        'https://torcache.net/torrent/%s.torrent',
         'https://itorrents.org/torrent/%s.torrent',
+        'https://itorrents.net/torrent/%s.torrent',
     ]
 
     torrent_trackers = [
@@ -130,7 +131,7 @@ class DownloaderBase(Provider):
 
         # Convert base 32 to hex
         if len(torrent_hash) == 32:
-            torrent_hash = b16encode(b32decode(torrent_hash))
+            torrent_hash = b16encode(b32decode(torrent_hash)).decode('ascii')
 
         sources = self.torrent_sources
         random.shuffle(sources)
@@ -138,7 +139,9 @@ class DownloaderBase(Provider):
         for source in sources:
             try:
                 filedata = self.urlopen(source % torrent_hash, headers = {'Referer': source % torrent_hash}, show_error = False)
-                if 'torcache' in filedata and 'file not found' in filedata.lower():
+                # A real .torrent is a bencoded dict; anything else is an error/landing page
+                if not filedata or not filedata.startswith(b'd'):
+                    log.debug('Torrent hash "%s" not on %s', (torrent_hash, source))
                     continue
 
                 return filedata
