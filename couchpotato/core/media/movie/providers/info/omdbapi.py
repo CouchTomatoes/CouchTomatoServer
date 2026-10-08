@@ -2,6 +2,8 @@ import json
 import re
 import traceback
 
+import requests
+
 from couchpotato import Env
 from couchpotato.core.event import addEvent, fireEvent
 from couchpotato.core.helpers.encoding import tryUrlencode
@@ -24,10 +26,41 @@ class OMDBAPI(MovieProvider):
 
     http_time_between_calls = 0
 
+    key_rejected = None  # the key OMDb answered 401 for
+
     def __init__(self):
         addEvent('info.search', self.search)
         addEvent('movie.search', self.search)
         addEvent('movie.info', self.getInfo)
+
+        addEvent('app.load', self.checkKey)
+        addEvent('setting.save.omdbapi.api_key.after', self.checkKey)
+
+    def checkKey(self):
+        """ Ask OMDb once whether the key works, instead of failing every lookup quietly """
+        self.key_rejected = None
+        key = self.getApiKey()
+        if not key:
+            return
+
+        try:
+            # The app's own opener: same proxy/SSL settings as every other call
+            self.urlopen(self.urls['info'] % (key, 'tt0133093'), show_error = False,
+                         headers = {'User-Agent': Env.getIdentifier()})
+            return
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else None
+        except Exception:
+            log.debug('Could not reach OMDb to check the API key: %s', traceback.format_exc(0))
+            return  # network trouble says nothing about the key
+
+        if status == 401:
+            self.key_rejected = key
+            message = 'OMDb rejected its API key, so IMDb ratings and OMDb lookups are off. ' \
+                      'Get a free key at https://www.omdbapi.com/apikey.aspx (activate it from the email) ' \
+                      'and enter it in Settings > Searcher > OMDb.'
+            log.error(message)
+            fireEvent('notify', message = message, data = {'important': True})
 
     def search(self, q, limit = 12):
         if self.isDisabled():
@@ -127,10 +160,9 @@ class OMDBAPI(MovieProvider):
         return movie_data
 
     def isDisabled(self):
-        if self.getApiKey() == '':
-            log.error('No API key provided.')
-            return True
-        return False
+        key = self.getApiKey()
+        # Optional provider: no key, or a key OMDb rejected, just means it sits out (checkKey said why)
+        return not key or key == self.key_rejected
 
     def getApiKey(self):
         apikey = self.conf('api_key')
@@ -152,15 +184,16 @@ config = [{
     'name': 'omdbapi',
     'groups': [
         {
-            'tab': 'providers',
-            'name': 'tmdb',
-            'label': 'OMDB API',
-            'hidden': True,
-            'description': 'Used for all calls to TheMovieDB.',
+            'tab': 'searcher',
+            'name': 'omdbapi',
+            'label': 'OMDb',
+            'description': 'Optional. Adds IMDb ratings and a second lookup source. Needs a free key from '
+                           '<a href="https://www.omdbapi.com/apikey.aspx" target="_blank">omdbapi.com</a> '
+                           '(activate it from the email).',
             'options': [
                 {
                     'name': 'api_key',
-                    'default': 'bbc0e412',  # Don't be a dick and use this somewhere else
+                    'default': '',  # the old shared default (bbc0e412) was never activated
                     'label': 'Api Key',
                 },
             ],
