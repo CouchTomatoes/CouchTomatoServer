@@ -261,12 +261,18 @@ class Manage(Plugin):
 
         folder = os.path.normpath(folder)
 
-        groups = fireEvent('scanner.scan', folder = folder, files = files, single = True)
+        # Pass the snatch along: without it the scanner identified the renamed copy by name
+        # (a different movie, at worst) and took its quality from the filename ("1080p BrRip"
+        # -> brrip), so a snatched 1080p never satisfied a 1080p profile
+        groups = fireEvent('scanner.scan', folder = folder, files = files, release_download = release_download, single = True)
 
         if groups:
             for group in list(groups.values()):
                 if group.get('media'):
-                    if release_download and release_download.get('release_id'):
+                    # A seeding snatch keeps its own release: checkSnatched still has to see it finish
+                    # seeding to let the downloader clean up. The library copy gets a release of its own,
+                    # with the snatched quality the scanner took from release_download.
+                    if release_download and release_download.get('release_id') and release_download.get('status') != 'seeding':
                         fireEvent('release.add', group = group, update_id = release_download.get('release_id'))
                     else:
                         fireEvent('release.add', group = group)
