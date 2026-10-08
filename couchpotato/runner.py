@@ -363,8 +363,12 @@ def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, En
                     except: log.info2('Tried to bind to IPV6 but failed')
 
             loop.start()
-            server.close_all_connections()
             server.stop()
+            try:
+                # A coroutine since tornado 6; calling it bare never ran it
+                loop.run_sync(server.close_all_connections, timeout = 5)
+            except Exception:
+                log.debug('Not all connections closed cleanly: %s', traceback.format_exc())
             loop.close(all_fds = True)
         except Exception as e:
             log.error('Failed starting: %s', traceback.format_exc())

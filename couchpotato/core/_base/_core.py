@@ -135,7 +135,7 @@ class Core(Plugin):
         def shutdown():
             self.initShutdown()
 
-        main_ioloop.add_callback(shutdown)
+        self.wakeLoop(shutdown)
 
         return 'shutdown'
 
@@ -145,9 +145,16 @@ class Core(Plugin):
 
         def restart():
             self.initShutdown(restart = True)
-        main_ioloop.add_callback(restart)
+        self.wakeLoop(restart)
 
         return 'restarting'
+
+    def wakeLoop(self, callback):
+        # Not main_ioloop.add_callback: called from the SIGTERM/SIGINT handler (which runs on
+        # the loop's own thread) it uses a plain call_soon, which never wakes the sleeping loop -
+        # so shutdown waited for unrelated network traffic, and an idle server was SIGKILLed.
+        # call_soon_threadsafe always writes to the loop's wakeup pipe.
+        main_ioloop.asyncio_loop.call_soon_threadsafe(callback)
 
     def initShutdown(self, restart = False):
         if self.shutdown_started:
