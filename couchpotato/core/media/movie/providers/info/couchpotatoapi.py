@@ -78,7 +78,7 @@ class CouchPotatoApi(MovieProvider):
         if not name:
             return
 
-        name_enc = base64.b64encode(ss(name))
+        name_enc = base64.b64encode(ss(name)).decode('ascii')
         return self.getJsonData(self.urls['validate'] % name_enc, headers = self.getRequestHeaders())
 
     def isMovie(self, identifier = None, adding = False, **kwargs):
