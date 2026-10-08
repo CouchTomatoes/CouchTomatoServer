@@ -84,7 +84,9 @@ class Dashboard(Plugin):
                 if coming_soon:
 
                     # Don't list older movies
-                    eta_date = eta.get(coming_soon)
+                    # No stored date (e.g. the release-date API never answered) counts as long past,
+                    # like an explicit 0; None used to crash the whole Soon/Late list
+                    eta_date = tryInt(eta.get(coming_soon))
                     eta_3month_passed = eta_date < (now - 7862400)  # Release was more than 3 months ago
 
                     if (not late and not eta_3month_passed) or \
