@@ -3,6 +3,7 @@ import traceback
 import itertools
 from base64 import b64decode as bd
 
+from couchpotato.api import addApiView
 from couchpotato.core.event import addEvent, fireEvent
 from couchpotato.core.helpers.encoding import toUnicode, ss, tryUrlencode
 from couchpotato.core.helpers.variable import tryInt, splitString
@@ -36,6 +37,14 @@ class TheMovieDb(MovieProvider):
         addEvent('movie.info', self.getInfo, priority = 3)
         addEvent('movie.info_by_tmdb', self.getInfo)
         addEvent('app.load', self.config)
+
+        addApiView('movie.trailer', self.trailerView, docs = {
+            'desc': 'YouTube trailer for a movie, from TMDB',
+            'params': {
+                'identifier': {'desc': 'IMDb id (tt...) or TMDB id'},
+            },
+            'return': {'type': 'object', 'example': """{'success': True, 'video_id': 'FVI84Dfx2-I', 'name': 'Official Trailer'}"""}
+        })
 
     def config(self):
 
@@ -234,6 +243,26 @@ class TheMovieDb(MovieProvider):
             log.debug('Failed getting %s.%s for "%s"', (type, size, ss(str(movie))))
 
         return image_urls
+
+    # Best first: an official trailer, then any trailer, then teasers
+    trailer_rank = [('Trailer', True), ('Trailer', False), ('Teaser', True), ('Teaser', False)]
+
+    def trailerView(self, identifier = None, **kwargs):
+        # The page used to search YouTube itself with a key shared by every CouchPotato
+        # install; once that key is over its daily quota every trailer embeds "undefined".
+        # TMDB already lists each movie's YouTube videos, under our own key.
+        if not identifier or self.isDisabled():
+            return {'success': False}
+
+        videos = self.request('movie/%s/videos' % identifier, return_key = 'results') or []
+        videos = [v for v in videos if v.get('site') == 'YouTube' and v.get('key')]
+
+        for video_type, official in self.trailer_rank:
+            for video in videos:
+                if video.get('type') == video_type and bool(video.get('official')) == official:
+                    return {'success': True, 'video_id': video['key'], 'name': video.get('name')}
+
+        return {'success': False}
 
     def request(self, call = '', params = {}, return_key = None):
 
