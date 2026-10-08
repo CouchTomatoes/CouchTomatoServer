@@ -11,8 +11,9 @@ class Base(TorrentMagnetProvider):
     # Only qualities allowed: 720p/1080p/3D - the rest will fail.
     # All YTS.ag torrents are verified
     urls = {
-        'detail': 'https://yts.am/api#list_movies',
-        'search': 'https://yts.am/api/v2/list_movies.json?query_term=%s&limit=%s&page=%s'
+        'detail': 'https://yts.gg/',
+        # yts.am now redirects to yts.gg, whose API answers "Base URL moving to movies-api.accel.li"
+        'search': 'https://movies-api.accel.li/api/v2/list_movies.json?query_term=%s&limit=%s&page=%s'
     }
 
     def _search(self, movie, quality, results):
@@ -77,7 +78,7 @@ config = [{
             'tab': 'searcher',
             'list': 'torrent_providers',
             'name': 'YTS',
-            'description': '<a href="https://yts.ag/" target="_blank">YTS</a>',
+            'description': '<a href="https://yts.gg/" target="_blank">YTS</a>',
             'wizard': True,
             'icon': 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAACL0lEQVR4AS1SPW/UQBAd23fxne/Ld2dvzvHuzPocEBAKokCBqG'
                     'iQ6IgACYmvUKRBFEQgKKGg4BAlUoggggYUEQpSHOI7CIEoQs/fYcbLaU/efTvvvZlnA1qydoxU5kcxX0CkgmQZtPy0hCUjvK+W'
