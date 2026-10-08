@@ -417,4 +417,5 @@ def find(func, iterable):
 def compareVersions(version1, version2):
     def normalize(v):
         return [int(x) for x in re.sub(r'(\.0+)*$','', v).split(".")]
-    return cmp(normalize(version1), normalize(version2))
+    a, b = normalize(version1), normalize(version2)
+    return (a > b) - (a < b)  # cmp() is gone in Python 3
