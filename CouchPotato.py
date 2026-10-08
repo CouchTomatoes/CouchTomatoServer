@@ -11,6 +11,15 @@ import subprocess
 import sys
 import traceback
 
+# The database (codernitydb3's hash index) places keys with Python's hash(), which
+# Python 3 randomises per process unless PYTHONHASHSEED is fixed - so a database
+# written in one run can't be read in the next. Existing databases were written
+# with seed 0, so re-launch with it when started any other way. Frozen builds
+# can't re-exec this script; there the launcher has to set it.
+if __name__ == '__main__' and os.environ.get('PYTHONHASHSEED') != '0' and not getattr(sys, 'frozen', False):
+    os.environ['PYTHONHASHSEED'] = '0'
+    os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)] + sys.argv[1:])
+
 # Root path
 base_path = dirname(os.path.abspath(__file__))
 
