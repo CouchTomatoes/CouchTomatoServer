@@ -76,7 +76,8 @@ class OMDBAPI(MovieProvider):
         try:
 
             try:
-                if isinstance(movie, str):
+                # The HTTP helper returns bytes in Python 3; json.loads takes either
+                if isinstance(movie, (bytes, str)):
                     movie = json.loads(movie)
             except ValueError:
                 log.info('No proper json to decode')
