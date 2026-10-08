@@ -71,7 +71,7 @@ class TheMovieDb(MovieProvider):
         if configuration:
             self.configuration = configuration
 
-    def search(self, q, limit = 3):
+    def search(self, q, limit = 6):
         """ Find movie by name """
 
         if self.isDisabled():
@@ -92,6 +92,10 @@ class TheMovieDb(MovieProvider):
 
         results = []
         if raw:
+            # TMDB often ranks extras above the film ("wall.e": three featurettes, then WALL-E);
+            # keep its order but move direct-to-video items after the real films
+            raw = sorted(raw, key = lambda m: bool(m.get('video')))
+
             try:
                 nr = 0
 
