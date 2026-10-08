@@ -73,7 +73,7 @@ class Base(TorrentMagnetProvider):
 
                     try:
                         for temp in result.find_all('tr'):
-                            if temp['class'] is 'firstr' or not temp.get('id'):
+                            if temp['class'] == 'firstr' or not temp.get('id'):
                                 continue
 
                             new = {}
@@ -91,13 +91,13 @@ class Base(TorrentMagnetProvider):
                                         new['detail_url'] = self.urls['detail'] % (self.getDomain(), link['href'][1:])
                                         new['verified'] = True if td.find('i', {'class': re.compile('verify')}) else False
                                         new['score'] = 100 if new['verified'] else 0
-                                    elif column_name is 'size':
+                                    elif column_name == 'size':
                                         new['size'] = self.parseSize(td.text)
-                                    elif column_name is 'age':
+                                    elif column_name == 'age':
                                         new['age'] = self.ageToDays(td.text)
-                                    elif column_name is 'seeds':
+                                    elif column_name == 'seeds':
                                         new['seeders'] = tryInt(td.text)
-                                    elif column_name is 'leechers':
+                                    elif column_name == 'leechers':
                                         new['leechers'] = tryInt(td.text)
 
                                 nr += 1

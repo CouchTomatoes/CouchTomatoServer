@@ -369,7 +369,7 @@ class Renamer(Plugin):
                 for file_type in group['files']:
 
                     # Move nfo depending on settings
-                    if file_type is 'nfo' and not self.conf('rename_nfo'):
+                    if file_type == 'nfo' and not self.conf('rename_nfo'):
                         log.debug('Skipping, renaming of %s disabled', file_type)
                         for current_file in group['files'][file_type]:
                             if self.conf('cleanup') and (not keep_original or self.fileIsAdded(current_file, group)):
@@ -377,7 +377,7 @@ class Renamer(Plugin):
                         continue
 
                     # Subtitle extra
-                    if file_type is 'subtitle_extra':
+                    if file_type == 'subtitle_extra':
                         continue
 
                     # Move other files
@@ -407,13 +407,13 @@ class Renamer(Plugin):
                         replacements['filename'] = final_file_name[:-(len(getExt(final_file_name)) + 1)]
 
                         # Meta naming
-                        if file_type is 'trailer':
+                        if file_type == 'trailer':
                             final_file_name = self.doReplace(trailer_name, replacements, remove_multiple = True)
-                        elif file_type is 'nfo':
+                        elif file_type == 'nfo':
                             final_file_name = self.doReplace(nfo_name, replacements, remove_multiple = True)
 
                         # Move DVD files (no structure renaming)
-                        if group['is_dvd'] and file_type is 'movie':
+                        if group['is_dvd'] and file_type == 'movie':
                             found = False
                             for top_dir in ['video_ts', 'audio_ts', 'bdmv', 'certificate']:
                                 has_string = current_file.lower().find(os.path.sep + top_dir + os.path.sep)
@@ -428,14 +428,14 @@ class Renamer(Plugin):
 
                         # Do rename others
                         else:
-                            if file_type is 'leftover':
+                            if file_type == 'leftover':
                                 if self.conf('move_leftover'):
                                     rename_files[current_file] = os.path.join(destination, final_folder_name, os.path.basename(current_file))
                             elif file_type not in ['subtitle']:
                                 rename_files[current_file] = os.path.join(destination, final_folder_name, final_file_name)
 
                         # Check for extra subtitle files
-                        if file_type is 'subtitle':
+                        if file_type == 'subtitle':
 
                             remove_multiple = False
                             if len(group['files']['movie']) == 1:
@@ -470,7 +470,7 @@ class Renamer(Plugin):
                             rename_files = mergeDicts(rename_files, rename_extras)
 
                         # Filename without cd etc
-                        elif file_type is 'movie':
+                        elif file_type == 'movie':
                             rename_extras = self.getRenameExtras(
                                 extra_type = 'movie_extra',
                                 replacements = replacements,
