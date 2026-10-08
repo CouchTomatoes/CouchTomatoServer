@@ -315,6 +315,13 @@ config = [{
                     'description': 'Let 3rd party app do stuff. <a href="../../docs/" target="_self">Docs</a>',
                 },
                 {
+                    'name': 'api_base_url',
+                    'label': 'CouchTomato API',
+                    'default': 'https://api.couchpota.to',
+                    'description': 'Movie info/search/"is it a movie" API. The original api.couchpota.to is retired; '
+                                   'point this at a self-hosted CouchTomatoAPI, e.g. http://pi5.local:3110',
+                },
+                {
                     'name': 'dereferer',
                     'default': '',
                     'description': 'Derefer links to external sites, keep empty for no dereferer (links already open without a referrer). Prefix the link is appended to, e.g. https://example.com/?',
