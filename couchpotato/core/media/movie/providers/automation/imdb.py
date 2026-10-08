@@ -26,23 +26,37 @@ class IMDBBase(Automation, RSS):
 
     interval = 1800
 
+    # IMDb answers every chart page with a bot challenge (202 with a browser user agent, 403
+    # without), so the charts come from TMDB. Same keys, so existing settings keep working.
     charts = {
         'theater': {
             'order': 1,
-            'name': 'IMDB - Movies in Theaters',
-            'url': 'http://www.imdb.com/movies-in-theaters/',
+            'name': 'TMDB - Now Playing',
+            'url': 'https://www.themoviedb.org/movie/now-playing',
+            'tmdb': 'movie/now_playing',
+            'limit': 20,
         },
         'boxoffice': {
             'order': 2,
-            'name': 'IMDB - Box Office',
-            'url': 'http://www.imdb.com/boxoffice/',
+            'name': 'TMDB - Trending This Week',
+            'url': 'https://www.themoviedb.org/movie',
+            'tmdb': 'trending/movie/week',
+            'limit': 10,
         },
         'top250': {
             'order': 3,
-            'name': 'IMDB - Top 250 Movies',
-            'url': 'http://www.imdb.com/chart/top',
+            'name': 'TMDB - Top Rated',
+            'url': 'https://www.themoviedb.org/movie/top-rated',
+            # Not movie/top_rated: that ranks recent films on a few hundred votes. With 10k+ votes
+            # this opens Shawshank, The Godfather, 12 Angry Men - close to IMDb's Top 250.
+            'tmdb': 'discover/movie',
+            'params': {'sort_by': 'vote_average.desc', 'vote_count.gte': 10000},
+            'limit': 250,
         },
     }
+
+    def getChartImdbs(self, chart, limit = None):
+        return fireEvent('movie.tmdb_list', chart['tmdb'], limit = limit or chart['limit'], params = chart.get('params'), single = True) or []
 
     def getInfo(self, imdb_id):
         return fireEvent('movie.info', identifier = imdb_id, extended = False, adding = False, merge = True)
@@ -150,10 +164,9 @@ class IMDBAutomation(IMDBBase):
 
         for name in self.charts:
             chart = self.charts[name]
-            url = chart.get('url')
 
             if self.conf('automation_charts_%s' % name):
-                imdb_ids = self.getFromURL(url)
+                imdb_ids = self.getChartImdbs(chart)
 
                 try:
                     for imdb_id in imdb_ids:
@@ -165,7 +178,7 @@ class IMDBAutomation(IMDBBase):
                             break
 
                 except:
-                    log.error('Failed loading IMDB chart results from %s: %s', (url, traceback.format_exc()))
+                    log.error('Failed loading chart results from %s: %s', (chart['tmdb'], traceback.format_exc()))
 
         return movies
 
@@ -179,7 +192,7 @@ class IMDBCharts(IMDBBase):
 
         for name in self.charts:
             chart = self.charts[name].copy()
-            cache_key = 'imdb.chart_display_%s' % name
+            cache_key = 'tmdb.chart_display_%s' % name  # not imdb.*: the old key cached empty lists for 3 days
 
             if self.conf('chart_display_%s' % name):
 
@@ -189,25 +202,18 @@ class IMDBCharts(IMDBBase):
                     movie_lists.append(chart)
                     continue
 
-                url = chart.get('url')
-
                 chart['list'] = []
-                imdb_ids = self.getFromURL(url)
+                imdb_ids = self.getChartImdbs(chart, limit = max_items)
 
                 try:
-                    for imdb_id in imdb_ids[0:max_items]:
-
-                        is_movie = fireEvent('movie.is_movie', identifier = imdb_id, adding = False, single = True)
-                        if not is_movie:
-                            continue
-
+                    for imdb_id in imdb_ids:
                         info = self.getInfo(imdb_id)
                         chart['list'].append(info)
 
                         if self.shuttingDown():
                             break
                 except:
-                    log.error('Failed loading IMDB chart results from %s: %s', (url, traceback.format_exc()))
+                    log.error('Failed loading chart results from %s: %s', (chart['tmdb'], traceback.format_exc()))
 
                 self.setCache(cache_key, chart['list'], timeout = 259200)
 
@@ -248,8 +254,8 @@ config = [{
             'tab': 'automation',
             'list': 'automation_providers',
             'name': 'imdb_automation_charts',
-            'label': 'IMDB',
-            'description': 'Import movies from IMDB Charts',
+            'label': 'TMDB charts',
+            'description': 'Import movies from TMDB charts (IMDb blocks automated access to its own)',
             'options': [
                 {
                     'name': 'automation_providers_enabled',
@@ -259,22 +265,22 @@ config = [{
                 {
                     'name': 'automation_charts_theater',
                     'type': 'bool',
-                    'label': 'In Theaters',
-                    'description': 'New Movies <a href="http://www.imdb.com/movies-in-theaters/" target="_blank">In-Theaters</a> chart',
+                    'label': 'Now Playing',
+                    'description': 'TMDB <a href="https://www.themoviedb.org/movie/now-playing" target="_blank">Now Playing</a> in theaters',
                     'default': True,
                 },
                 {
                     'name': 'automation_charts_top250',
                     'type': 'bool',
-                    'label': 'TOP 250',
-                    'description': 'IMDB <a href="http://www.imdb.com/chart/top/" target="_blank">TOP 250</a> chart',
+                    'label': 'Top Rated',
+                    'description': 'Highest rated on TMDB with 10,000+ votes, up to 250',
                     'default': False,
                 },
                 {
                     'name': 'automation_charts_boxoffice',
                     'type': 'bool',
-                    'label': 'Box office TOP 10',
-                    'description': 'IMDB Box office <a href="http://www.imdb.com/chart/" target="_blank">TOP 10</a> chart',
+                    'label': 'Trending',
+                    'description': 'TMDB <a href="https://www.themoviedb.org/movie" target="_blank">trending this week</a>, top 10 (TMDB has no box-office chart)',
                     'default': True,
                 },
             ],
@@ -283,8 +289,8 @@ config = [{
             'tab': 'display',
             'list': 'charts_providers',
             'name': 'imdb_charts_display',
-            'label': 'IMDB',
-            'description': 'Display movies from IMDB Charts',
+            'label': 'TMDB charts',
+            'description': 'Display movies from TMDB charts (IMDb blocks automated access to its own)',
             'options': [
                 {
                     'name': 'chart_display_enabled',
@@ -294,22 +300,22 @@ config = [{
                 {
                     'name': 'chart_display_theater',
                     'type': 'bool',
-                    'label': 'In Theaters',
-                    'description': 'New Movies <a href="http://www.imdb.com/movies-in-theaters/" target="_blank">In-Theaters</a> chart',
+                    'label': 'Now Playing',
+                    'description': 'TMDB <a href="https://www.themoviedb.org/movie/now-playing" target="_blank">Now Playing</a> in theaters',
                     'default': False,
                 },
                 {
                     'name': 'chart_display_top250',
                     'type': 'bool',
-                    'label': 'TOP 250',
-                    'description': 'IMDB <a href="http://www.imdb.com/chart/top/" target="_blank">TOP 250</a> chart',
+                    'label': 'Top Rated',
+                    'description': 'Highest rated on TMDB with 10,000+ votes, up to 250',
                     'default': False,
                 },
                 {
                     'name': 'chart_display_boxoffice',
                     'type': 'bool',
-                    'label': 'Box office TOP 10',
-                    'description': 'IMDB Box office <a href="http://www.imdb.com/chart/" target="_blank">TOP 10</a> chart',
+                    'label': 'Trending',
+                    'description': 'TMDB <a href="https://www.themoviedb.org/movie" target="_blank">trending this week</a>, top 10 (TMDB has no box-office chart)',
                     'default': True,
                 },
             ],

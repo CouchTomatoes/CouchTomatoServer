@@ -36,6 +36,7 @@ class TheMovieDb(MovieProvider):
         addEvent('movie.search', self.search, priority = 3)
         addEvent('movie.info', self.getInfo, priority = 3)
         addEvent('movie.info_by_tmdb', self.getInfo)
+        addEvent('movie.tmdb_list', self.getListImdbs)
         addEvent('app.load', self.config)
 
         addApiView('movie.trailer', self.trailerView, docs = {
@@ -267,6 +268,27 @@ class TheMovieDb(MovieProvider):
                     return {'success': True, 'video_id': video['key'], 'name': video.get('name')}
 
         return {'success': False}
+
+    def getListImdbs(self, path, limit = 20, params = None):
+        """ IMDb ids of a TMDB movie list (movie/now_playing, movie/top_rated, ...), in list order """
+        imdb_ids = []
+        page = 1
+        while len(imdb_ids) < limit:
+            results = self.request(path, dict(params or {}, page = page), return_key = 'results')
+            if not results:
+                break
+
+            for movie in results:
+                # List entries carry only the TMDB id
+                imdb_id = (self.request('movie/%s' % movie.get('id')) or {}).get('imdb_id')
+                if imdb_id:
+                    imdb_ids.append(imdb_id)
+                if len(imdb_ids) >= limit:
+                    break
+
+            page += 1
+
+        return imdb_ids
 
     def request(self, call = '', params = {}, return_key = None):
 
