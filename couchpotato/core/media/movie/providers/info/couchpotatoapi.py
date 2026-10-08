@@ -15,16 +15,23 @@ autoload = 'CouchPotatoApi'
 
 class CouchPotatoApi(MovieProvider):
 
-    urls = {
-        'validate': 'https://api.couchpota.to/validate/%s/',
-        'search': 'https://api.couchpota.to/search/%s/',
-        'info': 'https://api.couchpota.to/info/%s/',
-        'is_movie': 'https://api.couchpota.to/ismovie/%s/',
-        'eta': 'https://api.couchpota.to/eta/%s/',
-        'suggest': 'https://api.couchpota.to/suggest/',
-        'updater': 'https://api.couchpota.to/updater/?%s',
-        'messages': 'https://api.couchpota.to/messages/?%s',
+    default_base_url = 'https://api.couchpota.to'
+    paths = {
+        'validate': '/validate/%s/',
+        'search': '/search/%s/',
+        'info': '/info/%s/',
+        'is_movie': '/ismovie/%s/',
+        'eta': '/eta/%s/',
+        'suggest': '/suggest/',
+        'updater': '/updater/?%s',
+        'messages': '/messages/?%s',
     }
+
+    @property
+    def urls(self):
+        # Read on every call, so a changed setting applies without a restart
+        base = (Env.setting('api_base_url') or self.default_base_url).strip().rstrip('/')
+        return dict((key, base + path) for key, path in self.paths.items())
     http_time_between_calls = 0
     api_version = 1
 
