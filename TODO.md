@@ -349,6 +349,8 @@ From a live install on a Raspberry Pi 4. Evidence, file:line references and the 
 - [ ] Auto-update ships every merge to `main` to live installs within 24 h, unattended. `GitUpdater` does
       `git pull` + restart with `automatic = True` by default, never runs `pip install`, and has no health check or
       rollback. Default it off, or follow a release branch/tag; install requirements and roll back on a failed start. (§9)
+- [ ] **Do last:** go standalone like SickGear: drop the CouchTomato API, do info/is-movie/release dates/suggestions
+      directly against TMDB, with bundled keys and no sign-ups. Per-feature table of what replaces what: (§10)
 
 ---
 
