@@ -1,7 +1,9 @@
-GitPython
-bencode.py
 beautifulsoup4
+bencode.py
 chardet
+GitPython
 httplib2
+lxml
+pyOpenSSL
 requests
 tornado

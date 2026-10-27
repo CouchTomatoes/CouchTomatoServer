@@ -1,150 +1,115 @@
-import re
 import traceback
 
-from bs4 import BeautifulSoup
 from couchpotato.core.event import addEvent
-from couchpotato.core.helpers.encoding import toUnicode
-from couchpotato.core.helpers.variable import tryInt
+from couchpotato.core.helpers.encoding import tryUrlencode
+from couchpotato.core.helpers.variable import tryInt, getIdentifier, cleanHost
 from couchpotato.core.logger import CPLog
 from couchpotato.core.media._base.providers.torrent.base import TorrentMagnetProvider
-import six
 
 
 log = CPLog(__name__)
 
+# Trackers added to magnets built from apibay's info_hash (clients with DHT find peers without them)
+TRACKERS = [
+    'udp://tracker.opentrackr.org:1337/announce',
+    'udp://open.demonii.com:1337/announce',
+    'udp://open.stealth.si:80/announce',
+    'udp://tracker.torrent.eu.org:451/announce',
+    'udp://exodus.desync.com:6969/announce',
+    'udp://explodie.org:6969/announce',
+    'udp://tracker.openbittorrent.com:6969/announce',
+]
+
 
 class Base(TorrentMagnetProvider):
+    """
+    ThePirateBay through apibay, the JSON API behind thepiratebay.org. The HTML proxy sites this
+    provider used to scrape are gone; apibay sits behind Cloudflare, so it needs a FlareSolverr
+    host in Settings > General (the same approach SickGear uses).
+    """
 
     urls = {
-         'detail': '%s/torrent/%s',
-         'search': '%s/search/%%s/%%s/7/%%s'
+        'api': 'https://apibay.org',
+        'search': '%s/q.php?q=%s',
+        'info': '%s/t.php?id=%s',
+        'detail': 'https://thepiratebay.org/description.php?id=%s',
     }
 
     cat_backup_id = 200
     disable_provider = False
     http_time_between_calls = 0
 
-    proxy_list = [
-        'https://pirateproxy.cat',
-        'https://pirateproxy.wf',
-        'https://pirateproxy.tf',
-        'https://urbanproxy.eu',
-        'https://piratebays.co',
-        'https://pirateproxy.yt',
-        'https://thepiratebay.uk.net',
-        'https://thebay.tv',
-        'https://thepirateproxy.co',
-        'https://theproxypirate.pw',
-        'https://arrr.xyz',
-        'https://tpb.dashitz.com'
-    ]
+    # apibay's uploader status, and the score it adds (the old HTML badges: Trusted, VIP, Helpers, Moderator)
+    trust_scores = {'trusted': 10, 'vip': 20, 'helper': 30, 'moderator': 50, 'supermod': 50, 'admin': 50}
 
     def __init__(self):
         super(Base, self).__init__()
 
         addEvent('app.test', self.doTest)
 
+    def getDomain(self, url = ''):
+        domain = self.conf('domain')
+        return (cleanHost(domain).rstrip('/') if domain else self.urls['api']) + url
+
     def _search(self, media, quality, results):
 
-        page = 0
-        total_pages = 1
-        cats = self.getCatId(quality)
+        cats = [str(cat) for cat in self.getCatId(quality)]
+        imdb_id = getIdentifier(media)
 
-        base_search_url = self.urls['search'] % self.getDomain()
+        data = self.getJsonData(self.urls['search'] % (self.getDomain(), tryUrlencode(self.buildQuery(media))))
+        if not isinstance(data, list):
+            return
 
-        while page < total_pages:
+        try:
+            for item in data:
+                # an empty search answers with one placeholder row, id 0
+                if tryInt(item.get('id')) == 0 or not item.get('info_hash'):
+                    continue
 
-            search_url = base_search_url % self.buildUrl(media, page, cats)
+                category = str(item.get('category', ''))
+                if not (category in cats or ('200' in cats and category.startswith('2'))):
+                    continue
 
-            page += 1
+                if imdb_id and item.get('imdb') and item['imdb'] != imdb_id:
+                    log.debug('Skipped %s, it is for %s', (item.get('name'), item['imdb']))
+                    continue
 
-            data = self.getHTMLData(search_url)
+                status = (item.get('status') or '').lower()
+                if self.conf('trusted_only') and status not in self.trust_scores:
+                    log.info('Skipped torrent %s, untrusted.', item.get('name'))
+                    continue
 
-            if data:
-                try:
-                    soup = BeautifulSoup(data)
-                    results_table = soup.find('table', attrs = {'id': 'searchResult'})
+                results.append({
+                    'id': item['id'],
+                    'name': item['name'],
+                    'url': self.magnet(item['info_hash'], item['name']),
+                    'detail_url': self.urls['detail'] % item['id'],
+                    'size': tryInt(item.get('size')) / 1024 / 1024,
+                    'seeders': tryInt(item.get('seeders')),
+                    'leechers': tryInt(item.get('leechers')),
+                    'extra_score': lambda x, score = self.trust_scores.get(status, 0): score,
+                    'get_more_info': self.getMoreInfo,
+                })
+        except:
+            log.error('Failed getting results from %s: %s', (self.getName(), traceback.format_exc()))
 
-                    if not results_table:
-                        return
-
-                    try:
-                        total_pages = len(soup.find('div', attrs = {'align': 'center'}).find_all('a'))
-                    except:
-                        pass
-
-                    entries = results_table.find_all('tr')
-                    for result in entries[1:]:
-                        link = result.find(href = re.compile('torrent\/\d+\/'))
-                        download = result.find(href = re.compile('magnet:'))
-
-                        try:
-                            size = re.search('Size (?P<size>.+),', six.text_type(result.select('font.detDesc')[0])).group('size')
-                        except:
-                            continue
-
-                        if link and download:
-                            if self.conf('trusted_only'):
-                                if result.find('img', alt = re.compile('Trusted')) is None and \
-                                                result.find('img', alt = re.compile('VIP')) is None and \
-                                                result.find('img', alt = re.compile('Helpers')) is None and \
-                                                result.find('img', alt = re.compile('Moderator')) is None:
-                                    log.info('Skipped torrent %s, untrusted.' % link.string)
-                                    continue
-
-                            def extra_score(item):
-                                trusted = (0, 10)[result.find('img', alt = re.compile('Trusted')) is not None]
-                                vip = (0, 20)[result.find('img', alt = re.compile('VIP')) is not None]
-                                confirmed = (0, 30)[result.find('img', alt = re.compile('Helpers')) is not None]
-                                moderated = (0, 50)[result.find('img', alt = re.compile('Moderator')) is not None]
-
-                                return confirmed + trusted + vip + moderated
-
-                            results.append({
-                                'id': re.search('/(?P<id>\d+)/', link['href']).group('id'),
-                                'name': six.text_type(link.string),
-                                'url': download['href'],
-                                'detail_url': self.getDomain(link['href']),
-                                'size': self.parseSize(size),
-                                'seeders': tryInt(result.find_all('td')[2].string),
-                                'leechers': tryInt(result.find_all('td')[3].string),
-                                'extra_score': extra_score,
-                                'get_more_info': self.getMoreInfo
-                            })
-
-                except:
-                    log.error('Failed getting results from %s: %s', (self.getName(), traceback.format_exc()))
-
-    def isEnabled(self):
-        return super(Base, self).isEnabled() and self.getDomain()
-
-    def correctProxy(self, data):
-        return 'title="Pirate Search"' in toUnicode(data)
+    def magnet(self, info_hash, name):
+        return 'magnet:?xt=urn:btih:%s&dn=%s&tr=%s' % (info_hash.lower(), tryUrlencode(name), '&tr='.join(tryUrlencode(tr) for tr in TRACKERS))
 
     def getMoreInfo(self, item):
-        full_description = self.getCache('tpb.%s' % item['id'], item['detail_url'], cache_timeout = 25920000)
-        html = BeautifulSoup(full_description)
-        nfo_pre = html.find('div', attrs = {'class': 'nfo'})
-        description = ''
-        try:
-            description = toUnicode(nfo_pre.text)
-        except:
-            pass
-
-        item['description'] = description
+        info = self.getJsonData(self.urls['info'] % (self.getDomain(), item['id']), cache_timeout = 25920000)
+        item['description'] = (info or {}).get('descr', '') if isinstance(info, dict) else ''
         return item
 
     def doTest(self):
-
-        for url in self.proxy_list:
-            try:
-                data = self.urlopen(url + '/search/test+search')
-
-                if 'value="test+search"' in toUnicode(data):
-                    log.info('Success %s', url)
-                    continue
-            except:
-                log.error('%s', traceback.format_exc(0))
+        try:
+            data = self.getJsonData(self.urls['search'] % (self.getDomain(), 'test'), cache_timeout = 0)
+            if isinstance(data, list):
+                log.info('Success %s', self.getDomain())
+            else:
+                log.error('%s answered no search results list; is a FlareSolverr host set?', self.getDomain())
+        except:
+            log.error('%s', traceback.format_exc(0))
 
 
 config = [{
@@ -154,7 +119,7 @@ config = [{
             'tab': 'searcher',
             'list': 'torrent_providers',
             'name': 'ThePirateBay',
-            'description': 'The world\'s largest bittorrent tracker. <a href="https://thepiratebay.se/" target="_blank">ThePirateBay</a>',
+            'description': 'The world\'s largest bittorrent tracker. <a href="https://thepiratebay.org/" target="_blank">ThePirateBay</a>, searched through its apibay API. Needs a FlareSolverr host (Settings > General).',
             'wizard': True,
             'icon': 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAAAAAA6mKC9AAAA3UlEQVQY02P4DwT/YADIZvj//7qnozMYODmtAAusZoCDELDAegYGViZhAWZmRoYoqIDupfhNN1M3dTBEggXWMZg9jZRXV77YxhAOFpjDwMAPMoCXmcHsF1SAQZ6bQY2VgUEbKHClcAYzg3mINEO8jSCD478/DPsZmvqWblu1bOmStes3Pp0ezVDF4Gif0Hfx9///74/ObRZ2YNiZ47C8XIRBxFJR0jbSSUud4f9zAQWn8NTuziAt2zy5xIMM/z8LFX0E+fD/x0MRDCeA1v7Z++Y/FDzyvAtyBxIA+h8A8ZKLeT+lJroAAAAASUVORK5CYII=',
             'options': [
@@ -166,8 +131,8 @@ config = [{
                 {
                     'name': 'domain',
                     'advanced': True,
-                    'label': 'Proxy server',
-                    'description': 'Domain for requests, keep empty to let CouchPotato pick.',
+                    'label': 'API server',
+                    'description': 'An apibay-compatible API to search, keep empty for apibay.org.',
                 },
                 {
                     'name': 'seed_ratio',
