@@ -353,6 +353,11 @@ config = [{
                     'description': 'Leave blank for no password.',
                 },
                 {
+                    'name': 'flaresolverr_host',
+                    'label': 'FlareSolverr',
+                    'description': 'URL of a <a href="https://github.com/FlareSolverr/FlareSolverr" target="_blank">FlareSolverr</a> server, e.g. <i>http://localhost:8191/</i>. Used only when a site answers with a Cloudflare challenge. Keep empty to turn it off.',
+                },
+                {
                     'name': 'bookmarklet_host',
                     'description': 'Override default bookmarklet host. This can be useful in a reverse proxy environment. For example: "http://username:password@customHost:1020". Requires restart to take effect.',
                     'advanced': True,

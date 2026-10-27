@@ -1,3 +1,5 @@
+import html
+import re
 import threading
 from urllib.parse import quote
 from urllib.request import getproxies
@@ -10,7 +12,7 @@ from couchpotato.core.event import fireEvent, addEvent
 from couchpotato.core.helpers.encoding import ss, toSafeString, \
     toUnicode, sp
 from couchpotato.core.helpers.variable import md5, isLocalIP, scanForPassword, tryInt, getIdentifier, \
-    randomString
+    randomString, cleanHost
 from couchpotato.core.logger import CPLog
 from couchpotato.environment import Env
 import requests
@@ -40,6 +42,7 @@ class Plugin(object):
     http_time_between_calls = 0
     http_failed_request = {}
     http_failed_disabled = {}
+    cloudflare_hosts = {}  # host -> when it last answered with a Cloudflare challenge
 
     def __new__(cls, *args, **kwargs):
         new_plugin = super(Plugin, cls).__new__(cls)
@@ -218,14 +221,22 @@ class Plugin(object):
             }
             method = 'post' if len(data) > 0 or files else 'get'
 
-            log.info('Opening url: %s %s, data: %s', (method, url, [x for x in list(data.keys())] if isinstance(data, dict) else 'with data'))
-            response = r.request(method, url, **kwargs)
-
-            status_code = response.status_code
-            if response.status_code == requests.codes.ok:
-                data = response if stream else response.content
+            flaresolverr = Env.setting('flaresolverr_host') if method == 'get' and not stream else None
+            if flaresolverr and self.cloudflare_hosts.get(host, 0) > time.time() - 3600:
+                # Challenged within the hour: don't collect another 403 first
+                data = self.openViaFlareSolverr(flaresolverr, url)
             else:
-                response.raise_for_status()
+                log.info('Opening url: %s %s, data: %s', (method, url, [x for x in list(data.keys())] if isinstance(data, dict) else 'with data'))
+                response = r.request(method, url, **kwargs)
+
+                status_code = response.status_code
+                if response.status_code == requests.codes.ok:
+                    data = response if stream else response.content
+                elif flaresolverr and isCloudflareChallenge(response):
+                    self.cloudflare_hosts[host] = time.time()
+                    data = self.openViaFlareSolverr(flaresolverr, url)
+                else:
+                    response.raise_for_status()
 
             self.http_failed_request[host] = 0
         except (IOError, MaxRetryError, Timeout):
@@ -257,6 +268,21 @@ class Plugin(object):
         self.http_last_use[host] = time.time()
 
         return data
+
+    def openViaFlareSolverr(self, flaresolverr, url):
+        """ GET a Cloudflare-protected page through FlareSolverr and return its body as bytes. """
+        log.info('Opening url via FlareSolverr: %s', url)
+        reply = Env.get('http_opener').post(cleanHost(flaresolverr).rstrip('/') + '/v1', timeout = 75, json = {
+            'cmd': 'request.get',
+            'url': url,
+            'maxTimeout': 60000,
+        }).json()
+
+        solution = reply.get('solution') or {}
+        if reply.get('status') != 'ok' or solution.get('status') != requests.codes.ok:
+            raise IOError('FlareSolverr could not open %s: %s (HTTP %s)' % (url, reply.get('message'), solution.get('status')))
+
+        return unwrapBrowserJson(solution.get('response') or '').encode('utf-8')
 
     def wait(self, host = '', url = ''):
         if self.http_time_between_calls == 0:
@@ -447,3 +473,23 @@ class Plugin(object):
         if lock:
             log.debug('Releasing lock: %s', key)
             self._locks.get(key).release()
+
+
+def isCloudflareChallenge(response):
+    """ A 403/429/503 that is Cloudflare's "Just a moment..." challenge rather than a real refusal. """
+    if response.status_code not in (403, 429, 503):
+        return False
+    if response.headers.get('cf-mitigated') == 'challenge':
+        return True
+    if 'cloudflare' not in response.headers.get('Server', '').lower():
+        return False
+    text = response.text[:20000]
+    return 'Just a moment' in text or 'challenge-platform' in text or '_cf_chl' in text
+
+
+def unwrapBrowserJson(body):
+    """ FlareSolverr returns what the browser rendered; for JSON that is the text inside a <pre>. """
+    match = re.match(r'(?s)\s*<html><head>.*?</head><body><pre[^>]*>(.*?)</pre>.*</html>\s*$', body)
+    if match and match.group(1).lstrip()[:1] in ('[', '{'):
+        return html.unescape(match.group(1))
+    return body
