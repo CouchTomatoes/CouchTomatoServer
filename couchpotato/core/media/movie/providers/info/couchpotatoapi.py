@@ -115,7 +115,8 @@ class CouchPotatoApi(MovieProvider):
         dates = self.getJsonData(self.urls['eta'] % identifier, headers = self.getRequestHeaders())
         log.debug('Found ETA for %s: %s', (identifier, dates))
 
-        return dates
+        # The API answers 0 for a date it doesn't know. Drop those, or they overwrite real dates from TMDB in the merge.
+        return dict((k, v) for k, v in list((dates or {}).items()) if v)
 
     def getSuggestions(self, movies = None, ignore = None):
         if not ignore: ignore = []

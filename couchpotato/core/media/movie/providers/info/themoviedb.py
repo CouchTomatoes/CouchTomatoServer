@@ -1,4 +1,6 @@
+import calendar
 import random
+import time
 import traceback
 import itertools
 from base64 import b64decode as bd
@@ -37,6 +39,7 @@ class TheMovieDb(MovieProvider):
         addEvent('movie.info', self.getInfo, priority = 3)
         addEvent('movie.info_by_tmdb', self.getInfo)
         addEvent('movie.tmdb_list', self.getListImdbs)
+        addEvent('movie.info.release_date', self.getReleaseDate)
         addEvent('app.load', self.config)
 
         addApiView('movie.trailer', self.trailerView, docs = {
@@ -290,6 +293,23 @@ class TheMovieDb(MovieProvider):
 
         return imdb_ids
 
+    def getReleaseDate(self, identifier = None):
+        """
+        Cinema and DVD/digital release dates from TMDB, in the shape the searcher's couldBeReleased() reads.
+        Returns {} when TMDB doesn't answer, so a failed lookup never looks like a real "no dates".
+        """
+        if not identifier or self.isDisabled():
+            return {}
+
+        countries = self.request('movie/%s/release_dates' % identifier, return_key = 'results')
+        if not isinstance(countries, list):
+            log.debug('No release dates from TMDB for %s', identifier)
+            return {}
+
+        dates = releaseDates(countries)
+        log.debug('Found release dates for %s: %s', (identifier, dates))
+        return dates
+
     def request(self, call = '', params = {}, return_key = None):
 
         params = dict((k, v) for k, v in list(params.items()) if v)
@@ -366,3 +386,49 @@ config = [{
         },
     ],
 }]
+
+
+# TMDB release types: https://developer.themoviedb.org/reference/movie-release-dates
+THEATRICAL = (3,)
+HOME_RELEASE = (4, 5)  # digital, physical
+
+
+def releaseDates(countries, now = None):
+    """
+    Reduce TMDB's per-country release dates to {'theater', 'dvd', 'bluray', 'expires'} unix timestamps.
+    Each date is the earliest US release of that type, otherwise the earliest anywhere; 0 means unknown.
+    """
+    now = int(now or time.time())
+
+    def earliest(types):
+        found = {}
+        for country in countries:
+            for release in country.get('release_dates') or []:
+                stamp = parseDate(release.get('release_date'))
+                if release.get('type') in types and stamp:
+                    code = country.get('iso_3166_1')
+                    found[code] = min(found.get(code, stamp), stamp)
+        if 'US' in found:
+            return found['US']
+        return min(found.values()) if found else 0
+
+    theater = earliest(THEATRICAL)
+    dvd = earliest(HOME_RELEASE)
+
+    # Out on disc/digital for a while, or long out in cinemas: these dates won't change, check again in 3 weeks.
+    # An unknown date (0) is never "old", or a movie with no dates yet would wait 3 weeks to be checked again.
+    settled = (dvd and dvd < now - 604800 * 2 and theater and theater < now) or (theater and theater < now - 31449600 * 4)
+
+    return {
+        'theater': theater,
+        'dvd': dvd,
+        'bluray': False,  # TMDB's physical type doesn't say whether it is a Blu-ray
+        'expires': now + (604800 * 3 if settled else 259200),
+    }
+
+
+def parseDate(value):
+    try:
+        return calendar.timegm(time.strptime((value or '')[:10], '%Y-%m-%d'))
+    except ValueError:
+        return 0
