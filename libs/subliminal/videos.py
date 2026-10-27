@@ -250,13 +250,13 @@ def hash_opensubtitles(path):
         filehash = filesize
         if filesize < 65536 * 2:
             return None
-        for _ in range(65536 / bytesize):
+        for _ in range(65536 // bytesize):
             filebuffer = f.read(bytesize)
             (l_value,) = struct.unpack(longlongformat, filebuffer)
             filehash += l_value
             filehash = filehash & 0xFFFFFFFFFFFFFFFF  # to remain as 64bit number
         f.seek(max(0, filesize - 65536), 0)
-        for _ in range(65536 / bytesize):
+        for _ in range(65536 // bytesize):
             filebuffer = f.read(bytesize)
             (l_value,) = struct.unpack(longlongformat, filebuffer)
             filehash += l_value
