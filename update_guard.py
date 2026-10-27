@@ -140,6 +140,10 @@ def take_rollback(app_dir):
     return note
 
 
+def _duration(seconds):
+    return '%d minutes' % (seconds // 60) if seconds >= 120 else '%d seconds' % seconds
+
+
 def on_start(app_dir, argv):
     """ Called by CouchPotato.py before the app is imported. argv re-executes this process. """
     if not _git_dir(app_dir):
@@ -170,7 +174,7 @@ def on_start(app_dir, argv):
         current = _read(app_dir, PENDING)
         if current and current.get('version') == state['version']:
             try:
-                rollback(app_dir, current, 'no healthy reply within %d minutes' % (CONFIRM_SECONDS // 60))
+                rollback(app_dir, current, 'no healthy reply within %s' % _duration(CONFIRM_SECONDS))
             except Exception as e:
                 sys.stderr.write('update_guard: rollback failed: %s\n' % e)
                 return

@@ -150,7 +150,7 @@ class Updater(Plugin):
                     time.sleep(10)
 
             if not answered:
-                log.error('The updated version did not answer its own API; it will be rolled back if that lasts %s minutes', update_guard.CONFIRM_SECONDS // 60)
+                log.error('The updated version did not answer its own API; it will be rolled back if that lasts %s', update_guard._duration(update_guard.CONFIRM_SECONDS))
                 return
 
             state = update_guard.confirm(app_dir)
