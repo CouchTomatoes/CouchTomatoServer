@@ -83,12 +83,19 @@ class Transmission(DownloaderBase):
             torrent_params['seedIdleLimit'] = tryInt(data.get('seed_time')) * 60
             torrent_params['seedIdleMode'] = 1
 
+        if self.conf('no_upload', default = False):
+            # Upload limit 0 KB/s sends nothing; seed ratio 0 stops the torrent the moment it completes,
+            # so the renamer picks it up as completed and 'Remove torrent' removes it. Set right after the add,
+            # before any peer connects. Don't add it paused and start it: Transmission drops the ratio limit
+            # when a torrent that already reached it is started, and it seeds without limit.
+            torrent_params.update({'uploadLimited': True, 'uploadLimit': 0, 'seedRatioMode': 1, 'seedRatioLimit': 0})
+
         # Send request to Transmission
         if data.get('protocol') == 'torrent_magnet':
             remote_torrent = self.trpc.add_torrent_uri(data.get('url'), arguments = params)
             torrent_params['trackerAdd'] = self.torrent_trackers
         else:
-            remote_torrent = self.trpc.add_torrent_file(b64encode(filedata), arguments = params)
+            remote_torrent = self.trpc.add_torrent_file(b64encode(filedata).decode(), arguments = params)
 
         if not remote_torrent:
             log.error('Failed sending torrent to Transmission')
@@ -351,6 +358,13 @@ config = [{
                     'type': 'bool',
                     'advanced': True,
                     'description': 'Also remove the leftover files.',
+                },
+                {
+                    'name': 'no_upload',
+                    'label': 'Don\'t upload',
+                    'type': 'bool',
+                    'default': False,
+                    'description': 'Never upload (upload limit 0) and stop the torrent as soon as it finishes, so it doesn\'t seed.',
                 },
                 {
                     'name': 'paused',
