@@ -32,7 +32,7 @@ config = [{
                     'name': 'automatic',
                     'default': True,
                     'type': 'bool',
-                    'description': 'Automatically update when update is available',
+                    'description': 'Automatically update when update is available. Installs new packages, and goes back to the previous version if the new one doesn\'t start.',
                 },
                 {
                     'name': 'git_command',
