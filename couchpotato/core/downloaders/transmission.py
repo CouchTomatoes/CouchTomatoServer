@@ -84,11 +84,13 @@ class Transmission(DownloaderBase):
             torrent_params['seedIdleMode'] = 1
 
         if self.conf('no_upload', default = False):
-            # Upload limit 0 KB/s sends nothing; seed ratio 0 stops the torrent the moment it completes,
-            # so the renamer picks it up as completed and 'Remove torrent' removes it. Set right after the add,
-            # before any peer connects. Don't add it paused and start it: Transmission drops the ratio limit
-            # when a torrent that already reached it is started, and it seeds without limit.
-            torrent_params.update({'uploadLimited': True, 'uploadLimit': 0, 'seedRatioMode': 1, 'seedRatioLimit': 0})
+            # Upload limit 1 KB/s, the lowest that still downloads: Transmission counts the requests for
+            # metadata and pieces as upload, so at 0 a magnet never even gets its metadata (seen live: 0% after
+            # 45 min with 13 peers). Seed ratio 0 stops the torrent the moment it completes, so the renamer picks
+            # it up as completed and 'Remove torrent' removes it. Set right after the add, before any peer
+            # connects. Don't add it paused and start it: Transmission drops the ratio limit when a torrent that
+            # already reached it is started, and it seeds without limit.
+            torrent_params.update({'uploadLimited': True, 'uploadLimit': 1, 'seedRatioMode': 1, 'seedRatioLimit': 0})
 
         # Send request to Transmission
         if data.get('protocol') == 'torrent_magnet':
@@ -364,7 +366,7 @@ config = [{
                     'label': 'Don\'t upload',
                     'type': 'bool',
                     'default': False,
-                    'description': 'Never upload (upload limit 0) and stop the torrent as soon as it finishes, so it doesn\'t seed.',
+                    'description': 'Upload as little as possible (1 KB/s, the minimum that still downloads) and stop the torrent as soon as it finishes, so it doesn\'t seed.',
                 },
                 {
                     'name': 'paused',
