@@ -335,8 +335,11 @@ class MovieBase(MovieTypeBase):
             else:
                 dates = media.get('info').get('release_date')
 
-            if dates and (dates.get('expires', 0) < time.time() or dates.get('expires', 0) > time.time() + (604800 * 4)) or not dates:
-                dates = fireEvent('movie.info.release_date', identifier = getIdentifier(media), merge = True)
+            # Also look again when no date is known yet: zeros used to be stored for weeks (the old API cached them 21 days)
+            unknown = dates and not dates.get('theater') and not dates.get('dvd')
+            if dates and (dates.get('expires', 0) < time.time() or dates.get('expires', 0) > time.time() + (604800 * 4)) or not dates or unknown:
+                dates = fireEvent('movie.info.release_date', identifier = getIdentifier(media), merge = True) or {}
+                dates = dict({'dvd': 0, 'theater': 0, 'bluray': False}, **dates)
                 media['info'].update({'release_date': dates})
                 db.update(media)
 
