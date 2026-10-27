@@ -23,6 +23,12 @@ if __name__ == '__main__' and os.environ.get('PYTHONHASHSEED') != '0' and not ge
 # Root path
 base_path = dirname(os.path.abspath(__file__))
 
+# Roll back an automatic update that can't start. Runs before anything from the app is
+# imported, because a broken update may be exactly what fails to import.
+if __name__ == '__main__':
+    import update_guard
+    update_guard.on_start(base_path, [os.path.abspath(__file__)] + sys.argv[1:])
+
 # Insert local directories into path
 sys.path.insert(0, os.path.join(base_path, 'libs'))
 

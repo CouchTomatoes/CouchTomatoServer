@@ -32,7 +32,7 @@ class CoreNotifier(Notification):
     listen_to = [
         'media.available',
         'renamer.after', 'movie.snatched',
-        'updater.available', 'updater.updated',
+        'updater.available', 'updater.updated', 'updater.failed',
         'core.message', 'core.message.important',
     ]
 

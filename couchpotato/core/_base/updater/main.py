@@ -6,7 +6,7 @@ import time
 import traceback
 import zipfile
 from datetime import datetime
-from threading import RLock
+from threading import RLock, Thread
 import re
 
 from couchpotato.api import addApiView
@@ -18,6 +18,8 @@ from couchpotato.core.plugins.base import Plugin
 from couchpotato.environment import Env
 from dateutil.parser import parse
 import git
+import requests
+import update_guard
 import version
 from six.moves import filter
 
@@ -45,6 +47,7 @@ class Updater(Plugin):
 
         addEvent('app.load', self.logVersion, priority = 10000)
         addEvent('app.load', self.setCrons)
+        addEvent('app.load', self.confirmUpdate, priority = 1000)
         addEvent('updater.info', self.info)
 
         addApiView('updater.info', self.info, docs = {
@@ -92,16 +95,7 @@ class Updater(Plugin):
         if do_check and self.isEnabled() and self.check() and self.conf('automatic') and not self.updater.update_failed:
 
             if self.updater.doUpdate():
-
-                # Notify before restarting
-                try:
-                    if self.conf('notification'):
-                        info = self.updater.info()
-                        version_date = datetime.fromtimestamp(info['update_version']['date'])
-                        fireEvent('updater.updated', 'CouchPotato: Updated to a new version with hash "%s", this version is from %s' % (info['update_version']['hash'], version_date), data = info)
-                except:
-                    log.error('Failed notifying for update: %s', traceback.format_exc())
-
+                # The "updated" notification waits until the new version has answered (confirmUpdate)
                 fireEventAsync('app.restart')
 
                 return True
@@ -121,6 +115,51 @@ class Updater(Plugin):
             return True
 
         return False
+
+    def confirmUpdate(self):
+        """ After an automatic update: report a rollback, or confirm the new version once its own API answers. """
+        app_dir = Env.get('app_dir')
+
+        rolled_back = update_guard.take_rollback(app_dir)
+        if rolled_back:
+            message = 'CouchTomato: the update to %s was rolled back to %s, because %s.' % (rolled_back['version'][:8], rolled_back['previous'][:8], rolled_back['reason'])
+            log.error(message)
+            fireEvent('updater.failed', message, data = rolled_back)
+
+        if not update_guard.pending(app_dir):
+            return
+
+        def check_health():
+            host = Env.setting('host', default = '0.0.0.0')
+            if host.startswith('unix:'):
+                answered = True
+            else:
+                host = '127.0.0.1' if host in ('', '0.0.0.0', '::') else host
+                scheme = 'https' if Env.setting('ssl_cert') and Env.setting('ssl_key') else 'http'
+                url_base = ('/' + Env.setting('url_base').strip('/')) if Env.setting('url_base') else ''
+                url = '%s://%s:%s%s/api/%s/app.available' % (scheme, host, Env.setting('port', default = 5050), url_base, Env.setting('api_key'))
+
+                answered = False
+                for attempt in range(18):
+                    try:
+                        if requests.get(url, timeout = 10, verify = False).json().get('success'):
+                            answered = True
+                            break
+                    except:
+                        pass
+                    time.sleep(10)
+
+            if not answered:
+                log.error('The updated version did not answer its own API; it will be rolled back if that lasts %s', update_guard._duration(update_guard.CONFIRM_SECONDS))
+                return
+
+            state = update_guard.confirm(app_dir)
+            if state:
+                log.info('Update to %s confirmed: the API answers', state['version'][:8])
+                if self.conf('notification'):
+                    fireEvent('updater.updated', 'CouchTomato: updated to %s, and it answers.' % state['version'][:8], data = state)
+
+        Thread(target = check_health, name = 'updater.confirm').start()
 
     def info(self, **kwargs):
         self._lock.acquire()
@@ -219,10 +258,28 @@ class GitUpdater(BaseUpdater):
 
     def doUpdate(self):
 
+        app_dir = Env.get('app_dir')
         try:
+            previous = self.repo.head.commit.hexsha
             log.info('Updating to latest version')
-            self.repo.remote().pull()
+            self.repo.remote().pull(ff_only = True)
+            current = self.repo.head.commit.hexsha
+            if current == previous:
+                return False
 
+            requirements_changed = bool(self.repo.git.diff('--name-only', previous, current, '--', 'requirements.txt'))
+            if requirements_changed:
+                log.info('requirements.txt changed, installing packages')
+                if not update_guard.install_requirements(app_dir):
+                    self.repo.git.reset('--hard', previous)
+                    update_guard.mark_bad(app_dir, current)
+                    message = 'CouchTomato: the update to %s was rolled back to %s, because installing its packages failed.' % (current[:8], previous[:8])
+                    log.error(message)
+                    fireEvent('updater.failed', message)
+                    self.update_failed = True
+                    return False
+
+            update_guard.mark_pending(app_dir, previous, current, requirements_changed)
             return True
         except:
             log.error('Failed updating via GIT: %s', traceback.format_exc())
@@ -277,6 +334,10 @@ class GitUpdater(BaseUpdater):
                 remote = branch.commit
 
                 log.debug('Versions, local:%s, remote:%s', (local.hexsha[:8], remote.hexsha[:8]))
+
+                if update_guard.is_bad(Env.get('app_dir'), remote.hexsha):
+                    log.info('Not updating to %s: it was rolled back before', remote.hexsha[:8])
+                    break
 
                 if local.committed_date < remote.committed_date:
                     self.update_version = {
