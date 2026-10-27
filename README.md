@@ -11,9 +11,14 @@
 </p>
 
 <p align="center">
-  A Python 3 port and rebrand of <a href="https://github.com/CouchPotato/CouchPotatoServer">CouchPotato</a>,
+  The maintained Python 3 successor to <a href="https://github.com/CouchPotato/CouchPotatoServer">CouchPotato</a>,
   the automatic NZB and torrent movie downloader.
 </p>
+
+**Looking for CouchPotato?** CouchPotato (CouchPotatoServer) stopped being developed in 2020 and never
+moved off Python 2. CouchTomato is the same app (same web UI, same providers, same download-client
+support) ported to Python 3.11+ and kept working against today's sites, with Windows, macOS and Linux
+builds on every release.
 
 CouchPotato stopped receiving updates in 2020 while still stuck on Python 2, with its dependencies
 vendored in-tree instead of pip-installed. CouchTomato keeps the entire original commit history intact
@@ -104,10 +109,10 @@ Don't forget to enable development inside the settings. This disables some funct
 
 ## Project status
 
-This is an active port — see [`TODO.md`](TODO.md) for the full history/architecture notes,
-the [Architecture Overview wiki page](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Architecture-Overview)
-for a higher-level summary, and [`TODO.md`](TODO.md) for a checkbox-tracked list of what's left to
-reach full feature parity with upstream CouchPotato.
+This is an active port. See the
+[Architecture Overview wiki page](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Architecture-Overview)
+for a summary, and [`TODO.md`](TODO.md) for the porting history and a checkbox-tracked list of what's
+left to reach full feature parity with upstream CouchPotato.
 
 ## Release History
 
