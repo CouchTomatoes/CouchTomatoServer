@@ -3,6 +3,7 @@ from couchpotato.core.helpers.variable import tryInt, getIdentifier
 from couchpotato.core.logger import CPLog
 from couchpotato.core.media._base.providers.torrent.base import TorrentMagnetProvider
 import random
+from urllib.parse import quote, quote_plus
 
 log = CPLog(__name__)
 
@@ -62,13 +63,26 @@ class Base(TorrentMagnetProvider):
         return
 
     def make_magnet(self, hash, name):
-        url_encoded_trackers = 'udp%3A%2F%2Fopen.demonii.com%3A1337%2Fannounce&tr=%0Audp%3A%2F%2Ftracker.openbittorr' \
-                               'ent.com%3A80&tr=%0Audp%3A%2F%2Ftracker.coppersurfer.tk%3A6969&tr=%0Audp%3A%2F%2Fglot' \
-                               'orrents.pw%3A6969%2Fannounce&tr=%0Audp%3A%2F%2Ftracker.opentrackr.org%3A1337%2Fannou' \
-                               'nce&tr=%0Audp%3A%2F%2Ftorrent.gresille.org%3A80%2Fannounce&tr=%0Audp%3A%2F%2Fp4p.are' \
-                               'nabg.com%3A1337&tr=%0Audp%3A%2F%2Ftracker.leechers-paradise.org%3A6969]'
+        return makeMagnet(hash, name)
 
-        return 'magnet:?xt=urn:btih:%s&dn=%s&tr=%s' % (hash, name.replace(' ', '+'), url_encoded_trackers)
+
+# Each one answered a BEP 15 UDP connect from the Pi4 on 2026-11-19. Of the 8 the old
+# list had, only demonii and opentrackr still did (the rest time out or don't resolve).
+TRACKERS = [
+    'udp://tracker.opentrackr.org:1337/announce',
+    'udp://open.demonii.com:1337/announce',
+    'udp://open.stealth.si:80/announce',
+    'udp://tracker.torrent.eu.org:451/announce',
+    'udp://open.tracker.cl:1337/announce',
+    'udp://tracker.qu.ax:6969/announce',
+    'udp://tracker-udp.gbitt.info:80/announce',
+    'udp://tracker.dler.org:6969/announce',
+    'udp://explodie.org:6969/announce',
+]
+
+
+def makeMagnet(hash, name):
+    return 'magnet:?xt=urn:btih:%s&dn=%s%s' % (hash, quote_plus(name), ''.join('&tr=' + quote(t, safe = '') for t in TRACKERS))
 
 
 config = [{
