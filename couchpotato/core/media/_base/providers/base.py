@@ -101,7 +101,7 @@ class Provider(Plugin):
                     data = XMLTree.fromstring(ss(data))
                     return self.getElements(data, item_path)
                 except XmlParseError:
-                    log.error('Invalid XML returned, check "%s" manually for issues', url)
+                    log.warning('Invalid XML returned, check "%s" manually for issues', url)
                 except:
                     log.error('Failed to parsing %s: %s', (self.getName(), traceback.format_exc()))
 
