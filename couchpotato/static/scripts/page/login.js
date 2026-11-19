@@ -31,3 +31,4 @@ window.addEvent('domready', function(){
 		});
 	}
 });
+var __probe = 1;
