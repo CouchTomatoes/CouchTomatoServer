@@ -121,8 +121,10 @@ class MovieBase(MovieTypeBase):
                 m = db.get('media', 'imdb-%s' % params.get('identifier'), with_doc = True)['doc']
 
                 try:
-                    db.get('id', m.get('profile_id'))
-                    previous_profile = m.get('profile_id')
+                    # A movie that is already done has no profile (None), nothing to look up
+                    if m.get('profile_id'):
+                        db.get('id', m.get('profile_id'))
+                        previous_profile = m.get('profile_id')
                 except RecordNotFound:
                     pass
                 except:
