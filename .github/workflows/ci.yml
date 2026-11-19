@@ -1,0 +1,19 @@
+name: CI
+
+# The PR gate. The checks themselves live in _verify.yml so every caller holds a
+# commit to the same standard.
+#
+# Releases and installers are built separately by release.yml on hosted runners.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    uses: ./.github/workflows/_verify.yml
