@@ -323,7 +323,12 @@ class GitUpdater(BaseUpdater):
 
         log.info('Checking for new version on github for %s', self.repo_name)
         if not Env.get('dev'):
-            self.repo.remote().fetch()
+            try:
+                self.repo.remote().fetch()
+            except git.GitCommandError as e:
+                # Usually no network yet (boot) or GitHub unreachable: try again at the next check
+                log.warning('Could not check GitHub for updates, will retry later: %s', (e.stderr or str(e)).strip())
+                return False
 
         current_branch = self.repo.active_branch.name
 
@@ -497,8 +502,9 @@ class SourceUpdater(BaseUpdater):
                 'hash': commit['sha'],
                 'date': int(time.mktime(parse(commit['commit']['committer']['date']).timetuple())),
             }
-        except:
-            log.error('Failed getting latest request from github: %s', traceback.format_exc())
+        except Exception as e:
+            # Offline or GitHub unreachable; urlopen already logged why
+            log.warning('Failed getting latest commit from github: %s', e)
 
         return {}
 

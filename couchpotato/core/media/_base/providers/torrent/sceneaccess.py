@@ -31,7 +31,7 @@ class Base(TorrentProvider):
         data = self.getHTMLData(url)
 
         if data:
-            html = BeautifulSoup(data)
+            html = BeautifulSoup(data, 'lxml')
 
             try:
                 resultsTable = html.find('table', attrs = {'id': 'torrents-table'})
@@ -63,7 +63,7 @@ class Base(TorrentProvider):
 
     def getMoreInfo(self, item):
         full_description = self.getCache('sceneaccess.%s' % item['id'], item['detail_url'], cache_timeout = 25920000)
-        html = BeautifulSoup(full_description)
+        html = BeautifulSoup(full_description, 'lxml')
         nfo_pre = html.find('div', attrs = {'id': 'details_table'})
         description = toUnicode(nfo_pre.text) if nfo_pre else ''
 

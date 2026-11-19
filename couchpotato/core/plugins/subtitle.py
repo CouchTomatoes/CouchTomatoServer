@@ -104,7 +104,12 @@ class Subtitle(Plugin):
         if os.path.isfile(target):
             return target
 
-        page = self.getCache('yts-subs.%s' % identifier, self.search_url % identifier, show_error = False)
+        try:
+            page = self.getCache('yts-subs.%s' % identifier, self.search_url % identifier, show_error = False)
+        except Exception as e:
+            # 404 = yts-subs has no page for this movie yet (common for new releases)
+            log.info('No subtitle page on yts-subs for %s: %s', (identifier, e))
+            return None
         candidates = parseSubtitles(toUnicode(page or ''), Language(lang).name)
         if not candidates:
             log.info('No %s subtitle on yts-subs for %s', (lang, identifier))

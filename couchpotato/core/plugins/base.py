@@ -239,9 +239,10 @@ class Plugin(object):
                     response.raise_for_status()
 
             self.http_failed_request[host] = 0
-        except (IOError, MaxRetryError, Timeout):
+        except (IOError, MaxRetryError, Timeout) as e:
             if show_error:
-                log.error('Failed opening url in %s: %s %s', (self.getName(), url, traceback.format_exc(0)))
+                # A site being down/unreachable is an outside problem, not an app error: one line, no traceback
+                log.warning('Failed opening url in %s: %s %s', (self.getName(), url, describeUrlError(e)))
 
             # Save failed requests by hosts
             try:
@@ -272,11 +273,16 @@ class Plugin(object):
     def openViaFlareSolverr(self, flaresolverr, url):
         """ GET a Cloudflare-protected page through FlareSolverr and return its body as bytes. """
         log.info('Opening url via FlareSolverr: %s', url)
-        reply = Env.get('http_opener').post(cleanHost(flaresolverr).rstrip('/') + '/v1', timeout = 75, json = {
-            'cmd': 'request.get',
-            'url': url,
-            'maxTimeout': 60000,
-        }).json()
+        endpoint = cleanHost(flaresolverr).rstrip('/') + '/v1'
+        try:
+            reply = Env.get('http_opener').post(endpoint, timeout = 75, json = {
+                'cmd': 'request.get',
+                'url': url,
+                'maxTimeout': 60000,
+            }).json()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            # Name the real culprit: it is FlareSolverr that can't be reached, not the site
+            raise IOError('FlareSolverr at %s is unreachable: %s' % (endpoint, describeUrlError(e)))
 
         solution = reply.get('solution') or {}
         if reply.get('status') != 'ok' or solution.get('status') != requests.codes.ok:
@@ -473,6 +479,29 @@ class Plugin(object):
         if lock:
             log.debug('Releasing lock: %s', key)
             self._locks.get(key).release()
+
+
+def describeUrlError(e):
+    """ One readable line for a failed request, instead of urllib3's chained traceback. """
+    response = getattr(e, 'response', None)
+    if response is not None and getattr(response, 'status_code', None):
+        return 'HTTP %s %s' % (response.status_code, response.reason or '')
+
+    # Walk to the root cause (e.g. socket.gaierror inside NameResolutionError inside ConnectionError)
+    root = e
+    seen = set()
+    while id(root) not in seen:
+        seen.add(id(root))
+        nxt = getattr(root, 'reason', None) or root.__cause__ or root.__context__
+        if nxt is None or not isinstance(nxt, BaseException):
+            break
+        root = nxt
+
+    text = str(root) or str(e)
+    if root is not e and 'Failed to resolve' in str(e):
+        host = re.search(r"Failed to resolve '([^']+)'", str(e))
+        text = 'cannot resolve %s (%s)' % (host.group(1) if host else '?', text)
+    return '%s: %s' % (type(root).__name__, text)
 
 
 def isCloudflareChallenge(response):

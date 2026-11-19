@@ -7,8 +7,9 @@ from couchpotato.core.event import addEvent, fireEvent
 from couchpotato.core.helpers.encoding import toUnicode, ss, sp
 from couchpotato.core.helpers.variable import md5, getExt, isSubFolder
 from couchpotato.core.logger import CPLog
-from couchpotato.core.plugins.base import Plugin
+from couchpotato.core.plugins.base import Plugin, describeUrlError
 from couchpotato.environment import Env
+import requests
 from tornado.web import StaticFileHandler
 
 
@@ -77,6 +78,10 @@ class FileManager(Plugin):
 
         try:
             filedata = self.urlopen(url, **urlopen_kwargs)
+        except (IOError, requests.RequestException) as e:
+            # e.g. a poster that the image host has removed (404)
+            log.warning('Failed downloading file %s: %s', (url, describeUrlError(e)))
+            return False
         except:
             log.error('Failed downloading file %s: %s', (url, traceback.format_exc()))
             return False

@@ -192,7 +192,8 @@ class Manage(Plugin):
 
             # noinspection PyTypeChecker
             for folder in self.in_progress:
-                if self.in_progress[folder]['to_go'] <= 0:
+                # None = the scan found nothing new in this folder (Python 2 treated None <= 0 as True)
+                if (self.in_progress[folder]['to_go'] or 0) <= 0:
                     delete_me[folder] = True
 
             for delete in delete_me:

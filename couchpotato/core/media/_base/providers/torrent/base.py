@@ -62,7 +62,7 @@ class TorrentProvider(YarrProvider):
                 Env.prop(prop_name, time.time())
 
         if not self.proxy_domain:
-            log.error('No %s proxies left, please add one in settings, or let us know which one to add on the forum.', self.getName())
+            log.warning('No %s proxies left, please add one in settings, or let us know which one to add on the forum.', self.getName())
             return None
 
         return cleanHost(self.proxy_domain).rstrip('/') + url

@@ -29,6 +29,7 @@ class Scanner(Plugin):
                        'thumbs.db', 'ehthumbs.db', 'desktop.ini']  # unpacking, smb-crap, hidden files
     ignore_names = ['extract', 'extracting', 'extracted', 'movie', 'movies', 'film', 'films', 'download', 'downloads', 'video_ts', 'audio_ts', 'bdmv', 'certificate']
     ignored_extensions = ['ignore', 'lftp-pget-status']
+    partial_extensions = ['.part', '.!qb', '.!ut', '.crdownload', '.incomplete', '.tmp']
     extensions = {
         'movie': ['mkv', 'wmv', 'avi', 'mpg', 'mpeg', 'mp4', 'm2ts', 'iso', 'img', 'mdf', 'ts', 'm4v', 'flv'],
         'movie_extra': ['mds'],
@@ -384,7 +385,11 @@ class Scanner(Plugin):
                 group['files']['movie'] = self.getMediaFiles(group['unsorted_files'])
 
             if len(group['files']['movie']) == 0:
-                log.error('Couldn\'t find any movie files for %s', identifier)
+                partial = [f for f in group['unsorted_files'] if os.path.splitext(f)[1].lower() in self.partial_extensions]
+                if partial:
+                    log.info('Skipping %s, it is still downloading (%s)', (identifier, os.path.basename(partial[0])))
+                else:
+                    log.warning('Couldn\'t find any movie files for %s', identifier)
                 total_found -= 1
                 continue
 

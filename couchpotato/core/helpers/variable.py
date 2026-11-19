@@ -330,9 +330,17 @@ def removePyc(folder, only_excess = True, show_logs = True):
 
     for root, dirs, files in os.walk(folder):
 
+        # Never touch git's own files (empty refs dirs are valid there)
+        dirs[:] = [d for d in dirs if d != '.git']
+
         pyc_files = [filename for filename in files if filename.endswith('.pyc')]
-        py_files = set([filename for filename in files if filename.endswith('.py')])
-        excess_pyc_files = [pyc_filename for pyc_filename in pyc_files if pyc_filename[:-1] not in py_files] if only_excess else pyc_files
+        if os.path.basename(root) == '__pycache__':
+            # Python 3: __pycache__/name.cpython-311.pyc belongs to ../name.py
+            parent = os.path.dirname(root)
+            excess_pyc_files = [f for f in pyc_files if not os.path.isfile(os.path.join(parent, f.split('.')[0] + '.py'))] if only_excess else pyc_files
+        else:
+            py_files = set([filename for filename in files if filename.endswith('.py')])
+            excess_pyc_files = [pyc_filename for pyc_filename in pyc_files if pyc_filename[:-1] not in py_files] if only_excess else pyc_files
 
         for excess_pyc_file in excess_pyc_files:
             full_path = os.path.join(root, excess_pyc_file)

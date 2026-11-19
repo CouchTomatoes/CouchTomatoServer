@@ -76,7 +76,7 @@ class IMDBBase(Automation, RSS):
                     log.error('Failed parsing IMDB page "%s", unexpected html.', url)
                     return []
 
-                html = BeautifulSoup(split[1])
+                html = BeautifulSoup(split[1], 'lxml')
                 for x in ['list compact', 'lister', 'list detail sub-list']:
                     html2 = html.find('div', attrs = {
                         'class': x

@@ -54,7 +54,7 @@ class Base(NZBProvider, RSS):
 
     def getMoreInfo(self, item):
         full_description = self.getCache('nzbclub.%s' % item['id'], item['detail_url'], cache_timeout = 25920000)
-        html = BeautifulSoup(full_description)
+        html = BeautifulSoup(full_description, 'lxml')
         nfo_pre = html.find('pre', attrs = {'class': 'nfo'})
         description = toUnicode(nfo_pre.text) if nfo_pre else ''
 

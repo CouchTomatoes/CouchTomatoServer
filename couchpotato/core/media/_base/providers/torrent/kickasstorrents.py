@@ -65,7 +65,7 @@ class Base(TorrentMagnetProvider):
             table_order = ['name', 'size', None, 'age', 'seeds', 'leechers']
 
             try:
-                html = BeautifulSoup(data)
+                html = BeautifulSoup(data, 'lxml')
                 resultdiv = html.find('div', attrs = {'class': 'tabs'})
                 for result in resultdiv.find_all('div', recursive = False):
                     if result.get('id').lower().strip('tab-') not in cat_ids:
