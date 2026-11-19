@@ -9,7 +9,7 @@ else:
     from pyutil import iputil, testutil
     import re
 
-    DOTTED_QUAD_RE=re.compile("^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$")
+    DOTTED_QUAD_RE=re.compile("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$")
 
     class ListAddresses(testutil.SignalMixin):
         def test_get_local_ip_for(self):

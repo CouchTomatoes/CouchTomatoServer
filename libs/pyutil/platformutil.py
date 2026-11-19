@@ -1,11 +1,11 @@
 # Thanks to Daenyth for help porting this to Arch Linux.
 
 import os, platform, re, subprocess
-_distributor_id_cmdline_re = re.compile("(?:Distributor ID:)\s*(.*)", re.I)
-_release_cmdline_re = re.compile("(?:Release:)\s*(.*)", re.I)
+_distributor_id_cmdline_re = re.compile("(?:Distributor ID:)\\s*(.*)", re.I)
+_release_cmdline_re = re.compile("(?:Release:)\\s*(.*)", re.I)
 
-_distributor_id_file_re = re.compile("(?:DISTRIB_ID\s*=)\s*(.*)", re.I)
-_release_file_re = re.compile("(?:DISTRIB_RELEASE\s*=)\s*(.*)", re.I)
+_distributor_id_file_re = re.compile("(?:DISTRIB_ID\\s*=)\\s*(.*)", re.I)
+_release_file_re = re.compile("(?:DISTRIB_RELEASE\\s*=)\\s*(.*)", re.I)
 
 global _distname,_version
 _distname = None

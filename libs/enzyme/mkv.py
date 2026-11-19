@@ -163,7 +163,7 @@ def matroska_bps_to_bitrate(bps):
     """
     Tries to convert a free-form bps string into a bitrate (bits per second).
     """
-    m = re.search('([\d.]+)\s*(\D.*)', bps)
+    m = re.search('([\\d.]+)\\s*(\\D.*)', bps)
     if m:
         bps, suffix = m.groups()
         if 'kbit' in suffix:

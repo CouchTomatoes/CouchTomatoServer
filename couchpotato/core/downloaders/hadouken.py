@@ -92,7 +92,7 @@ class Hadouken(DownloaderBase):
         torrent_filename = self.createFileName(data, filedata, media)
 
         if data.get('protocol') == 'torrent_magnet':
-            torrent_hash = re.findall('urn:btih:([\w]{32,40})', data.get('url'))[0].upper()
+            torrent_hash = re.findall('urn:btih:([\\w]{32,40})', data.get('url'))[0].upper()
             torrent_params['trackers'] = self.torrent_trackers
             torrent_params['name'] = torrent_filename
         else:

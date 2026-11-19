@@ -146,7 +146,7 @@ class Logging(Plugin):
                     log_type = 'UNKNOWN'
 
                 message = ''.join(split[1]) if len(split) > 1 else split[0]
-                message = re.sub('\[\d+m\[', '[', message)
+                message = re.sub('\\[\\d+m\\[', '[', message)
 
                 logs.append({
                     'time': timestamp,

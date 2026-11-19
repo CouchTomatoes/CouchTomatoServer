@@ -78,9 +78,9 @@ if os.path.isfile(dll_copy):
 copyfile(dll_file, dll_copy)
 
 
-volume_naming1 = re.compile("\.r([0-9]{2})$")
-volume_naming2 = re.compile("\.([0-9]{3}).rar$")
-volume_naming3 = re.compile("\.part([0-9]+).rar$")
+volume_naming1 = re.compile("\\.r([0-9]{2})$")
+volume_naming2 = re.compile("\\.([0-9]{3}).rar$")
+volume_naming3 = re.compile("\\.part([0-9]+).rar$")
 
 unrar = ctypes.WinDLL(dll_copy)
 

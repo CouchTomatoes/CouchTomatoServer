@@ -106,23 +106,23 @@ class Scanner(Plugin):
         'HDTV': ['hdtv']
     }
 
-    clean = '([ _\,\.\(\)\[\]\-]|^)(3d|hsbs|sbs|half.sbs|full.sbs|ou|half.ou|full.ou|extended|extended.cut|directors.cut|french|fr|swedisch|sw|danish|dutch|nl|swesub|subs|spanish|german|ac3|dts|custom|dc|divx|divx5|dsr|dsrip|dutch|dvd|dvdr|dvdrip|dvdscr|dvdscreener|screener|dvdivx|cam|fragment|fs|hdtv|hdrip' \
-            '|hdtvrip|webdl|web.dl|webrip|web.rip|internal|limited|multisubs|ntsc|ogg|ogm|pal|pdtv|proper|repack|rerip|retail|r3|r5|bd5|se|svcd|swedish|german|read.nfo|nfofix|unrated|ws|telesync|ts|telecine|tc|brrip|bdrip|video_ts|audio_ts|480p|480i|576p|576i|720p|720i|1080p|1080i|hrhd|hrhdtv|hddvd|bluray|x264|h264|x265|h265|xvid|xvidvd|xxx|www.www|hc|\[.*\])(?=[ _\,\.\(\)\[\]\-]|$)'
+    clean = '([ _\\,\\.\\(\\)\\[\\]\\-]|^)(3d|hsbs|sbs|half.sbs|full.sbs|ou|half.ou|full.ou|extended|extended.cut|directors.cut|french|fr|swedisch|sw|danish|dutch|nl|swesub|subs|spanish|german|ac3|dts|custom|dc|divx|divx5|dsr|dsrip|dutch|dvd|dvdr|dvdrip|dvdscr|dvdscreener|screener|dvdivx|cam|fragment|fs|hdtv|hdrip' \
+            '|hdtvrip|webdl|web.dl|webrip|web.rip|internal|limited|multisubs|ntsc|ogg|ogm|pal|pdtv|proper|repack|rerip|retail|r3|r5|bd5|se|svcd|swedish|german|read.nfo|nfofix|unrated|ws|telesync|ts|telecine|tc|brrip|bdrip|video_ts|audio_ts|480p|480i|576p|576i|720p|720i|1080p|1080i|hrhd|hrhdtv|hddvd|bluray|x264|h264|x265|h265|xvid|xvidvd|xxx|www.www|hc|\\[.*\\])(?=[ _\\,\\.\\(\\)\\[\\]\\-]|$)'
     multipart_regex = [
-        '[ _\.-]+cd[ _\.-]*([0-9a-d]+)',  #*cd1
-        '[ _\.-]+dvd[ _\.-]*([0-9a-d]+)',  #*dvd1
-        '[ _\.-]+part[ _\.-]*([0-9a-d]+)',  #*part1
-        '[ _\.-]+dis[ck][ _\.-]*([0-9a-d]+)',  #*disk1
-        'cd[ _\.-]*([0-9a-d]+)$',  #cd1.ext
-        'dvd[ _\.-]*([0-9a-d]+)$',  #dvd1.ext
-        'part[ _\.-]*([0-9a-d]+)$',  #part1.mkv
-        'dis[ck][ _\.-]*([0-9a-d]+)$',  #disk1.mkv
-        '()[ _\.-]+([0-9]*[abcd]+)(\.....?)$',
-        '([a-z])([0-9]+)(\.....?)$',
-        '()([ab])(\.....?)$'  #*a.mkv
+        '[ _\\.-]+cd[ _\\.-]*([0-9a-d]+)',  #*cd1
+        '[ _\\.-]+dvd[ _\\.-]*([0-9a-d]+)',  #*dvd1
+        '[ _\\.-]+part[ _\\.-]*([0-9a-d]+)',  #*part1
+        '[ _\\.-]+dis[ck][ _\\.-]*([0-9a-d]+)',  #*disk1
+        'cd[ _\\.-]*([0-9a-d]+)$',  #cd1.ext
+        'dvd[ _\\.-]*([0-9a-d]+)$',  #dvd1.ext
+        'part[ _\\.-]*([0-9a-d]+)$',  #part1.mkv
+        'dis[ck][ _\\.-]*([0-9a-d]+)$',  #disk1.mkv
+        '()[ _\\.-]+([0-9]*[abcd]+)(\\.....?)$',
+        '([a-z])([0-9]+)(\\.....?)$',
+        '()([ab])(\\.....?)$'  #*a.mkv
     ]
 
-    cp_imdb = '\.cp\((?P<id>tt[0-9]+),?\s?(?P<random>[A-Za-z0-9]+)?\)'
+    cp_imdb = '\\.cp\\((?P<id>tt[0-9]+),?\\s?(?P<random>[A-Za-z0-9]+)?\\)'
 
     def __init__(self):
 
@@ -501,7 +501,7 @@ class Scanner(Plugin):
         return data
 
     def get3dType(self, filename):
-        words = re.split('\W+', filename.lower())
+        words = re.split('\\W+', filename.lower())
 
         for key in self.threed_types:
             tags = self.threed_types.get(key, [])
@@ -588,7 +588,7 @@ class Scanner(Plugin):
                     txt = output.read()
                     output.close()
 
-                    idx_langs = re.findall('\nid: (\w+)', txt)
+                    idx_langs = re.findall('\nid: (\\w+)', txt)
 
                     sub_file = '%s.sub' % os.path.splitext(extra)[0]
                     if len(idx_langs) > 0 and os.path.isfile(sub_file):
@@ -729,7 +729,7 @@ class Scanner(Plugin):
     def getTrailers(self, files):
 
         def test(s):
-            return re.search('(^|[\W_])trailer\d*[\W_]', s.lower()) and self.filesizeBetween(s, self.file_sizes['trailer'])
+            return re.search('(^|[\\W_])trailer\\d*[\\W_]', s.lower()) and self.filesizeBetween(s, self.file_sizes['trailer'])
 
         return set(filter(test, files))
 
@@ -740,7 +740,7 @@ class Scanner(Plugin):
         files = set(filter(test, files))
 
         images = {
-            'backdrop': set([s for s in files if re.search('(^|[\W_])fanart|backdrop\d*[\W_]', s.lower()) and self.filesizeBetween(s, self.file_sizes['backdrop'])])
+            'backdrop': set([s for s in files if re.search('(^|[\\W_])fanart|backdrop\\d*[\\W_]', s.lower()) and self.filesizeBetween(s, self.file_sizes['backdrop'])])
         }
 
         # Rest
@@ -772,7 +772,7 @@ class Scanner(Plugin):
         return True
 
     def isSampleFile(self, filename):
-        is_sample = re.search('(^|[\W_])sample\d*[\W_]', filename.lower())
+        is_sample = re.search('(^|[\\W_])sample\\d*[\\W_]', filename.lower())
         if is_sample: log.debug('Is sample file: %s', filename)
         return is_sample
 
@@ -882,7 +882,7 @@ class Scanner(Plugin):
 
     def getGroup(self, file):
         try:
-            match = re.findall('\-([A-Z0-9]+)[\.\/]', file, re.I)
+            match = re.findall('\\-([A-Z0-9]+)[\\.\\/]', file, re.I)
             return match[-1] or ''
         except:
             return ''
@@ -898,7 +898,7 @@ class Scanner(Plugin):
     def findYear(self, text):
 
         # Search year inside () or [] first
-        matches = re.findall('(\(|\[)(?P<year>19[0-9]{2}|20[0-9]{2})(\]|\))', text)
+        matches = re.findall('(\\(|\\[)(?P<year>19[0-9]{2}|20[0-9]{2})(\\]|\\))', text)
         if matches:
             return matches[-1][1]
 
@@ -928,7 +928,7 @@ class Scanner(Plugin):
 
         # Backup to simple
         release_name = os.path.basename(release_name.replace('\\', '/'))
-        cleaned = ' '.join(re.split('\W+', simplifyString(release_name)))
+        cleaned = ' '.join(re.split('\\W+', simplifyString(release_name)))
         cleaned = re.sub(self.clean, ' ', cleaned)
 
         year = None
