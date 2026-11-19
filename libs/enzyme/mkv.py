@@ -703,7 +703,7 @@ class Matroska(core.AVContainer):
             elif elem_id == MATROSKA_FILE_DESC_ID:
                 desc = elem.get_utf8()
             elif elem_id == MATROSKA_FILE_MIME_TYPE_ID:
-                mimetype = elem.get_data()
+                mimetype = elem.get_str()
             elif elem_id == MATROSKA_FILE_DATA_ID:
                 data = elem.get_data()
 
@@ -819,7 +819,7 @@ class Matroska(core.AVContainer):
             value = [item.value for item in tag] if isinstance(tag, list) else tag.value
             if filter:
                 try:
-                    value = [list(filter(item)) for item in value] if isinstance(value, list) else list(filter(value))
+                    value = [filter(item) for item in value] if isinstance(value, list) else filter(value)
                 except Exception as e:
                     log.warning('Failed to convert tag to core attribute: %r', e)
             # Special handling for tv series recordings. The 'title' tag
