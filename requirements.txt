@@ -1,9 +1,12 @@
 beautifulsoup4
 bencode.py
+certifi
 chardet
 GitPython
 httplib2
 lxml
 pyOpenSSL
+python-dateutil
 requests
+six
 tornado
