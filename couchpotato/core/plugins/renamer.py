@@ -15,6 +15,7 @@ from couchpotato.core.helpers.variable import getExt, mergeDicts, getTitle, \
 from couchpotato.core.logger import CPLog
 from couchpotato.core.plugins.base import Plugin
 from couchpotato.environment import Env
+from subliminal.language import Language
 from unrar2 import RarFile
 import six
 from six.moves import filter
@@ -23,6 +24,45 @@ from six.moves import filter
 log = CPLog(__name__)
 
 autoload = 'Renamer'
+
+
+SUBTITLE_FLAGS = {'sdh': 'sdh', 'hi': 'sdh', 'cc': 'sdh', 'forced': 'forced'}
+
+
+def subtitleTagsFromName(file_path):
+    """ Language and flags from a subtitle's own file name, for subs the scanner can't place
+    (e.g. "Subs/English.srt", "Subs/SDH.eng.srt"). Returns e.g. ['en', 'sdh'], or [] when unknown. """
+    tokens = [t for t in re.split(r'[.\s_\-\[\]()]+', os.path.splitext(os.path.basename(file_path))[0]) if t]
+    if not tokens:
+        return []
+
+    def language(token, any_length):
+        # Short codes only as the last token, so words in a title ("It", "Up") aren't read as languages
+        if not any_length and len(token) <= 3:
+            return None
+        try:
+            lang = Language(token, strict = True)
+            return lang.alpha2 or lang.alpha3
+        except Exception:
+            return None
+
+    lang = language(tokens[-1], True)
+    if not lang:
+        for token in reversed(tokens[:-1]):
+            lang = language(token, False)
+            if lang:
+                break
+
+    if not lang:
+        return []
+
+    flags = []
+    for token in tokens:
+        flag = SUBTITLE_FLAGS.get(token.lower())
+        if flag and flag not in flags:
+            flags.append(flag)
+
+    return [lang] + flags
 
 
 class Renamer(Plugin):
@@ -458,9 +498,12 @@ class Renamer(Plugin):
                                 remove_multiple = remove_multiple,
                             )
 
+                            # Not found next to the movie (e.g. a Subs/ folder): read the language from its own name
+                            sub_tags = sub_langs if sub_langs else subtitleTagsFromName(current_file)
+
                             # Don't add language if multiple languages in 1 subtitle file
-                            if len(sub_langs) == 1:
-                                sub_suffix = '%s.%s' % (sub_langs[0], replacements['ext'])
+                            if len(sub_langs) == 1 or (not sub_langs and sub_tags):
+                                sub_suffix = '%s.%s' % ('.'.join(str(t) for t in sub_tags), replacements['ext'])
 
                                 # Don't add language to subtitle file it it's already there
                                 if not sub_name.endswith(sub_suffix):
@@ -636,7 +679,7 @@ class Renamer(Plugin):
                     dst = rename_files[src]
 
                     if dst in group['renamed_files']:
-                        log.error('File "%s" already renamed once, adding random string at the end to prevent data loss', dst)
+                        log.warning('File "%s" already renamed once, adding random string at the end to prevent data loss', dst)
                         dst = '%s.random-%s' % (dst, randomString())
 
                     # Create dir
