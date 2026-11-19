@@ -66,14 +66,20 @@ class EmbeddedSubtitle(Subtitle):
     :param int track_id: id of the subtitle track in the container
 
     """
-    def __init__(self, path, language, track_id):
+    def __init__(self, path, language, track_id, codec = None):
         super(EmbeddedSubtitle, self).__init__(path, language)
         self.track_id = track_id
+        self.codec = codec
 
     @classmethod
     def from_enzyme(cls, path, subtitle):
         language = Language(subtitle.language, strict=False)
-        return cls(path, language, subtitle.trackno)
+        return cls(path, language, subtitle.trackno, getattr(subtitle, 'codec', None))
+
+    @property
+    def is_text(self):
+        """ Text tracks (S_TEXT/UTF8, ASS...) play directly; image ones (PGS, VobSub) make players transcode """
+        return bool(self.codec) and str(self.codec).upper().startswith('S_TEXT')
 
 
 class ExternalSubtitle(Subtitle):

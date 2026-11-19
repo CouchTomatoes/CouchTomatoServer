@@ -93,7 +93,9 @@ class Subtitle(Plugin):
     def existingLanguages(self, movie_file):
         """ Languages of the subtitles already next to, or embedded in, a movie file """
         try:
-            return set(s.language.alpha2 for s in Video.from_path(movie_file).scan() if s.language)
+            # An embedded image track (PGS/VobSub) still gets an .srt: Plex would have to burn it in
+            return set(s.language.alpha2 for s in Video.from_path(movie_file).scan()
+                       if s.language and getattr(s, 'is_text', True))
         except:
             log.debug('Failed scanning %s for subtitles: %s', (movie_file, traceback.format_exc()))
             return set()
