@@ -15,7 +15,7 @@ import traceback
 # Python 3 randomises per process unless PYTHONHASHSEED is fixed - so a database
 # written in one run can't be read in the next. Existing databases were written
 # with seed 0, so re-launch with it when started any other way. Frozen builds
-# can't re-exec this script; there the launcher has to set it.
+# can't re-exec this script; packaging/couchtomato.spec bakes hash_seed=0 in.
 if __name__ == '__main__' and os.environ.get('PYTHONHASHSEED') != '0' and not getattr(sys, 'frozen', False):
     os.environ['PYTHONHASHSEED'] = '0'
     os.execv(sys.executable, [sys.executable, os.path.abspath(__file__)] + sys.argv[1:])

@@ -344,7 +344,7 @@ class Timezone:
     @type patten: re.Pattern
     """
     
-    pattern = re.compile('([zZ])|([\-\+][0-9]{2}:[0-9]{2})')
+    pattern = re.compile('([zZ])|([\\-\\+][0-9]{2}:[0-9]{2})')
     
     LOCAL = ( 0-time.timezone/60/60 )
 

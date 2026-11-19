@@ -171,7 +171,7 @@ class OMDBAPI(MovieProvider):
     def runtimeToMinutes(self, runtime_str):
         runtime = 0
 
-        regex = '(\d*.?\d+).(h|hr|hrs|mins|min)+'
+        regex = '(\\d*.?\\d+).(h|hr|hrs|mins|min)+'
         matches = re.findall(regex, runtime_str)
         for match in matches:
             nr, size = match

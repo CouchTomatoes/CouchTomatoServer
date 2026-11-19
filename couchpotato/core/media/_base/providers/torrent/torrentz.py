@@ -46,7 +46,7 @@ class Base(TorrentMagnetProvider, RSS):
                     magnet = splitString(detail_url, '/')[-1]
                     magnet_url = 'magnet:?xt=urn:btih:%s&dn=%s&tr=%s' % (magnet.upper(), tryUrlencode(name), tryUrlencode('udp://tracker.openbittorrent.com/announce'))
 
-                    reg = re.search('Size: (?P<size>\d+) (?P<unit>[KMG]B) Seeds: (?P<seeds>[\d,]+) Peers: (?P<peers>[\d,]+)', six.text_type(description))
+                    reg = re.search('Size: (?P<size>\\d+) (?P<unit>[KMG]B) Seeds: (?P<seeds>[\\d,]+) Peers: (?P<peers>[\\d,]+)', six.text_type(description))
                     size = reg.group('size')
                     unit = reg.group('unit')
                     seeds = reg.group('seeds').replace(',', '')

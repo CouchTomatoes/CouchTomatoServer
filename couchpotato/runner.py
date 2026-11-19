@@ -114,7 +114,7 @@ def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, En
             # Only consider files being a direct child of the backup_path
             if root == backup_path:
                 for backup_file in sorted(files):
-                    ints = re.findall('\d+', backup_file)
+                    ints = re.findall('\\d+', backup_file)
 
                     # Delete non zip files
                     if len(ints) != 1:

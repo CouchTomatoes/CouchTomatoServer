@@ -255,7 +255,7 @@ class TransmissionRPC(object):
                 msg = str(err.read())
                 try:
                     self.session_id = \
-                        re.search('X-Transmission-Session-Id:\s*(\w+)', msg).group(1)
+                        re.search('X-Transmission-Session-Id:\\s*(\\w+)', msg).group(1)
                     log.debug('X-Transmission-Session-Id: %s', self.session_id)
 
                     # #resend request with the updated header

@@ -133,7 +133,7 @@ def sha1(text):
 
 def isLocalIP(ip):
     ip = ip.lstrip('htps:/')
-    regex = '/(^127\.)|(^192\.168\.)|(^10\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^::1)$/'
+    regex = '/(^127\\.)|(^192\\.168\\.)|(^10\\.)|(^172\\.1[6-9]\\.)|(^172\\.2[0-9]\\.)|(^172\\.3[0-1]\\.)|(^::1)$/'
     return re.search(regex, ip) is not None or 'localhost' in ip or ip[:4] == '127.'
 
 
@@ -195,7 +195,7 @@ def getImdb(txt, check_inside = False, multiple = False):
         output.close()
 
     try:
-        ids = re.findall('(tt\d{4,8})', txt)
+        ids = re.findall('(tt\\d{4,8})', txt)
 
         if multiple:
             return removeDuplicate(['tt%s' % str(tryInt(x[2:])).rjust(7, '0') for x in ids]) if len(ids) > 0 else []

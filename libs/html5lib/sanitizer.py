@@ -185,7 +185,7 @@ class HTMLSanitizerMixin(object):
             for attr in self.attr_val_is_uri:
                 if attr not in attrs:
                     continue
-                val_unescaped = re.sub("[`\000-\040\177-\240\s]+", '',
+                val_unescaped = re.sub("[`\000-\040\177-\240\\s]+", '',
                                        unescape(attrs[attr])).lower()
                 # remove replacement characters from unescaped characters
                 val_unescaped = val_unescaped.replace("\\ufffd", "")
@@ -199,7 +199,7 @@ class HTMLSanitizerMixin(object):
                                          ' ',
                                          unescape(attrs[attr]))
             if (token["name"] in self.svg_allow_local_href and
-                'xlink:href' in attrs and re.search('^\s*[^#\s].*',
+                'xlink:href' in attrs and re.search('^\\s*[^#\\s].*',
                                                     attrs['xlink:href'])):
                 del attrs['xlink:href']
             if 'style' in attrs:
@@ -228,16 +228,16 @@ class HTMLSanitizerMixin(object):
 
     def sanitize_css(self, style):
         # disallow urls
-        style = re.compile('url\s*\(\s*[^\s)]+?\s*\)\s*').sub(' ', style)
+        style = re.compile('url\\s*\\(\\s*[^\\s)]+?\\s*\\)\\s*').sub(' ', style)
 
         # gauntlet
-        if not re.match("""^([:,;#%.\sa-zA-Z0-9!]|\w-\w|'[\s\w]+'|"[\s\w]+"|\([\d,\s]+\))*$""", style):
+        if not re.match("""^([:,;#%.\\sa-zA-Z0-9!]|\\w-\\w|'[\\s\\w]+'|"[\\s\\w]+"|\\([\\d,\\s]+\\))*$""", style):
             return ''
-        if not re.match("^\s*([-\w]+\s*:[^:;]*(;\s*|$))*$", style):
+        if not re.match("^\\s*([-\\w]+\\s*:[^:;]*(;\\s*|$))*$", style):
             return ''
 
         clean = []
-        for prop, value in re.findall("([-\w]+)\s*:\s*([^:;]*)", style):
+        for prop, value in re.findall("([-\\w]+)\\s*:\\s*([^:;]*)", style):
             if not value:
                 continue
             if prop.lower() in self.allowed_css_properties:
@@ -246,7 +246,7 @@ class HTMLSanitizerMixin(object):
                                                 'padding']:
                 for keyword in value.split():
                     if not keyword in self.acceptable_css_keywords and \
-                            not re.match("^(#[0-9a-f]+|rgb\(\d+%?,\d*%?,?\d*%?\)?|\d{0,2}\.?\d{0,2}(cm|em|ex|in|mm|pc|pt|px|%|,|\))?)$", keyword):
+                            not re.match("^(#[0-9a-f]+|rgb\\(\\d+%?,\\d*%?,?\\d*%?\\)?|\\d{0,2}\\.?\\d{0,2}(cm|em|ex|in|mm|pc|pt|px|%|,|\\))?)$", keyword):
                         break
                 else:
                     clean.append(prop + ': ' + value + ';')

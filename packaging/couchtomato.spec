@@ -58,7 +58,9 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    [],
+    # The database places keys with hash(), so the seed must be the same 0 that
+    # CouchPotato.py re-execs with from source; a frozen build can't re-exec itself
+    [('hash_seed=0', None, 'OPTION')],
     exclude_binaries=True,
     name='CouchTomato',
     console=True,

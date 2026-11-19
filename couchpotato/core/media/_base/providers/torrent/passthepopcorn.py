@@ -159,7 +159,7 @@ class Base(TorrentProvider):
                 except KeyError:
                     pass
             return txt  # leave as is
-        return re.sub("&#?\w+;", fixup, six.u('%s') % text)
+        return re.sub("&#?\\w+;", fixup, six.u('%s') % text)
 
     def unicodeToASCII(self, text):
         import unicodedata

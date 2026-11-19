@@ -80,8 +80,8 @@ import re
 # applied since the last version number tag was applied.  The revision number is
 # the count of all patches that have been applied in the history.
 
-VERSION_BASE_RE_STR="(\d+)(\.(\d+)(\.(\d+))?)?((a|b|c)(\d+))?(\.dev(\d+))?"
-VERSION_SUFFIX_RE_STR="(-(\d+|r\d+)|.post\d+)?"
+VERSION_BASE_RE_STR="(\\d+)(\\.(\\d+)(\\.(\\d+))?)?((a|b|c)(\\d+))?(\\.dev(\\d+))?"
+VERSION_SUFFIX_RE_STR="(-(\\d+|r\\d+)|.post\\d+)?"
 VERSION_RE_STR=VERSION_BASE_RE_STR + VERSION_SUFFIX_RE_STR
 VERSION_RE=re.compile("^" + VERSION_RE_STR + "$")
 
