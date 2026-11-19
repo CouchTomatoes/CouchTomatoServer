@@ -18,6 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with enzyme.  If not, see <http://www.gnu.org/licenses/>.
+import importlib
 import mimetypes
 import os
 import sys
@@ -57,7 +58,8 @@ def parse(path):
     parser = parser_mime or parser_ext
     if not parser:
         raise NoParserError()
-    mod = __import__(parser, globals=globals(), locals=locals(), fromlist=[], level=-1)
+    # Python 2's implicit relative import (level=-1) raises on Python 3
+    mod = importlib.import_module('.' + parser, __name__)
     with open(path, 'rb') as f:
         p = mod.Parser(f)
     return p

@@ -22,6 +22,11 @@
 from datetime import datetime
 from .exceptions import ParseError
 from struct import unpack
+
+
+def _byte(value):
+    # Python 3: indexing bytes already gives an int (Python 2 gave a 1-char str)
+    return value if isinstance(value, int) else ord(value)
 from . import core
 import logging
 import re
@@ -248,7 +253,7 @@ class EbmlEntity:
         self.value = 0
         if self.entity_len <= 8:
             for pos, shift in zip(list(range(self.entity_len)), list(range((self.entity_len - 1) * 8, -1, -8))):
-                self.value |= ord(self.entity_data[pos]) << shift
+                self.value |= _byte(self.entity_data[pos]) << shift
 
 
     def add_data(self, data):
@@ -263,7 +268,7 @@ class EbmlEntity:
         self.id_len = 0
         if len(inbuf) < 1:
             return 0
-        first = ord(inbuf[0])
+        first = _byte(inbuf[0])
         if first & 0x80:
             self.id_len = 1
             self.entity_id = first
@@ -271,19 +276,19 @@ class EbmlEntity:
             if len(inbuf) < 2:
                 return 0
             self.id_len = 2
-            self.entity_id = ord(inbuf[0]) << 8 | ord(inbuf[1])
+            self.entity_id = _byte(inbuf[0]) << 8 | _byte(inbuf[1])
         elif first & 0x20:
             if len(inbuf) < 3:
                 return 0
             self.id_len = 3
-            self.entity_id = (ord(inbuf[0]) << 16) | (ord(inbuf[1]) << 8) | \
-                             (ord(inbuf[2]))
+            self.entity_id = (_byte(inbuf[0]) << 16) | (_byte(inbuf[1]) << 8) | \
+                             (_byte(inbuf[2]))
         elif first & 0x10:
             if len(inbuf) < 4:
                 return 0
             self.id_len = 4
-            self.entity_id = (ord(inbuf[0]) << 24) | (ord(inbuf[1]) << 16) | \
-                             (ord(inbuf[2]) << 8) | (ord(inbuf[3]))
+            self.entity_id = (_byte(inbuf[0]) << 24) | (_byte(inbuf[1]) << 16) | \
+                             (_byte(inbuf[2]) << 8) | (_byte(inbuf[3]))
         self.entity_str = inbuf[0:self.id_len]
 
 
@@ -292,7 +297,7 @@ class EbmlEntity:
             return 0, 0
         i = num_ffs = 0
         len_mask = 0x80
-        len = ord(inbuf[0])
+        len = _byte(inbuf[0])
         while not len & len_mask:
             i += 1
             len_mask >>= 1
@@ -303,7 +308,7 @@ class EbmlEntity:
         if len == len_mask - 1:
             num_ffs += 1
         for p in range(i):
-            len = (len << 8) | ord(inbuf[p + 1])
+            len = (len << 8) | _byte(inbuf[p + 1])
             if len & 0xff == 0xff:
                 num_ffs += 1
         if num_ffs == i + 1:
