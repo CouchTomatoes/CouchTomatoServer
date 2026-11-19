@@ -1,0 +1,49 @@
+name: Verify (reusable)
+
+# The single definition of "green" for CouchTomato. Called by ci.yml on every PR
+# and every push to main.
+#
+# Runs on the SELF-HOSTED runner (this Mac): its minutes are unmetered, and hosted
+# Actions minutes are kept for release.yml's builds from main.
+#
+# Python 3.11 on purpose: it is what the Pi4 runs. It comes from Homebrew
+# (brew install python@3.11), not actions/setup-python, so nothing is downloaded
+# per run.
+#
+# ⚠ A queued job is not a failing job. If the Mac sleeps, PRs queue rather than go
+# red. Silence is never a pass:
+#   gh api repos/CouchTomatoes/CouchTomatoServer/actions/runners --jq '.runners[].status'
+
+on:
+  workflow_call:
+
+jobs:
+  verify:
+    name: unit tests (Python 3.11)
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Python 3.11 environment
+        run: |
+          py=/opt/homebrew/bin/python3.11
+          test -x "$py" || { echo "::error::python3.11 missing on the runner: brew install python@3.11"; exit 1; }
+          "$py" -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q --disable-pip-version-check -r requirements.txt
+
+      - name: Byte-compile the app (catches syntax errors in modules no test imports)
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" -m compileall -q couchpotato CouchPotato.py update_guard.py > "$RUNNER_TEMP/compile.log" 2>&1 \
+            || { grep -v SyntaxWarning "$RUNNER_TEMP/compile.log" | head -40; exit 1; }
+
+      - name: Unit tests
+        env:
+          PYTHONHASHSEED: '0'
+        run: |
+          set -o pipefail
+          "$RUNNER_TEMP/venv/bin/python" -m unittest discover -s tests -v 2>&1 | tee "$RUNNER_TEMP/tests.log"
+          # Guard against a green run that tested nothing
+          ran=$(grep -Eo '^Ran [0-9]+ test' "$RUNNER_TEMP/tests.log" | grep -Eo '[0-9]+')
+          test "${ran:-0}" -gt 0 || { echo "::error::no tests ran"; exit 1; }
+          echo "### $ran unit tests passed (Python 3.11)" >> "$GITHUB_STEP_SUMMARY"
