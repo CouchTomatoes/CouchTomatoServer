@@ -1,7 +1,7 @@
 import traceback
 import time
 
-from CodernityDB.database import RecordNotFound
+from CodernityDB.database import RecordNotFound, RevConflict
 from couchpotato import get_db
 from couchpotato.api import addApiView
 from couchpotato.core.event import fireEvent, fireEventAsync, addEvent
@@ -13,6 +13,21 @@ import six
 
 
 log = CPLog(__name__)
+
+
+def saveWithRetry(db, media_id, apply, attempts = 3):
+    """ Apply changes to the CURRENT revision of a media doc and save it.
+    Fetching movie info takes seconds, and a search or movie.add may save the same movie
+    meanwhile; writing the revision read before that raised RevConflict. """
+    for attempt in range(attempts):
+        current = db.get('id', media_id)
+        apply(current)
+        try:
+            db.update(current)
+            return current
+        except RevConflict:
+            if attempt == attempts - 1:
+                raise
 
 
 class MovieBase(MovieTypeBase):
@@ -311,7 +326,12 @@ class MovieBase(MovieTypeBase):
 
             self.getPoster(media, image_urls)
 
-            db.update(media)
+            def apply(current):
+                for key in ['info', 'title', 'files']:
+                    if key in media:
+                        current[key] = media[key]
+
+            media = saveWithRetry(db, media['_id'], apply)
         except:
             log.error('Failed update media: %s', traceback.format_exc())
 
@@ -342,8 +362,7 @@ class MovieBase(MovieTypeBase):
             if dates and (dates.get('expires', 0) < time.time() or dates.get('expires', 0) > time.time() + (604800 * 4)) or not dates or unknown:
                 dates = fireEvent('movie.info.release_date', identifier = getIdentifier(media), merge = True) or {}
                 dates = dict({'dvd': 0, 'theater': 0, 'bluray': False}, **dates)
-                media['info'].update({'release_date': dates})
-                db.update(media)
+                saveWithRetry(db, media_id, lambda current: current.setdefault('info', {}).update({'release_date': dates}))
 
             return dates
         except:
