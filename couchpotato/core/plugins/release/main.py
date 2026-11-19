@@ -122,8 +122,10 @@ class Release(Plugin):
                 if rel['status'] in ['available']:
                     self.delete(rel['_id'])
 
-                # Set all snatched and downloaded releases to ignored to make sure they are ignored when re-adding the media
-                elif rel['status'] in ['snatched', 'downloaded']:
+                # Set all snatched and downloaded releases to ignored to make sure they are ignored when re-adding the media.
+                # Judge the release by its own age: snatching doesn't touch the movie's last_edit, so a movie wanted for
+                # weeks and snatched today would otherwise lose its download (the renamer skips ignored releases).
+                elif rel['status'] in ['snatched', 'downloaded'] and rel.get('last_edit', 0) <= (now - week):
                     self.updateStatus(rel['_id'], status = 'ignored')
 
             if 'recent' in media.get('tags', []):
