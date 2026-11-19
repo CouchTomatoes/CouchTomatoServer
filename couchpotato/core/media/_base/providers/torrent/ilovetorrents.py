@@ -56,7 +56,7 @@ class Base(TorrentProvider):
                     data_split = splitString(data, '<table')
                     soup = None
                     for x in data_split:
-                        soup = BeautifulSoup(x)
+                        soup = BeautifulSoup(x, 'lxml')
                         results_table = soup.find('table', attrs = {'class': 'koptekst'})
                         if results_table:
                             break
@@ -122,7 +122,7 @@ class Base(TorrentProvider):
 
             try:
                 full_description = self.getHTMLData(item['detail_url'])
-                html = BeautifulSoup(full_description)
+                html = BeautifulSoup(full_description, 'lxml')
                 nfo_pre = html.find('td', attrs = {'class': 'main'}).findAll('table')[1]
                 description = toUnicode(nfo_pre.text) if nfo_pre else ''
             except:

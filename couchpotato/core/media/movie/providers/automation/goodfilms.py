@@ -35,7 +35,7 @@ class Goodfilms(Automation):
         while True:
             url = self.url % (self.conf('automation_username'), page)
             data = self.getHTMLData(url)
-            soup = BeautifulSoup(data)
+            soup = BeautifulSoup(data, 'lxml')
 
             this_watch_list = soup.find_all('div', attrs = {
                 'class': 'movie',
