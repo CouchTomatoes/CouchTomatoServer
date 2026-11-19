@@ -47,3 +47,18 @@ jobs:
           ran=$(grep -Eo '^Ran [0-9]+ test' "$RUNNER_TEMP/tests.log" | grep -Eo '[0-9]+')
           test "${ran:-0}" -gt 0 || { echo "::error::no tests ran"; exit 1; }
           echo "### $ran unit tests passed (Python 3.11)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: JS bundles match their sources
+        # combined.*.min.js are what the browser loads; editing a source .js without
+        # rebuilding them ships nothing. Node comes from fnm (runner shells don't load it).
+        run: |
+          if ! command -v node >/dev/null; then
+            bin=""
+            for d in "$HOME"/.local/share/fnm/node-versions/*/installation/bin; do bin=$d; done
+            test -x "$bin/node" || { echo "::error::node missing on the runner (fnm install --lts)"; exit 1; }
+            PATH="$bin:$PATH"
+            export PATH
+          fi
+          cd tools/jsbuild
+          npm ci --silent --no-audit --no-fund
+          node build.js --check

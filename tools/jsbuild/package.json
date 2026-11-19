@@ -1,0 +1,13 @@
+{
+  "name": "couchtomato-jsbuild",
+  "private": true,
+  "description": "Builds couchpotato/static/scripts/combined.*.min.js (same output as the old Gruntfile)",
+  "license": "GPL-3.0",
+  "scripts": {
+    "build": "node build.js",
+    "check": "node build.js --check"
+  },
+  "devDependencies": {
+    "uglify-js": "2.6.4"
+  }
+}
