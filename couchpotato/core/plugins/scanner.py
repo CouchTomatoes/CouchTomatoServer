@@ -30,6 +30,30 @@ def stripCollectionIndex(name):
     return stripped if stripped != name and stripped.strip() else None
 
 
+def pickSearchResult(results, name, year):
+    """ The search's first hit is often a longer, more popular title ("race 2008" -> Death Race,
+    "mrs 2025" -> Mrs. Doubtfire). Prefer, in search order: the same title within 2 years,
+    then the same year, then the first hit. """
+    if not results:
+        return None
+
+    wanted = simplifyString(toUnicode(name))
+    year = tryInt(year)
+
+    def titles(movie):
+        return [simplifyString(toUnicode(t)) for t in (movie.get('titles') or [])]
+
+    for movie in results:
+        if wanted in titles(movie) and abs(tryInt(movie.get('year')) - year) <= 2:
+            return movie
+
+    for movie in results:
+        if tryInt(movie.get('year')) == year:
+            return movie
+
+    return results[0]
+
+
 class Scanner(Plugin):
 
     ignored_in_path = [os.path.sep + 'extracted' + os.path.sep, 'extracting', '_unpack', '_failed_', '_unknown_', '_exists_', '_failed_remove_',
@@ -664,13 +688,13 @@ class Scanner(Plugin):
                     name_year = self.getReleaseNameYear(identifier, file_name = filename if not group['is_dvd'] else None)
                     if name_year.get('name') and name_year.get('year'):
                         search_q = '%(name)s %(year)s' % name_year
-                        movie = fireEvent('movie.search', q = search_q, merge = True, limit = 1)
+                        movie = self.searchMovie(name_year['name'], name_year['year'])
 
                         # Try with other
                         if len(movie) == 0 and name_year.get('other') and name_year['other'].get('name') and name_year['other'].get('year'):
                             search_q2 = '%(name)s %(year)s' % name_year.get('other')
                             if search_q2 != search_q:
-                                movie = fireEvent('movie.search', q = search_q2, merge = True, limit = 1)
+                                movie = self.searchMovie(name_year['other']['name'], name_year['other']['year'])
 
                         # Collection files are often numbered ("1 harry potter ... 2001"): retry without the index.
                         # Only as a last resort, so real titles that start with a number ("12 Angry Men") match first.
@@ -678,7 +702,7 @@ class Scanner(Plugin):
                             for guess in [name_year, name_year.get('other') or {}]:
                                 stripped = stripCollectionIndex(guess.get('name'))
                                 if stripped and guess.get('year'):
-                                    movie = fireEvent('movie.search', q = '%s %s' % (stripped, guess['year']), merge = True, limit = 1)
+                                    movie = self.searchMovie(stripped, guess['year'])
                                     if len(movie) > 0:
                                         break
 
@@ -931,6 +955,12 @@ class Scanner(Plugin):
             return matches[-1]
 
         return ''
+
+    def searchMovie(self, name, year):
+        """ Search "<name> <year>" and return [best match] or [] """
+        results = fireEvent('movie.search', q = '%s %s' % (name, year), merge = True, limit = 5) or []
+        best = pickSearchResult(results, name, year)
+        return [best] if best else []
 
     def getReleaseNameYear(self, release_name, file_name = None):
 
