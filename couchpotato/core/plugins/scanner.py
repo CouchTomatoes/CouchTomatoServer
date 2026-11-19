@@ -22,6 +22,14 @@ log = CPLog(__name__)
 autoload = 'Scanner'
 
 
+def stripCollectionIndex(name):
+    """ "1 harry potter and the sorcerers stone" -> "harry potter and the sorcerers stone", or None when there is no index. """
+    if not name:
+        return None
+    stripped = re.sub(r'^\s*\d{1,3}\s*[-._)\]]?\s+(?=[^\d\s])', '', name)
+    return stripped if stripped != name and stripped.strip() else None
+
+
 class Scanner(Plugin):
 
     ignored_in_path = [os.path.sep + 'extracted' + os.path.sep, 'extracting', '_unpack', '_failed_', '_unknown_', '_exists_', '_failed_remove_',
@@ -663,6 +671,16 @@ class Scanner(Plugin):
                             search_q2 = '%(name)s %(year)s' % name_year.get('other')
                             if search_q2 != search_q:
                                 movie = fireEvent('movie.search', q = search_q2, merge = True, limit = 1)
+
+                        # Collection files are often numbered ("1 harry potter ... 2001"): retry without the index.
+                        # Only as a last resort, so real titles that start with a number ("12 Angry Men") match first.
+                        if len(movie) == 0:
+                            for guess in [name_year, name_year.get('other') or {}]:
+                                stripped = stripCollectionIndex(guess.get('name'))
+                                if stripped and guess.get('year'):
+                                    movie = fireEvent('movie.search', q = '%s %s' % (stripped, guess['year']), merge = True, limit = 1)
+                                    if len(movie) > 0:
+                                        break
 
                         if len(movie) > 0:
                             imdb_id = movie[0].get('imdb')
