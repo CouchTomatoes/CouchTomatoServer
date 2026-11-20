@@ -64,6 +64,74 @@ def fileName(start, end):
     return 'history-%s_to_%s.jsonl' % (start.isoformat(), end.isoformat())
 
 
+def fileRanges(folder):
+    """ (first day, last day, name) of every archive file in the folder """
+    out = []
+    if os.path.isdir(folder):
+        for name in os.listdir(folder):
+            m = FILE_RE.match(name)
+            if m:
+                try:
+                    out.append((datetime.date.fromisoformat(m.group(1)), datetime.date.fromisoformat(m.group(2)), name))
+                except ValueError:
+                    pass
+    return sorted(out)
+
+
+def nameFor(day, anchor, length, ranges):
+    """
+    The file an event of `day` goes into. A file already covering that day wins (so changing "Keep history" never
+    makes files whose dates overlap); otherwise its block, cut short where it would run into an existing file.
+    """
+    for first, last, name in ranges:
+        if first <= day <= last:
+            return name
+    start, end = blockFor(day, anchor, length)
+    for first, last, name in ranges:
+        if last < day:
+            start = max(start, last + datetime.timedelta(days = 1))
+        elif first > day:
+            end = min(end, first - datetime.timedelta(days = 1))
+    return fileName(start, end)
+
+
+def replaceFile(path, lines):
+    """ Write lines into path in one rename (fsync first); no lines left removes the file """
+    if not lines:
+        os.remove(path)
+    else:
+        tmp = path + '.tmp'
+        with open(tmp, 'w', encoding = 'utf-8') as f:
+            f.writelines(lines)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+
+    try:
+        fd = os.open(os.path.dirname(path), os.O_RDONLY)
+        try: os.fsync(fd)
+        finally: os.close(fd)
+    except OSError:
+        pass  # not every platform can fsync a folder
+
+
+def removeEvents(path, eids):
+    """ Take these events out of an archive file (the file goes when it is empty). Returns how many are left. """
+    kept = []
+    with open(path, 'r', encoding = 'utf-8') as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                eid = json.loads(line).get('eid')
+            except (ValueError, AttributeError):
+                eid = None
+            if eid not in eids:
+                kept.append(line if line.endswith('\n') else line + '\n')
+    replaceFile(path, kept)
+    return len(kept)
+
+
 def readEvents(path):
     """ The events in an archive file, skipping blank or broken lines """
     events = []
@@ -107,20 +175,7 @@ def writeBlock(path, new_events):
         lines.append(json.dumps(dict((k, e.get(k)) for k in FIELDS if e.get(k) is not None), ensure_ascii = False) + '\n')
         added += 1
 
-    tmp = path + '.tmp'
-    with open(tmp, 'w', encoding = 'utf-8') as f:
-        f.writelines(lines)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(tmp, path)
-
-    try:
-        fd = os.open(os.path.dirname(path), os.O_RDONLY)
-        try: os.fsync(fd)
-        finally: os.close(fd)
-    except OSError:
-        pass  # not every platform can fsync a folder
-
+    replaceFile(path, lines)
     return added
 
 
@@ -164,6 +219,7 @@ class History(Plugin):
         addEvent('updater.updated', self.onUpdated)
         addEvent('updater.failed', self.onUpdateFailed)
         addEvent('app.load', self.seed)
+        addEvent('setting.save.history.keep.after', self.restore)
 
         addApiView('history.list', self.listView, docs = {
             'desc': 'History events, newest first',
@@ -370,9 +426,12 @@ class History(Plugin):
 
     def archive(self, now = None):
         """ Move events older than "Keep history" into their block's file. Each file is on disk before any delete. """
+        restored = self.restore(now = now).get('restored', 0)
+
         keep = keepDays(self.keep())
         if keep is None:
-            return {'success': True, 'archived': 0, 'files': [], 'message': 'Keep history is Forever: nothing is archived.'}
+            return {'success': True, 'archived': 0, 'files': [], 'restored': restored,
+                    'message': 'Keep history is Forever: nothing is archived.'}
 
         with self.lock:
             try:
@@ -382,15 +441,16 @@ class History(Plugin):
                 cutoff = (now or time.time()) - keep * DAY
                 old = [e for e in live if e.get('time', 0) < cutoff]
                 if not old:
-                    return {'success': True, 'archived': 0, 'files': []}
+                    return {'success': True, 'archived': 0, 'files': [], 'restored': restored}
 
                 anchor = self.anchor(live)
+                folder = self.folder()
+                ranges = fileRanges(folder)
                 blocks = {}
                 for e in old:
-                    start, end = blockFor(datetime.date.fromtimestamp(e['time']), anchor, keep)
-                    blocks.setdefault(fileName(start, end), []).append(e)
+                    name = nameFor(datetime.date.fromtimestamp(e['time']), anchor, keep, ranges)
+                    blocks.setdefault(name, []).append(e)
 
-                folder = self.folder()
                 if not os.path.isdir(folder):
                     os.makedirs(folder)
 
@@ -408,10 +468,56 @@ class History(Plugin):
                     written.append({'name': name, 'added': added})
                     log.info('History: archived %s events into %s', (len(blocks[name]), path))
 
-                return {'success': True, 'archived': archived, 'files': written}
+                return {'success': True, 'archived': archived, 'files': written, 'restored': restored}
             except:
                 log.error('Failed archiving history: %s', traceback.format_exc())
                 return {'success': False, 'error': 'Archiving failed, see the log'}
+
+    def restore(self, now = None, **kwargs):
+        """
+        "Keep history" got longer (or Forever): events in the files that are now inside the limit go back on the
+        page, live, and leave their file, so an event is never both. Each is in the database before its file shrinks.
+        """
+        keep = keepDays(self.keep())
+        cutoff = None if keep is None else (now or time.time()) - keep * DAY
+
+        with self.lock:
+            try:
+                db = get_db()
+                restored = 0
+                for first, last, name in fileRanges(self.folder()):
+                    path = os.path.join(self.folder(), name)
+                    back = [e for e in readEvents(path) if cutoff is None or tryInt(e.get('time')) >= cutoff]
+                    if not back:
+                        continue
+
+                    done = set()
+                    for e in back:
+                        if e.get('type') not in TYPES:
+                            continue
+                        try:
+                            doc = db.get('history_eid', e['eid'], with_doc = True)['doc']
+                        except:
+                            doc = None
+                        if doc is None:
+                            new = dict((k, e.get(k)) for k in FIELDS if e.get(k) is not None)
+                            new['time'] = tryInt(new.get('time'))
+                            new['_t'] = 'history'
+                            db.insert(new)
+                        elif doc.get('archive'):
+                            # Imported earlier: it stops being an imported copy and is simply on the page again
+                            del doc['archive']
+                            db.update(doc)
+                        done.add(e['eid'])
+                        restored += 1
+
+                    left = removeEvents(path, done)
+                    log.info('History: %s events from %s are back on the page (%s left in the file)', (len(done), name, left))
+
+                return {'success': True, 'restored': restored}
+            except:
+                log.error('Failed bringing history back from the archive: %s', traceback.format_exc())
+                return {'success': False, 'restored': 0}
 
     def archiveView(self, **kwargs):
         return self.archive()

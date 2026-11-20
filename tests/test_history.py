@@ -379,14 +379,84 @@ class Simulate(Base):
         self.event(10, eid = 'new')
         self.h.archive(now = NOW)
         self.assertEqual(sorted(e['eid'] for e in self.live()), ['new'])
+        # Forever: everything archived comes back on the page, and the files go
         self.settings['keep'] = 'forever'
         self.event(500, eid = 'older')
         self.h.archive(now = NOW)
-        self.assertIn('older', [e['eid'] for e in self.live()])
+        self.assertEqual(sorted(e['eid'] for e in self.live()), ['mid', 'new', 'old', 'older'])
+        self.assertEqual(self.files(), [])
         self.settings['keep'] = '365'
         self.h.archive(now = NOW)
-        self.assertEqual(sorted(e['eid'] for e in self.live()), ['new'])
-        self.assertEqual(sorted(self.all_in_files()), ['mid', 'old', 'older'])
+        self.assertEqual(sorted(e['eid'] for e in self.live()), ['mid', 'new', 'old'])
+        self.assertEqual(sorted(self.all_in_files()), ['older'])
+
+    def spans(self):
+        out = []
+        for n in self.files():
+            m = FILE_RE.match(n)
+            out.append((datetime.date.fromisoformat(m.group(1)), datetime.date.fromisoformat(m.group(2))))
+        return out
+
+    def seed51(self):
+        """ The real-boot scenario: 5 movies x 12 ages x 4 kinds, + 3 more = 63 events, all kept somewhere """
+        eids = []
+        for m in range(5):
+            for d in (0.2, 1, 3, 10, 45, 89, 95, 130, 200, 300, 370, 400):
+                for k, t in enumerate(('snatched', 'downloaded', 'moved', 'subtitle')):
+                    eid = 's%d-%s-%d' % (m, d, k)
+                    self.assertTrue(self.h.add(t, title = 'Movie %d' % m, event_time = NOW - d * DAY + k * 60, eid = eid))
+                    eids.append(eid)
+        return eids
+
+    def check_whole(self, eids):
+        in_db, in_files = [e['eid'] for e in self.live()], self.all_in_files()
+        self.assertEqual(len(in_files), len(set(in_files)), 'an event is in the files twice')
+        self.assertFalse(set(in_db) & set(in_files), 'an event is both on the page and in a file')
+        self.assertEqual(sorted(in_db + in_files), sorted(eids), 'an event was lost')
+        spans = self.spans()
+        for (a1, b1), (a2, b2) in zip(spans, spans[1:]):
+            self.assertLess(b1, a2, 'files %s..%s and %s..%s overlap' % (a1, b1, a2, b2))
+        return in_db, in_files
+
+    def test_1_year_then_90_days_makes_no_overlapping_files(self):
+        self.settings['keep'] = '365'
+        eids = self.seed51()
+        self.h.archive(now = NOW)
+        self.assertEqual(len(self.files()), 1)
+        year = self.files()[0]
+        self.settings['keep'] = '90'
+        self.h.archive(now = NOW)
+        in_db, in_files = self.check_whole(eids)
+        # Everything 95-300 days old falls inside the year file's dates, so it went there
+        self.assertEqual(self.files(), [year])
+        self.assertEqual(len(in_db), 5 * 6 * 4)
+
+    def test_90_days_then_1_year_brings_events_back(self):
+        self.settings['keep'] = '90'
+        eids = self.seed51()
+        self.h.archive(now = NOW)
+        self.assertEqual(len(self.live()), 5 * 6 * 4)
+        before = len(self.files())
+        self.settings['keep'] = '365'
+        self.h.restore(now = NOW)
+        in_db, in_files = self.check_whole(eids)
+        self.assertEqual(len(in_db), 5 * 10 * 4)          # 95-300 days are back on the page
+        self.assertEqual(len(in_files), 5 * 2 * 4)        # 370 and 400 stay archived
+        self.assertLess(len(self.files()), before)        # files that emptied are gone
+        self.assertFalse([e for e in self.h.allEvents() if e.get('archive')])
+
+    def test_restore_turns_an_imported_copy_live(self):
+        self.settings['keep'] = '90'
+        self.event(100, eid = 'mid')
+        self.h.archive(now = NOW)
+        name = self.files()[0]
+        self.h.importEvents(self.lines(name), name)
+        self.assertEqual([e.get('archive') for e in self.h.allEvents()], [name])
+        self.settings['keep'] = '365'
+        self.h.restore(now = NOW)
+        docs = self.h.allEvents()
+        self.assertEqual([(e['eid'], e.get('archive')) for e in docs], [('mid', None)])
+        self.assertEqual(self.files(), [])
 
 
 class Seed(Base):

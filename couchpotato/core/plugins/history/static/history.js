@@ -126,6 +126,11 @@ var HistoryHelpers = {
 		});
 	},
 
+	// The days a file really holds events for; its name's block can reach past them
+	span: function(file){
+		return HistoryHelpers.dateText(file.first || file.from) + ' – ' + HistoryHelpers.dateText(file.last || file.to, true);
+	},
+
 	fileRow: function(file, onChange){
 		var act;
 		if(file.on_page)
@@ -141,7 +146,7 @@ var HistoryHelpers = {
 
 		return new Element('div.file').adopt(
 			new Element('code.fn', {'text': file.name}),
-			new Element('span.meta', {'text': HistoryHelpers.dateText(file.from) + ' – ' + HistoryHelpers.dateText(file.to, true) + ' · ' + file.events + ' events · ' + HistoryHelpers.size(file.size)}),
+			new Element('span.meta', {'text': HistoryHelpers.span(file) + ' · ' + file.events + ' events · ' + HistoryHelpers.size(file.size)}),
 			new Element('span.act').grab(act)
 		);
 	},
@@ -371,7 +376,7 @@ Page.History = new Class({
 				new Element('span', {'text': '🗄'}),
 				new Element('span.grow').adopt(
 					new Element('b', {'text': 'Older history is archived. '}),
-					new Element('span', {'text': HistoryHelpers.dateText(newest.from) + ' – ' + HistoryHelpers.dateText(newest.to, true) + ' · '}),
+					new Element('span', {'text': HistoryHelpers.span(newest) + ' · '}),
 					new Element('code', {'text': newest.name}),
 					waiting.length > 1 ? new Element('span.muted', {'text': ' (and ' + (waiting.length - 1) + ' older, in Settings)'}) : null,
 					new Element('br'),
