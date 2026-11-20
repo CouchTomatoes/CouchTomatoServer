@@ -28,8 +28,13 @@ config = [{
                 {
                     'name': 'automation_oauth_refresh',
                     'label': 'Refresh Token',
-                    'description': ('Used to automatically refresh your oauth token every 3 months',
-                                    'To get a refresh token, reconnect with trakt'),
+                    'description': 'Renews the auth token before it expires. Filled in when you sign in.',
+                    'advanced': 1
+                },
+                {
+                    'name': 'automation_oauth_expires',
+                    'label': 'Token Expires',
+                    'description': 'When the auth token runs out (Unix time). Empty means an old sign-in: sign in again.',
                     'advanced': 1
                 },
             ],
