@@ -687,7 +687,7 @@ input[type=text],textarea{-webkit-appearance:none}
 .header .navigation .logo span{position:absolute;display:block;height:100%;width:100%;text-align:center;left:0}
 .header .navigation .logo span:nth-child(even){-webkit-transform:translateX(100%);transform:translateX(100%)}
 @media (max-width:485px){.header .navigation .logo{font-size:28px;line-height:44px;height:44px}
-.header .navigation .logo:after{content:'CP'}
+.header .navigation .logo:after{content:'CT'}
 .header .navigation .logo span{display:none}
 .header .navigation ul li{line-height:0}
 }

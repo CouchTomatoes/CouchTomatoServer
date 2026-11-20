@@ -7,7 +7,7 @@ var BlockHeader = new Class({
 			animation_options = {
 				type: dynamics.spring
 			},
-			couch, potato;
+			couch, tomato;
 
 		self.parent();
 
@@ -21,7 +21,7 @@ var BlockHeader = new Class({
 							translateX: -50
 						}, animation_options);
 
-						dynamics.animate(potato, {
+						dynamics.animate(tomato, {
 							opacity: 1,
 							translateX: 0
 						}, animation_options);
@@ -32,7 +32,7 @@ var BlockHeader = new Class({
 							translateX: 0
 						}, animation_options);
 
-						dynamics.animate(potato, {
+						dynamics.animate(tomato, {
 							opacity: 0,
 							translateX: 50
 						}, animation_options);
@@ -40,7 +40,7 @@ var BlockHeader = new Class({
 				}
 			}).adopt(
 				couch = new Element('span[text=Couch]'),
-				potato = new Element('span[text=Potato]')
+				tomato = new Element('span[text=Tomato]')
 			),
 			self.nav
 		);
