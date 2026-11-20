@@ -39,6 +39,13 @@ PRE, NUKED, UNNUKED, DELPRE = 0, 1, 2, 3
 
 CACHE_SECONDS = 259200  # 3 days, as the API cached it
 
+# (connect, read). predb.net publishes an IPv6 address that does not answer from his network (measured
+# 2026-11-20: v6 connect timed out at 15 s, v4 connected in 0.1 s, on the Mac and the Pi4 alike). Python
+# tries v6 first and only moves to v4 when the connect times out, so a single 10 s timeout spent all 10 s
+# on v6 and the first lookup of every run failed over to srrdb. A short connect timeout costs 3 s once,
+# then the kept-alive v4 connection answers in ~0.2 s.
+TIMEOUT = (3, 10)
+
 
 def scoreNuke(reason):
     score, reasons = -10, ['nuke']
@@ -83,7 +90,7 @@ class SceneCheck(Plugin):
     def fetchJson(self, url):
         """ The decoded answer, or None when the site could not answer """
         try:
-            data = self.urlopen(url, timeout = 10, show_error = False)
+            data = self.urlopen(url, timeout = TIMEOUT, show_error = False)
             if isinstance(data, bytes):
                 data = data.decode('utf-8', 'replace')  # not toUnicode(): it turns bytes into their b'...' repr
             return json.loads(data) if data else None

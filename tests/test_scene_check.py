@@ -51,7 +51,11 @@ def checker(predb = None, srrdb = None):
 class SceneCheckTest(unittest.TestCase):
 
     def test_scene_release(self):
-        self.assertEqual(checker(recorded('predb_found')).validate(FOUND), {'score': 40, 'reasons': ['scene']})
+        plugin = checker(recorded('predb_found'))
+        self.assertEqual(plugin.validate(FOUND), {'score': 40, 'reasons': ['scene']})
+        # A short connect timeout, so predb's dead IPv6 address can't eat the whole budget (see TIMEOUT)
+        connect, read = plugin.urlopen.call_args.kwargs['timeout']
+        self.assertLessEqual(connect, 3)
 
     def test_nuked_release_with_a_known_reason(self):
         # predb reason "bad.subs_get.rerip": -10 for the nuke, -40 for get.rerip
