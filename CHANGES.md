@@ -10,6 +10,12 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: a History page, a dated timeline of what happened to each movie (added, snatched,
+  downloaded, moved, replaced, failed, subtitles) and to the app (updates, sign-ins). It starts
+  filled from your existing notifications and finished downloads. Settings → General → History
+  keeps 90 days (default), 1 year or Forever; older events go into archive files you can import
+  back. Making Keep longer brings archived events that are now inside it back onto the page, and
+  making it shorter adds to the existing files instead of creating files whose dates overlap
 * Change: development now happens on the `dev` branch. `main` only gets deliberate,
   numbered releases, so the built-in updater installs a release, not every merge
 * Fix the X (Twitter) notifier: it now posts through X's current API (v2) with 280-character

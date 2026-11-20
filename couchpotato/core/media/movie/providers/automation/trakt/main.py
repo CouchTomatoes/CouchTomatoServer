@@ -114,6 +114,7 @@ class TraktBase(Provider):
         if status == 200 and data.get('access_token'):
             self.saveTokens(data)
             log.info('Renewed the Trakt sign-in')
+            fireEvent('history.add', 'signin', detail = 'Renewed the Trakt sign-in')
             return True
 
         log.error('Trakt refused to renew the sign-in (HTTP %s). Sign in again in Settings > Automation > Trakt', status)
@@ -211,6 +212,7 @@ class Trakt(Automation, TraktBase):
             self.saveTokens(data)
             self.device = None
             log.info('Signed in to Trakt')
+            fireEvent('history.add', 'signin', detail = 'Signed in to Trakt')
             return {'success': True, 'status': 'connected'}
 
         answer = self.poll_answers.get(status, 'error')
