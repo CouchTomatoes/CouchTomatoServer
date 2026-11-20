@@ -15,6 +15,8 @@ from couchpotato.environment import Env
 
 log = CPLog(__name__)
 
+SUGGEST_LIMIT = 10  # the old API's /suggest/ answered the top 10
+
 autoload = 'TheMovieDb'
 
 
@@ -41,6 +43,7 @@ class TheMovieDb(MovieProvider):
         addEvent('movie.tmdb_list', self.getListImdbs)
         addEvent('movie.info.release_date', self.getReleaseDate)
         addEvent('movie.is_movie', self.isMovie)
+        addEvent('movie.suggest', self.getSuggestions)
         addEvent('app.load', self.config)
 
         addApiView('movie.trailer', self.trailerView, docs = {
@@ -323,6 +326,53 @@ class TheMovieDb(MovieProvider):
         found = self.request('find/%s' % identifier, {'external_source': 'imdb_id'})
         return isMovieResult(found, identifier)
 
+    def tmdbId(self, identifier):
+        """ TMDB's own id for an IMDb id, or None """
+        found = self.request('find/%s' % identifier, {'external_source': 'imdb_id'})
+        if isinstance(found, dict) and found.get('movie_results'):
+            return found['movie_results'][0].get('id')
+
+    def getSuggestions(self, movies = None, ignore = None, limit = SUGGEST_LIMIT):
+        """
+        Movies to suggest, from TMDB's recommendations for every movie in the library. A movie recommended
+        for several library movies, and higher up their lists, ranks first. Library and ignored movies are
+        left out. Returns full movie info, as movie.info does, like the old API's /suggest/ (top 10).
+        """
+        if self.isDisabled():
+            return []
+
+        library = set(m for m in (movies or []) if m)
+        ignore = set(i for i in (ignore or []) if i)
+
+        library_ids = set()
+        lists = []
+        for identifier in library:
+            tmdb_id = self.tmdbId(identifier)
+            if not tmdb_id:
+                continue
+            library_ids.add(tmdb_id)
+            results = self.request('movie/%s/recommendations' % tmdb_id, return_key = 'results')
+            if isinstance(results, list):
+                lists.append(results)
+
+        if not library:
+            # Nothing to base it on yet: start from what is popular now
+            popular = self.request('movie/popular', return_key = 'results')
+            lists = [popular] if isinstance(popular, list) else []
+
+        suggestions = []
+        for tmdb_id in rankRecommendations(lists, exclude = library_ids):
+            info = self.parseMovie({'id': tmdb_id}, extended = False)
+            imdb = (info or {}).get('imdb')
+            if not imdb or imdb in library or imdb in ignore:
+                continue
+            suggestions.append(info)
+            if len(suggestions) >= limit:
+                break
+
+        log.info('Found %s suggestions from %s library movies, %s ignored', (len(suggestions), len(library), len(ignore)))
+        return suggestions
+
     def request(self, call = '', params = {}, return_key = None):
 
         params = dict((k, v) for k, v in list(params.items()) if v)
@@ -404,6 +454,28 @@ config = [{
 # TMDB release types: https://developer.themoviedb.org/reference/movie-release-dates
 THEATRICAL = (3,)
 HOME_RELEASE = (4, 5)  # digital, physical
+
+
+def rankRecommendations(lists, exclude = None):
+    """
+    TMDB ids from several recommendation lists, best first. Each list gives its first entry 20 points,
+    its second 19, and so on, and the points add up across lists, so a movie recommended for many
+    library movies wins. Ties keep the order they were first seen in.
+    """
+    exclude = exclude or set()
+    scores = {}
+    order = []
+    for results in lists:
+        for rank, movie in enumerate(results or []):
+            tmdb_id = movie.get('id') if isinstance(movie, dict) else None
+            if not tmdb_id or tmdb_id in exclude:
+                continue
+            if tmdb_id not in scores:
+                scores[tmdb_id] = 0
+                order.append(tmdb_id)
+            scores[tmdb_id] += max(20 - rank, 1)
+
+    return sorted(order, key = lambda i: -scores[i])
 
 
 TV_RESULTS = ('tv_results', 'tv_episode_results', 'tv_season_results')

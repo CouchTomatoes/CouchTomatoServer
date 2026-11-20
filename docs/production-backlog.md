@@ -224,9 +224,9 @@ Every call the app makes to the API, and what replaces it:
 | **"Is it a movie?"** (charts, adding a movie) | Asks TMDB/OMDb (added 2026-10-07) | Look up the IMDb id on TMDB directly: it says whether the id is a movie or a TV show | Nothing |
 | **Release dates** (cinema / DVD / Blu-ray, used for Soon/Late) | Guesses them by scraping Google results (`veta`, `mi`). Fragile, probably already broken | TMDB's release dates for each movie, which include cinema, digital and disc dates per country | Nothing; it gets **better** |
 | **Suggestions** (the shared-votes feature) | Counts which movies appear together across *every user's* library | TMDB's own recommendations for each movie in the library, built from millions of TMDB users | The crowd version is already gone: with one user it can only suggest pairs from that user's own library. TMDB's version is **better** than what works now |
-| **Scene-release check** (a small scoring bonus) | Checks the release name against public lists of real scene releases (orlydb, corrupt-net) | Call one of those lists directly from the app, or drop the check | At worst a small bonus that helps pick a real release over a fake one. Whether orlydb.com still works is unchecked; confirm before deciding |
+| **Scene-release check** (a small scoring bonus) | Checks the release name against public lists of real scene releases (orlydb, corrupt-net) | Call those lists directly from the app (orlydb, plus predb.net / srrdb in place of the dead corrupt-net) | At worst a small bonus that helps pick a real release over a fake one. Whether orlydb.com still works is unchecked; confirm before deciding |
 | **Trakt / put.io login** | The API holds the shared developer secret and passes the login through | Bundle a project-registered client id, the way SickGear does, so users don't need their own. Trakt supports sign-in with a code shown in the app | Nothing for the user, as long as the project registers the apps once |
-| **Announcements** | Serves a fixed message file from 2014 | Remove | Nothing |
+| **Announcements** | Serves a fixed message file from 2014 | Show the project's GitHub Releases in the same notification bar | Nothing |
 | **Updater download link** | Builds a GitHub zip link | Build the link in the app, one line | Nothing |
 
 What changes rather than what is lost:
@@ -234,9 +234,25 @@ What changes rather than what is lost:
   setting (#32) all go away.
 - Each install caches its own lookups, as the app already does. For one user this makes no difference.
 
-Work, three or four PRs: (1) "Is it a movie?" and release dates from TMDB; (2) suggestions from TMDB
-recommendations; (3) the scene-release check, kept or dropped once those lists are checked; (4) Trakt/put.io
-sign-in with bundled keys, then remove the `CouchPotatoApi` provider and its setting.
+**Rule (Mansoor, 2026-11-19): 100% of the functionality stays. Nothing is dropped, only moved into the app.**
+
+Every route of CouchTomatoAPI (`app.js`), what the app uses it for, and where it moves:
+
+| API route | Used by the app for | Standalone replacement | PR | Status |
+|---|---|---|---|---|
+| `/ismovie/` | refusing TV shows on add and in the Blu-ray chart | TMDB `find/{imdb}` | 1 (#16) | merged 2026-11-19 |
+| `/eta/` | release dates (Soon/Late, searcher) | TMDB `release_dates` (already in the app since 10-27); its Blu-ray flag is stored but nothing reads it | 1 (#16) | merged |
+| `/suggest/` | home-page suggestions, dismiss/seen | TMDB `recommendations` per library movie, ranked across the library, top 10 with full info; empty library → TMDB popular | 2 | in progress |
+| `/validate/` | scene-release score bonus | orlydb (alive 2026-11-19) plus predb.net / srrdb in place of the dead corrupt-net | 3 | todo |
+| `/authorize/trakt`, `/authorize/trakt_refresh` | Trakt sign-in and token refresh | a bundled project Trakt app with device-code sign-in in the app | 4 | todo |
+| `/authorize/putio` | put.io sign-in | a bundled project put.io app with OAuth in the app | 4 | todo |
+| `/authorize/twitter` | Twitter notifications | the app's Twitter notifier doesn't call it; check it still signs in on its own | 4 | todo |
+| `/updater/` | updater zip URL | build the GitHub codeload URL in the app | 5 | todo |
+| `/messages/` | announcements in the notification bar | the project's GitHub Releases feed, shown the same way | 5 | todo |
+| `/info/`, `/search/` | movie info and search (merged TMDB + OMDb) | the app's own TMDB and OMDb providers already answer both | 5 | todo: remove the provider and `api_base_url` only after 1-4 are live |
+| `/updates/*`, `/stats/`, `/manage/cleanup`, `/` | server-side admin pages, never called by the app | nothing to move | — | — |
+
+Also: the Discord notifier's default icon points at dead `couchpota.to`; ship the icon in the app (PR 5).
 
 ## Not a bug — quality-profile defaults
 

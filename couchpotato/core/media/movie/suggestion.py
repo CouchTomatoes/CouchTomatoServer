@@ -1,7 +1,7 @@
 import time
 from couchpotato.api import addApiView
 from couchpotato.core.event import fireEvent, addEvent
-from couchpotato.core.helpers.variable import splitString, removeDuplicate, getIdentifier, getTitle
+from couchpotato.core.helpers.variable import md5, splitString, removeDuplicate, getIdentifier, getTitle, tryInt
 from couchpotato.core.plugins.base import Plugin
 from couchpotato.environment import Env
 
@@ -21,6 +21,15 @@ class Suggestion(Plugin):
             self.suggestView()
 
         addEvent('app.load', test)
+
+        # The list is cached for weeks, so a library change must clear it or the
+        # home page keeps showing what was suggested for the old library
+        # (on a fresh install: the popular movies picked for an empty one).
+        addEvent('suggestion.forget', self.forgetCached)
+
+    def forgetCached(self):
+        Env.get('cache').delete(md5('suggestion_cached'))
+        return True
 
     def suggestView(self, limit = 6, **kwargs):
         if self.isDisabled():
@@ -79,6 +88,8 @@ class Suggestion(Plugin):
 
     def ignoreView(self, imdb = None, limit = 6, remove_only = False, mark_seen = False, **kwargs):
 
+        limit = tryInt(limit) or 6  # arrives as text from the URL; Python 3 won't compare it with a number
+
         ignored = splitString(Env.prop('suggest_ignore', default = ''))
         seen = splitString(Env.prop('suggest_seen', default = ''))
 
@@ -130,7 +141,7 @@ class Suggestion(Plugin):
                     new_suggestions.append(cs)
 
         # Get new results and add them
-        if len(new_suggestions) - 1 < limit:
+        if len(new_suggestions) - 1 < tryInt(limit):
             active_movies = fireEvent('media.with_status', ['active', 'done'], single = True)
             movies = [getIdentifier(x) for x in active_movies]
             movies.extend(seen)

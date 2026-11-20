@@ -202,6 +202,9 @@ class MovieBase(MovieTypeBase):
                 onComplete = self.createOnComplete(m['_id'])
                 onComplete()
 
+            if added:
+                fireEvent('suggestion.forget')
+
             if added and notify_after:
 
                 if params.get('title'):
