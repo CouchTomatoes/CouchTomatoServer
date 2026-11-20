@@ -25,7 +25,7 @@ config = [{
                 {
                     'name': 'oauth_token',
                     'label': 'oauth_token',
-                    'description': 'This is the OAUTH_TOKEN from your putio API',
+                    'description': 'Filled in when you link your put.io account with the button below',
                     'advanced': True,
                 },
                 {

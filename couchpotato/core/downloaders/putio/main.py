@@ -1,11 +1,11 @@
 from couchpotato.api import addApiView
 from couchpotato.core.event import addEvent, fireEventAsync
 from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
-from couchpotato.core.helpers.variable import cleanHost
 from couchpotato.core.logger import CPLog
 from couchpotato.environment import Env
 from pio import api as pio
 import datetime
+import time
 
 log = CPLog(__name__)
 
@@ -16,14 +16,27 @@ class PutIO(DownloaderBase):
 
     protocol = ['torrent', 'torrent_magnet']
     downloading_list = []
-    oauth_authenticate = 'https://api.couchpota.to/authorize/putio/'
+
+    # The project's own put.io app (backlog §10). Users link their account with a code entered at put.io/link,
+    # so nobody registers an app or needs an address put.io can call back. The id is public by design.
+    app_id = ''
+
+    oob_url = 'https://api.put.io/v2/oauth2/oob/code'
+    link_url = 'https://put.io/link'
+    timeout = (3, 15)
+    code_lifetime = 600  # stop polling a code after this; put.io answers 404 once it has gone
 
     def __init__(self):
         addApiView('downloader.putio.getfrom', self.getFromPutio, docs = {
             'desc': 'Allows you to download file from prom Put.io',
         })
-        addApiView('downloader.putio.auth_url', self.getAuthorizationUrl)
-        addApiView('downloader.putio.credentials', self.getCredentials)
+        addApiView('downloader.putio.device_code', self.startSignIn, docs = {
+            'desc': 'Start linking a put.io account: returns the code to enter at put.io/link',
+        })
+        addApiView('downloader.putio.device_poll', self.pollSignIn, docs = {
+            'desc': 'Check the put.io link started by device_code: status is connected, pending or expired',
+        })
+        self.device = None  # the link in progress: code + when to give up
         addEvent('putio.download', self.putioDownloader)
 
         return super(PutIO, self).__init__()
@@ -79,27 +92,64 @@ class PutIO(DownloaderBase):
             log.info('Failed to get file listing, check OAUTH_TOKEN')
             return False
 
-    def getAuthorizationUrl(self, host = None, **kwargs):
+    def oob(self, path = ''):
+        """ GET put.io's code-link endpoints. Not through urlopen(): an expired code answers 404, which
+        urlopen() would count as a failing host. Returns (status, json). """
+        response = Env.get('http_opener').get(self.oob_url + path, params = {'app_id': self.app_id} if not path else None,
+                                              headers = {'User-Agent': 'CouchTomato'}, timeout = self.timeout)
+        try:
+            body = response.json() if response.content else {}
+        except ValueError:
+            body = {}
+        return response.status_code, body
 
-        callback_url = cleanHost(host) + '%sdownloader.putio.credentials/' % (Env.get('api_base').lstrip('/'))
-        log.debug('callback_url is %s', callback_url)
+    def startSignIn(self, **kwargs):
+        if not self.app_id:
+            return {'success': False, 'error': 'This CouchTomato build has no put.io app id yet'}
 
-        target_url = self.oauth_authenticate + "?target=" + callback_url
-        log.debug('target_url is %s', target_url)
+        try:
+            status, data = self.oob()
+        except Exception as e:
+            log.warning('Could not reach put.io to start linking: %s', e)
+            return {'success': False, 'error': 'Could not reach put.io'}
 
+        if status != 200 or not data.get('code'):
+            log.error('put.io refused to start linking (HTTP %s): %s', (status, data))
+            return {'success': False, 'error': 'put.io refused the link (HTTP %s)' % status}
+
+        self.device = {'code': data['code'], 'expires': time.time() + self.code_lifetime}
         return {
             'success': True,
-            'url': target_url,
+            'user_code': data['code'],
+            'verification_url': self.link_url,
+            'interval': 5,
+            'expires_in': self.code_lifetime,
         }
 
-    def getCredentials(self, **kwargs):
+    def pollSignIn(self, **kwargs):
+        device = self.device
+        if not device or device['expires'] < time.time():
+            self.device = None
+            return {'success': False, 'status': 'expired'}
+
         try:
-            oauth_token = kwargs.get('oauth')
-        except:
-            return 'redirect', Env.get('web_base') + 'settings/downloaders/'
-        log.debug('oauth_token is: %s', oauth_token)
-        self.conf('oauth_token', value = oauth_token);
-        return 'redirect', Env.get('web_base') + 'settings/downloaders/'
+            status, data = self.oob('/' + device['code'])
+        except Exception as e:
+            log.debug('put.io link poll failed, will retry: %s', e)
+            return {'success': False, 'status': 'pending'}
+
+        if status == 200 and data.get('oauth_token'):
+            self.conf('oauth_token', value = data['oauth_token'])
+            self.device = None
+            log.info('Linked the put.io account')
+            return {'success': True, 'status': 'connected'}
+
+        if status == 200:
+            return {'success': False, 'status': 'pending'}
+
+        self.device = None
+        log.info('put.io link ended (HTTP %s)', status)
+        return {'success': False, 'status': 'expired' if status == 404 else 'error'}
 
     def getAllDownloadStatus(self, ids):
 
