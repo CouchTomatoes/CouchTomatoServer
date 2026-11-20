@@ -19,7 +19,9 @@ class TraktBase(Provider):
     # with a code shown in the app, so they never register an app themselves. Trakt's new developer site
     # issues no client secret for such apps ("signs users in with PKCE"), so the id alone is enough and it is
     # public by design. A secret is sent only if one is ever set here (apps registered on the old site).
-    client_id = 'W3CQ0MtQWR9JHkboG8MN1EeqvXB4aJrCCzJ4c3TW4mQ'
+    # This is the Production app (275721, granted 2026-11-20): any Trakt account can sign in. The Development
+    # app (275720) stays a sandbox limited to the owner + 16 invited users.
+    client_id = 'rFhMRM8Z6CsNb6DorrINYEQV7y2GDiSnxYSRDlMStgE'
     client_secret = ''
 
     api_url = 'https://api.trakt.tv/'
