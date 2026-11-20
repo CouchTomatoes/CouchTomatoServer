@@ -108,12 +108,11 @@
 
 @font-face {
     font-family: 'Lobster';
-    src: url('../fonts/Lobster-webfont.eot');
-    src: url('../fonts/Lobster-webfont.eot?#iefix') format('embedded-opentype'),
-         url('../fonts/Lobster-webfont.woff2') format('woff2'),
+    /* Lobster 2.100 (SIL OFL 1.1, fonts/Lobster-OFL.txt), subset to A-Z a-z and space.
+       The old file held only the letters of "CouchPotato", so the T and m of "Tomato" fell back to serif. */
+    src: url('../fonts/Lobster-webfont.woff2') format('woff2'),
          url('../fonts/Lobster-webfont.woff') format('woff'),
-         url('../fonts/Lobster-webfont.ttf') format('truetype'),
-         url('../fonts/Lobster-webfont.svg#lobster_14regular') format('svg');
+         url('../fonts/Lobster-webfont.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
