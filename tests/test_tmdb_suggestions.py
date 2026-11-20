@@ -94,5 +94,25 @@ class SuggestTest(unittest.TestCase):
         self.assertNotIn('movie.suggest', registered)
 
 
+class ForgetCachedTest(unittest.TestCase):
+    """ The suggestion list is cached for weeks; adding or deleting a movie must clear it """
+
+    def test_forget_deletes_the_cached_list(self):
+        from couchpotato.core.helpers.variable import md5
+        from couchpotato.core.media.movie import suggestion
+        from couchpotato.environment import Env
+
+        cache = mock.Mock()
+        plugin = suggestion.Suggestion.__new__(suggestion.Suggestion)
+        with mock.patch.object(Env, 'get', side_effect = lambda key, *a, **k: cache if key == 'cache' else None):
+            self.assertTrue(plugin.forgetCached())
+        cache.delete.assert_called_once_with(md5('suggestion_cached'))
+
+    def test_add_and_delete_fire_forget(self):
+        for path in ('couchpotato/core/media/movie/_base/main.py', 'couchpotato/core/media/_base/media/main.py'):
+            with open(os.path.join(root, path)) as f:
+                self.assertIn("fireEvent('suggestion.forget')", f.read(), path)
+
+
 if __name__ == '__main__':
     unittest.main()

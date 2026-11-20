@@ -468,6 +468,7 @@ class MediaPlugin(MediaBase):
                         fireEvent('media.restatus', media.get('_id'), single = True)
 
                 if deleted:
+                    fireEvent('suggestion.forget')
                     fireEvent('notify.frontend', type = 'media.deleted', data = media)
         except:
             log.error('Failed deleting media: %s', traceback.format_exc())

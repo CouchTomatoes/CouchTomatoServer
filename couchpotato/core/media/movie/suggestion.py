@@ -1,7 +1,7 @@
 import time
 from couchpotato.api import addApiView
 from couchpotato.core.event import fireEvent, addEvent
-from couchpotato.core.helpers.variable import splitString, removeDuplicate, getIdentifier, getTitle, tryInt
+from couchpotato.core.helpers.variable import md5, splitString, removeDuplicate, getIdentifier, getTitle, tryInt
 from couchpotato.core.plugins.base import Plugin
 from couchpotato.environment import Env
 
@@ -21,6 +21,15 @@ class Suggestion(Plugin):
             self.suggestView()
 
         addEvent('app.load', test)
+
+        # The list is cached for weeks, so a library change must clear it or the
+        # home page keeps showing what was suggested for the old library
+        # (on a fresh install: the popular movies picked for an empty one).
+        addEvent('suggestion.forget', self.forgetCached)
+
+    def forgetCached(self):
+        Env.get('cache').delete(md5('suggestion_cached'))
+        return True
 
     def suggestView(self, limit = 6, **kwargs):
         if self.isDisabled():
