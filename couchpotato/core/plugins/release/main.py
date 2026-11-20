@@ -18,6 +18,25 @@ from couchpotato.environment import Env
 log = CPLog(__name__)
 
 
+def libraryFileSize(release):
+    """Size in MB of the movie file a 'done' release points at, or None.
+
+    The renamer's release row only holds the file paths, not the size the
+    provider reported, so the releases table showed 'n/a'. Measured on read,
+    never stored: the file can be replaced or removed after the rename.
+    """
+    files = release.get('files')
+    if not isinstance(files, dict):
+        return None
+    total = 0
+    for path in files.get('movie') or []:
+        try:
+            total += os.path.getsize(path)
+        except (OSError, TypeError, ValueError):
+            pass
+    return round(total / 1048576.0, 1) if total else None
+
+
 class Release(Plugin):
 
     _database = {
@@ -554,6 +573,10 @@ class Release(Plugin):
         for r in raw_releases:
             try:
                 doc = db.get('id', r.get('_id'))
+                if not (doc.get('info') or {}).get('size'):
+                    size = libraryFileSize(doc)
+                    if size:
+                        doc['file_size'] = size
                 releases.append(doc)
             except RecordDeleted:
                 pass
