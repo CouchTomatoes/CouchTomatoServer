@@ -243,7 +243,7 @@ Every route of CouchTomatoAPI (`app.js`), what the app uses it for, and where it
 | `/ismovie/` | refusing TV shows on add and in the Blu-ray chart | TMDB `find/{imdb}` | 1 (#16) | merged 2026-11-19 |
 | `/eta/` | release dates (Soon/Late, searcher) | TMDB `release_dates` (already in the app since 10-27); its Blu-ray flag is stored but nothing reads it | 1 (#16) | merged |
 | `/suggest/` | home-page suggestions, dismiss/seen | TMDB `recommendations` per library movie, ranked across the library, top 10 with full info; empty library → TMDB popular | 2 (#17) | merged 2026-11-19 |
-| `/validate/` | scene-release score bonus | orlydb (alive 2026-11-19) plus predb.net / srrdb in place of the dead corrupt-net | 3 | todo |
+| `/validate/` | scene-release score bonus | predb.net (knows nukes), srrdb as fallback; orlydb sits behind a JS wall, corrupt-net is dead. `plugins/scenecheck.py` | 3 | done |
 | `/authorize/trakt`, `/authorize/trakt_refresh` | Trakt sign-in and token refresh | a bundled project Trakt app with device-code sign-in in the app | 4 | todo |
 | `/authorize/putio` | put.io sign-in | a bundled project put.io app with OAuth in the app | 4 | todo |
 | `/authorize/twitter` | Twitter notifications | the app's Twitter notifier doesn't call it; check it still signs in on its own | 4 | todo |

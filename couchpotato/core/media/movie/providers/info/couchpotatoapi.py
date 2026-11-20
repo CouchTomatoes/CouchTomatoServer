@@ -1,8 +1,7 @@
-import base64
 import time
 
 from couchpotato.core.event import addEvent, fireEvent
-from couchpotato.core.helpers.encoding import tryUrlencode, ss
+from couchpotato.core.helpers.encoding import tryUrlencode
 from couchpotato.core.logger import CPLog
 from couchpotato.core.media.movie.providers.base import MovieProvider
 from couchpotato.environment import Env
@@ -17,7 +16,6 @@ class CouchPotatoApi(MovieProvider):
 
     default_base_url = 'https://api.couchpota.to'
     paths = {
-        'validate': '/validate/%s/',
         'search': '/search/%s/',
         'info': '/info/%s/',
         'messages': '/messages/?%s',
@@ -37,8 +35,7 @@ class CouchPotatoApi(MovieProvider):
         addEvent('info.search', self.search, priority = 1)
         addEvent('movie.search', self.search, priority = 1)
 
-
-        addEvent('release.validate', self.validate)
+        # release.validate (scene check) is answered by plugins/scenecheck.py now
 
         addEvent('cp.api_call', self.call)
 
@@ -57,14 +54,6 @@ class CouchPotatoApi(MovieProvider):
 
     def search(self, q, limit = 5):
         return self.getJsonData(self.urls['search'] % tryUrlencode(q) + ('?limit=%s' % limit), headers = self.getRequestHeaders())
-
-    def validate(self, name = None):
-
-        if not name:
-            return
-
-        name_enc = base64.b64encode(ss(name)).decode('ascii')
-        return self.getJsonData(self.urls['validate'] % name_enc, headers = self.getRequestHeaders())
 
     def getInfo(self, identifier = None, adding = False, **kwargs):
 
