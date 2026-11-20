@@ -5,7 +5,6 @@ import time
 from unittest import TestCase, mock
 
 from couchpotato.core.media.movie._base import main as movie_main
-from couchpotato.core.media.movie.providers.info.couchpotatoapi import CouchPotatoApi
 from couchpotato.core.media.movie.providers.info import themoviedb
 from couchpotato.core.media.movie.providers.info.themoviedb import TheMovieDb
 
@@ -85,17 +84,6 @@ class TheMovieDbReleaseDateTest(TestCase):
         self.assertEqual(tmdb(None).getReleaseDate('tt37287335'), {})
         # ... and the bare error body when TMDB answers without 'results'
         self.assertEqual(tmdb({'status_code': 34, 'status_message': 'not found'}).getReleaseDate('tt0000001'), {})
-
-
-class CouchPotatoApiReleaseDateTest(TestCase):
-
-    def test_zeros_from_the_api_are_dropped(self):
-        # What the self-hosted API answered for Obsession on 2026-10-26. Kept as-is, these zeros would
-        # overwrite TMDB's dates when the two answers are merged.
-        api = CouchPotatoApi.__new__(CouchPotatoApi)
-        api.getRequestHeaders = lambda: {}
-        api.getJsonData = mock.Mock(return_value = {'dvd': 0, 'theater': 0, 'bluray': False, 'expires': 1793254638})
-        self.assertEqual(api.getReleaseDate('tt37287335'), {'expires': 1793254638})
 
 
 class UpdateReleaseDateTest(TestCase):

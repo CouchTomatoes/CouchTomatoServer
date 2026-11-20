@@ -40,6 +40,7 @@ class TheMovieDb(MovieProvider):
         addEvent('movie.info_by_tmdb', self.getInfo)
         addEvent('movie.tmdb_list', self.getListImdbs)
         addEvent('movie.info.release_date', self.getReleaseDate)
+        addEvent('movie.is_movie', self.isMovie)
         addEvent('app.load', self.config)
 
         addApiView('movie.trailer', self.trailerView, docs = {
@@ -310,6 +311,18 @@ class TheMovieDb(MovieProvider):
         log.debug('Found release dates for %s: %s', (identifier, dates))
         return dates
 
+    def isMovie(self, identifier = None, **kwargs):
+        """
+        Is this IMDb id a movie? Asks TMDB's /find, which files every IMDb id under movie, TV show, episode, etc.
+        Only a definite "TV, not a movie" answers False. An unknown id or a failed lookup answers True, so a gap
+        in TMDB never stops a movie being added.
+        """
+        if not identifier or self.isDisabled():
+            return True
+
+        found = self.request('find/%s' % identifier, {'external_source': 'imdb_id'})
+        return isMovieResult(found, identifier)
+
     def request(self, call = '', params = {}, return_key = None):
 
         params = dict((k, v) for k, v in list(params.items()) if v)
@@ -391,6 +404,25 @@ config = [{
 # TMDB release types: https://developer.themoviedb.org/reference/movie-release-dates
 THEATRICAL = (3,)
 HOME_RELEASE = (4, 5)  # digital, physical
+
+
+TV_RESULTS = ('tv_results', 'tv_episode_results', 'tv_season_results')
+
+
+def isMovieResult(found, identifier = None):
+    """ Read a TMDB /find answer: False only when it lists TV and no movie """
+    if not isinstance(found, dict) or 'movie_results' not in found:
+        log.debug('TMDB could not say if %s is a movie, assuming it is', identifier)
+        return True
+
+    if found.get('movie_results'):
+        return True
+
+    if any(found.get(key) for key in TV_RESULTS):
+        log.info('%s is a TV show on TMDB, not a movie', identifier)
+        return False
+
+    return True
 
 
 def releaseDates(countries, now = None):

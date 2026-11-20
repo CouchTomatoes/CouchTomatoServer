@@ -20,8 +20,6 @@ class CouchPotatoApi(MovieProvider):
         'validate': '/validate/%s/',
         'search': '/search/%s/',
         'info': '/info/%s/',
-        'is_movie': '/ismovie/%s/',
-        'eta': '/eta/%s/',
         'suggest': '/suggest/',
         'updater': '/updater/?%s',
         'messages': '/messages/?%s',
@@ -37,13 +35,11 @@ class CouchPotatoApi(MovieProvider):
 
     def __init__(self):
         addEvent('movie.info', self.getInfo, priority = 2)
-        addEvent('movie.info.release_date', self.getReleaseDate)
 
         addEvent('info.search', self.search, priority = 1)
         addEvent('movie.search', self.search, priority = 1)
 
         addEvent('movie.suggest', self.getSuggestions)
-        addEvent('movie.is_movie', self.isMovie)
 
         addEvent('release.validate', self.validate)
 
@@ -81,20 +77,6 @@ class CouchPotatoApi(MovieProvider):
         name_enc = base64.b64encode(ss(name)).decode('ascii')
         return self.getJsonData(self.urls['validate'] % name_enc, headers = self.getRequestHeaders())
 
-    def isMovie(self, identifier = None, adding = False, **kwargs):
-
-        if not identifier:
-            return
-
-        url = self.urls['is_movie'] % identifier
-        url += '' if adding else '?ignore=1'
-
-        data = self.getJsonData(url, headers = self.getRequestHeaders())
-        if data:
-            return data.get('is_movie', True)
-
-        return True
-
     def getInfo(self, identifier = None, adding = False, **kwargs):
 
         if not identifier:
@@ -108,15 +90,6 @@ class CouchPotatoApi(MovieProvider):
             return dict((k, v) for k, v in list(result.items()) if v)
 
         return {}
-
-    def getReleaseDate(self, identifier = None):
-        if identifier is None: return {}
-
-        dates = self.getJsonData(self.urls['eta'] % identifier, headers = self.getRequestHeaders())
-        log.debug('Found ETA for %s: %s', (identifier, dates))
-
-        # The API answers 0 for a date it doesn't know. Drop those, or they overwrite real dates from TMDB in the merge.
-        return dict((k, v) for k, v in list((dates or {}).items()) if v)
 
     def getSuggestions(self, movies = None, ignore = None):
         if not ignore: ignore = []
