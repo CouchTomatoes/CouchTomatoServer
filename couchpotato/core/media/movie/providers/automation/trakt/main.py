@@ -18,7 +18,7 @@ class TraktBase(Provider):
     # The project's own Trakt app (backlog §10). Users sign in with a code shown in the app, so they never
     # register an app themselves. Both values are public by design, as they are for every self-installed app
     # (SickGear ships its Trakt keys the same way); a device-code app has no secret worth hiding.
-    client_id = ''
+    client_id = 'W3CQ0MtQWR9JHkboG8MN1EeqvXB4aJrCCzJ4c3TW4mQ'
     client_secret = ''
 
     api_url = 'https://api.trakt.tv/'
