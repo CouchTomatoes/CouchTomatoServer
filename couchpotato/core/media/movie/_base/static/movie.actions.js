@@ -193,8 +193,15 @@ MA.Release = new Class({
 						}
 						catch(e){}
 					}
+					// The renamer's row for the files in the library: no provider info, files = {movie: [path, ...]}
+					var library_file = (release.files && !release.files.length && release.files.movie) ? release.files.movie[0] : null,
+						library_row = !!library_file && !release.info;
+					if(library_file)
+						release_name = library_file.split(Api.getOption('path_sep')).getLast();
+					if(library_row)
+						provider = 'In library';
 
-					var size = info.size ? Math.floor(self.get(release, 'size')) : 0;
+					var size = Math.floor(info.size ? self.get(release, 'size') : (release.file_size || 0));
 						size = size ? ((size < 1000) ? size + 'MB' : Math.round(size*10/1024)/10 + 'GB') : 'n/a';
 
 					// Create release
@@ -206,8 +213,8 @@ MA.Release = new Class({
 						new Element('span.status', {'text': release.status, 'class': 'status '+release.status}),
 						new Element('span.quality', {'text': quality.label + (release.is_3d ? ' 3D' : '') || 'n/a'}),
 						new Element('span.size', {'text': size}),
-						new Element('span.age', {'text': self.get(release, 'age')}),
-						new Element('span.score', {'text': self.get(release, 'score')}),
+						new Element('span.age', {'text': (library_row ? '\u2014' : self.get(release, 'age'))}),
+						new Element('span.score', {'text': (library_row ? '\u2014' : self.get(release, 'score'))}),
 						new Element('span.provider', { 'text': provider, 'title': provider }),
 						new Element('span.actions').adopt(
 							info.detail_url ? new Element('a.icon-info', {
