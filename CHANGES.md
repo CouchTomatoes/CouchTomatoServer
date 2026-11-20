@@ -10,6 +10,8 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+### v4.0.70 (2026-11-20)
+
 * New: a History page, a dated timeline of what happened to each movie (added, snatched,
   downloaded, moved, replaced, failed, subtitles) and to the app (updates, sign-ins). It starts
   filled from your existing notifications and finished downloads. Settings → General → History
