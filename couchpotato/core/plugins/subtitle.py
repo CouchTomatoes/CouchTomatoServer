@@ -61,6 +61,9 @@ class Subtitle(Plugin):
                     group['files']['subtitle'].append(path)
                     group['before_rename'].append(path)
                     group['subtitle_language'][path] = [lang]
+                language = Language(lang).name
+                fireEvent('history.add', 'subtitle' if path else 'subfail', media = group.get('media'),
+                          detail = ('%s from yts-subs.com' if path else 'No %s subtitle on yts-subs.com yet') % language)
 
             return True
         except:

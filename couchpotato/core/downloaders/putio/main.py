@@ -1,5 +1,5 @@
 from couchpotato.api import addApiView
-from couchpotato.core.event import addEvent, fireEventAsync
+from couchpotato.core.event import addEvent, fireEvent, fireEventAsync
 from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
 from couchpotato.core.logger import CPLog
 from couchpotato.environment import Env
@@ -142,6 +142,7 @@ class PutIO(DownloaderBase):
             self.conf('oauth_token', value = data['oauth_token'])
             self.device = None
             log.info('Linked the put.io account')
+            fireEvent('history.add', 'signin', detail = 'Linked the put.io account')
             return {'success': True, 'status': 'connected'}
 
         if status == 200:

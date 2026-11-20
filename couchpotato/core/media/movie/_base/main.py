@@ -204,6 +204,9 @@ class MovieBase(MovieTypeBase):
 
             if added:
                 fireEvent('suggestion.forget')
+                fireEvent('history.add', 'added', media = m, title = params.get('title') or None,
+                          detail = 'Found in your library' if status == 'done' else
+                          ('Added to your wanted list' if new else 'Added to your wanted list again'))
 
             if added and notify_after:
 

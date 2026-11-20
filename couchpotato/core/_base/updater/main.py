@@ -277,7 +277,7 @@ class GitUpdater(BaseUpdater):
                     update_guard.mark_bad(app_dir, current)
                     message = 'CouchTomato: the update to %s was rolled back to %s, because installing its packages failed.' % (current[:8], previous[:8])
                     log.error(message)
-                    fireEvent('updater.failed', message)
+                    fireEvent('updater.failed', message, data = {'version': current, 'previous': previous, 'reason': 'installing its packages failed'})
                     self.update_failed = True
                     return False
 
