@@ -1,7 +1,7 @@
 name: Verify (reusable)
 
 # The single definition of "green" for CouchTomato. Called by ci.yml on every PR
-# and every push to main.
+# and every push to dev and main.
 #
 # Runs on the SELF-HOSTED runner (this Mac): its minutes are unmetered, and hosted
 # Actions minutes are kept for release.yml's builds from main.
