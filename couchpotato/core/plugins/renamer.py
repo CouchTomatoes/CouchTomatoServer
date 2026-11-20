@@ -46,18 +46,34 @@ def subtitleTagsFromName(file_path):
         except Exception:
             return None
 
-    lang = language(tokens[-1], True)
+    def find_language(names):
+        if not names:
+            return None
+        found = language(names[-1], True)
+        if not found:
+            for token in reversed(names[:-1]):
+                found = language(token, False)
+                if found:
+                    break
+        return found
+
+    # Flags come after the language ("SDH.eng.HI.srt"); "hi" is also Hindi's code, so look past
+    # trailing flags first and only read one as a language when nothing else names one ("Movie.hi.srt")
+    words = list(tokens)
+    while words and words[-1].lower() in SUBTITLE_FLAGS:
+        words.pop()
+    lang = find_language(words) if len(words) < len(tokens) else None
+    flag_tokens = tokens
     if not lang:
-        for token in reversed(tokens[:-1]):
-            lang = language(token, False)
-            if lang:
-                break
+        lang = find_language(tokens)
+        if lang and len(words) < len(tokens) and language(tokens[-1], True) == lang:
+            flag_tokens = tokens[:-1]  # the trailing token was the language itself
 
     if not lang:
         return []
 
     flags = []
-    for token in tokens:
+    for token in flag_tokens:
         flag = SUBTITLE_FLAGS.get(token.lower())
         if flag and flag not in flags:
             flags.append(flag)

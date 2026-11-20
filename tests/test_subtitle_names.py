@@ -40,6 +40,19 @@ class SubtitleTagsFromNameTest(unittest.TestCase):
         self.assertEqual(subtitleTagsFromName('Movie.2020.1080p.es.srt'), ['es'])
         self.assertEqual(subtitleTagsFromName('Movie.2020.1080p.English.forced.srt'), ['en', 'forced'])
 
+    def test_hi_after_a_language_is_hearing_impaired_not_hindi(self):
+        # The Odyssey (2026) on the Pi4, 2026-11-19: "HI" was read as Hindi
+        self.assertEqual(subtitleTagsFromName('/dl/The Odyssey (2026)/Subs/SDH.eng.HI.srt'), ['en', 'sdh'])
+        self.assertEqual(subtitleTagsFromName('Movie.2020.English.HI.srt'), ['en', 'sdh'])
+        self.assertEqual(subtitleTagsFromName('Movie.2020.en.forced.srt'), ['en', 'forced'])
+
+    def test_hi_alone_is_still_hindi(self):
+        self.assertEqual(subtitleTagsFromName('Movie.2020.1080p.hi.srt'), ['hi'])
+
+    def test_odyssey_subs_folder(self):
+        names = ['Canadian.fre.srt', 'English.srt', 'Latin American.spa.srt', 'SDH.eng.HI.srt']
+        self.assertEqual(['.'.join(subtitleTagsFromName(n)) for n in names], ['fr', 'en', 'es', 'en.sdh'])
+
 
 if __name__ == '__main__':
     unittest.main()
