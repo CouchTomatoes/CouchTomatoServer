@@ -1,7 +1,7 @@
 import time
 from couchpotato.api import addApiView
 from couchpotato.core.event import fireEvent, addEvent
-from couchpotato.core.helpers.variable import splitString, removeDuplicate, getIdentifier, getTitle
+from couchpotato.core.helpers.variable import splitString, removeDuplicate, getIdentifier, getTitle, tryInt
 from couchpotato.core.plugins.base import Plugin
 from couchpotato.environment import Env
 
@@ -79,6 +79,8 @@ class Suggestion(Plugin):
 
     def ignoreView(self, imdb = None, limit = 6, remove_only = False, mark_seen = False, **kwargs):
 
+        limit = tryInt(limit) or 6  # arrives as text from the URL; Python 3 won't compare it with a number
+
         ignored = splitString(Env.prop('suggest_ignore', default = ''))
         seen = splitString(Env.prop('suggest_seen', default = ''))
 
@@ -130,7 +132,7 @@ class Suggestion(Plugin):
                     new_suggestions.append(cs)
 
         # Get new results and add them
-        if len(new_suggestions) - 1 < limit:
+        if len(new_suggestions) - 1 < tryInt(limit):
             active_movies = fireEvent('media.with_status', ['active', 'done'], single = True)
             movies = [getIdentifier(x) for x in active_movies]
             movies.extend(seen)

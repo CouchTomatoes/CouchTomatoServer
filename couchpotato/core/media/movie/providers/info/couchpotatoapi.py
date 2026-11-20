@@ -20,7 +20,6 @@ class CouchPotatoApi(MovieProvider):
         'validate': '/validate/%s/',
         'search': '/search/%s/',
         'info': '/info/%s/',
-        'suggest': '/suggest/',
         'updater': '/updater/?%s',
         'messages': '/messages/?%s',
     }
@@ -39,7 +38,6 @@ class CouchPotatoApi(MovieProvider):
         addEvent('info.search', self.search, priority = 1)
         addEvent('movie.search', self.search, priority = 1)
 
-        addEvent('movie.suggest', self.getSuggestions)
 
         addEvent('release.validate', self.validate)
 
@@ -90,18 +88,6 @@ class CouchPotatoApi(MovieProvider):
             return dict((k, v) for k, v in list(result.items()) if v)
 
         return {}
-
-    def getSuggestions(self, movies = None, ignore = None):
-        if not ignore: ignore = []
-        if not movies: movies = []
-
-        suggestions = self.getJsonData(self.urls['suggest'], data = {
-            'movies': ','.join(movies),
-            'ignore': ','.join(ignore),
-        }, headers = self.getRequestHeaders())
-        log.info('Found suggestions for %s movies, %s ignored', (len(movies), len(ignore)))
-
-        return suggestions
 
     def getRequestHeaders(self):
         return {
