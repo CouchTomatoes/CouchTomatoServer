@@ -20,7 +20,6 @@ class CouchPotatoApi(MovieProvider):
         'validate': '/validate/%s/',
         'search': '/search/%s/',
         'info': '/info/%s/',
-        'updater': '/updater/?%s',
         'messages': '/messages/?%s',
     }
 
@@ -43,7 +42,6 @@ class CouchPotatoApi(MovieProvider):
 
         addEvent('cp.api_call', self.call)
 
-        addEvent('cp.source_url', self.getSourceUrl)
         addEvent('cp.messages', self.getMessages)
 
     def call(self, url, **kwargs):
@@ -56,13 +54,6 @@ class CouchPotatoApi(MovieProvider):
         }), headers = self.getRequestHeaders(), cache_timeout = 10)
 
         return data
-
-    def getSourceUrl(self, repo = None, repo_name = None, branch = None):
-        return self.getJsonData(self.urls['updater'] % tryUrlencode({
-            'repo': repo,
-            'name': repo_name,
-            'branch': branch,
-        }), headers = self.getRequestHeaders())
 
     def search(self, q, limit = 5):
         return self.getJsonData(self.urls['search'] % tryUrlencode(q) + ('?limit=%s' % limit), headers = self.getRequestHeaders())

@@ -208,8 +208,10 @@ class Updater(Plugin):
 
 class BaseUpdater(Plugin):
 
-    repo_user = 'CouchPotato'
-    repo_name = 'CouchPotatoServer'
+    # Where updates come from. Source installs download this repo's branch; the git updater follows the
+    # checkout's own origin, so these also name the repo in the version line and the changelog link.
+    repo_user = 'CouchTomatoes'
+    repo_name = 'CouchTomatoServer'
     branch = version.BRANCH
 
     version = None
@@ -345,11 +347,15 @@ class GitUpdater(BaseUpdater):
                     break
 
                 if local.committed_date < remote.committed_date:
+                    log.info('New version on GitHub: %s (running %s)', (remote.hexsha[:8], local.hexsha[:8]))
                     self.update_version = {
                         'hash': remote.hexsha[:8],
                         'date': remote.committed_date,
                     }
                     return True
+
+                # Say so: a silent check reads the same as a check that never ran
+                log.info('Up to date: running %s, GitHub %s %s', (local.hexsha[:8], branch.remote_head, remote.hexsha[:8]))
 
         self.last_check = time.time()
         return False
@@ -367,7 +373,7 @@ class SourceUpdater(BaseUpdater):
     def doUpdate(self):
 
         try:
-            download_data = fireEvent('cp.source_url', repo = self.repo_user, repo_name = self.repo_name, branch = self.branch, single = True)
+            download_data = self.sourceUrl()
             destination = os.path.join(Env.get('cache_dir'), self.update_version.get('hash')) + '.' + download_data.get('type')
 
             extracted_path = os.path.join(Env.get('cache_dir'), 'temp_updater')
@@ -491,6 +497,13 @@ class SourceUpdater(BaseUpdater):
             log.error('Failed updating via source: %s', traceback.format_exc())
 
         return self.update_version is not None
+
+    def sourceUrl(self):
+        """ GitHub's own tarball of the branch; this used to be asked of the CouchTomato API. """
+        return {
+            'url': 'https://codeload.github.com/%s/%s/tar.gz/%s' % (self.repo_user, self.repo_name, self.branch),
+            'type': 'tar.gz',
+        }
 
     def latestCommit(self):
         try:
