@@ -128,7 +128,8 @@ var HistoryHelpers = {
 
 	// The days a file really holds events for; its name's block can reach past them
 	span: function(file){
-		return HistoryHelpers.dateText(file.first || file.from) + ' – ' + HistoryHelpers.dateText(file.last || file.to, true);
+		var a = file.first || file.from, b = file.last || file.to;
+		return a == b ? HistoryHelpers.dateText(b, true) : HistoryHelpers.dateText(a) + ' – ' + HistoryHelpers.dateText(b, true);
 	},
 
 	fileRow: function(file, onChange){
