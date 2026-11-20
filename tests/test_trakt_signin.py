@@ -29,8 +29,7 @@ def trakt(replies, settings = None, keys = True):
     """ A Trakt plugin whose api.trakt.tv answers with `replies` (path -> Reply, or a list used in order) """
     plugin = Trakt.__new__(Trakt)  # skip __init__: no event registration
     plugin.device = None
-    if keys:
-        plugin.client_id, plugin.client_secret = 'id', 'secret'
+    plugin.client_id, plugin.client_secret = ('id', '') if keys else ('', '')
     store = dict(settings or {})
     plugin.conf = lambda name, value = None, default = None: store.__setitem__(name, value) if value is not None else store.get(name, default)
     plugin.store = store
@@ -84,6 +83,14 @@ class TraktSignInTest(unittest.TestCase):
 
         payload = plugin.opener.post.call_args.kwargs['data']
         self.assertIn('"code": "secret-device"', payload)
+        self.assertNotIn('client_secret', payload)  # new-site Trakt apps have no secret
+
+    def test_a_secret_is_sent_when_one_is_set(self):
+        plugin = self.use(trakt({'oauth/device/token': Reply(400)}))
+        plugin.client_secret = 's3'
+        plugin.device = {'code': 'c', 'expires': time.time() + 60}
+        plugin.pollSignIn()
+        self.assertIn('"client_secret": "s3"', plugin.opener.post.call_args.kwargs['data'])
         connect, read = plugin.opener.post.call_args.kwargs['timeout']
         self.assertLessEqual(connect, 3)
 

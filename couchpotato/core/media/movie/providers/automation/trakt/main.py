@@ -15,9 +15,10 @@ log = CPLog(__name__)
 
 class TraktBase(Provider):
 
-    # The project's own Trakt app (backlog §10). Users sign in with a code shown in the app, so they never
-    # register an app themselves. Both values are public by design, as they are for every self-installed app
-    # (SickGear ships its Trakt keys the same way); a device-code app has no secret worth hiding.
+    # The project's own Trakt app (backlog §10, registered 2026-11-20 on developer.trakt.tv). Users sign in
+    # with a code shown in the app, so they never register an app themselves. Trakt's new developer site
+    # issues no client secret for such apps ("signs users in with PKCE"), so the id alone is enough and it is
+    # public by design. A secret is sent only if one is ever set here (apps registered on the old site).
     client_id = 'W3CQ0MtQWR9JHkboG8MN1EeqvXB4aJrCCzJ4c3TW4mQ'
     client_secret = ''
 
@@ -28,7 +29,13 @@ class TraktBase(Provider):
     refresh_margin = 12 * 3600  # renew the token once it has less than this left
 
     def configured(self):
-        return bool(self.client_id and self.client_secret)
+        return bool(self.client_id)
+
+    def credentials(self, **payload):
+        payload['client_id'] = self.client_id
+        if self.client_secret:
+            payload['client_secret'] = self.client_secret
+        return payload
 
     def apiHeaders(self, signed_in = True):
         headers = {
@@ -93,13 +100,11 @@ class TraktBase(Provider):
             return False
 
         try:
-            status, data = self.oauth('oauth/token', {
-                'refresh_token': refresh_token,
-                'client_id': self.client_id,
-                'client_secret': self.client_secret,
-                'redirect_uri': self.oob_redirect,
-                'grant_type': 'refresh_token',
-            })
+            status, data = self.oauth('oauth/token', self.credentials(
+                refresh_token = refresh_token,
+                redirect_uri = self.oob_redirect,
+                grant_type = 'refresh_token',
+            ))
         except Exception:
             log.warning('Could not reach Trakt to renew the sign-in, will retry: %s', traceback.format_exc(0))
             return False
@@ -195,11 +200,7 @@ class Trakt(Automation, TraktBase):
             return {'success': False, 'status': 'expired'}
 
         try:
-            status, data = self.oauth('oauth/device/token', {
-                'code': device['code'],
-                'client_id': self.client_id,
-                'client_secret': self.client_secret,
-            })
+            status, data = self.oauth('oauth/device/token', self.credentials(code = device['code']))
         except Exception as e:
             log.debug('Trakt sign-in poll failed, will retry: %s', e)
             return {'success': False, 'status': 'pending'}
