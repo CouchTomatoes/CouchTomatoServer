@@ -57,6 +57,9 @@ Hadouken, Synology, put.io, SABnzbd, Blackhole
 **Notifications:** see `couchpotato/core/notifications/` for the full list (Plex, Kodi/XBMC, Pushover,
 Twitter, and more)
 
+**Trakt:** imports your Trakt watchlist and can add finished downloads to your Trakt collection.
+CouchTomato uses Trakt but is not endorsed or certified by Trakt. See [PRIVACY.md](PRIVACY.md).
+
 ## Screenshots
 
 | Setup wizard | Home page charts | Movie detail |
