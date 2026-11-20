@@ -246,7 +246,7 @@ Every route of CouchTomatoAPI (`app.js`), what the app uses it for, and where it
 | `/validate/` | scene-release score bonus | predb.net (knows nukes), srrdb as fallback; orlydb sits behind a JS wall, corrupt-net is dead. `plugins/scenecheck.py` | 3 | done |
 | `/authorize/trakt`, `/authorize/trakt_refresh` | Trakt sign-in and token refresh | a bundled project Trakt app with device-code sign-in in the app | 4 | done 2026-11-20: Production app 275721, sign-in proven on a real boot |
 | `/authorize/putio` | put.io sign-in | a bundled project put.io app with OAuth in the app | 4 | code in (link with a code at put.io/link); needs the project put.io app id |
-| `/authorize/twitter` | Twitter notifications | the app's Twitter notifier doesn't call it; check it still signs in on its own | 4 | todo |
+| `/authorize/twitter` | Twitter notifications | the app's Twitter notifier doesn't call it; check it still signs in on its own | 4 | done 2026-11-20: rebuilt on X's v2 API with the user's own app keys (X is pay-per-use, so no shared app); signer proven against X's documented example, live endpoint answers 401 to dummy keys; a real post is unverified (needs an X account with credits) |
 | `/updater/` | updater zip URL | build the GitHub codeload URL in the app | fix/updater-own-repo | done 2026-11-19 (source installs also pointed at the dead upstream repo on `master`; now this repo's `main`) |
 | `/messages/` | announcements in the notification bar | the project's GitHub Releases feed, shown the same way | 5 | todo |
 | `/info/`, `/search/` | movie info and search (merged TMDB + OMDb) | the app's own TMDB and OMDb providers already answer both | 5 | todo: remove the provider and `api_base_url` only after 1-4 are live |
