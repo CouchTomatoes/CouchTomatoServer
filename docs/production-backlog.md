@@ -242,12 +242,12 @@ Every route of CouchTomatoAPI (`app.js`), what the app uses it for, and where it
 |---|---|---|---|---|
 | `/ismovie/` | refusing TV shows on add and in the Blu-ray chart | TMDB `find/{imdb}` | 1 (#16) | merged 2026-11-19 |
 | `/eta/` | release dates (Soon/Late, searcher) | TMDB `release_dates` (already in the app since 10-27); its Blu-ray flag is stored but nothing reads it | 1 (#16) | merged |
-| `/suggest/` | home-page suggestions, dismiss/seen | TMDB `recommendations` per library movie, ranked across the library, top 10 with full info; empty library → TMDB popular | 2 | in progress |
+| `/suggest/` | home-page suggestions, dismiss/seen | TMDB `recommendations` per library movie, ranked across the library, top 10 with full info; empty library → TMDB popular | 2 (#17) | merged 2026-11-19 |
 | `/validate/` | scene-release score bonus | orlydb (alive 2026-11-19) plus predb.net / srrdb in place of the dead corrupt-net | 3 | todo |
 | `/authorize/trakt`, `/authorize/trakt_refresh` | Trakt sign-in and token refresh | a bundled project Trakt app with device-code sign-in in the app | 4 | todo |
 | `/authorize/putio` | put.io sign-in | a bundled project put.io app with OAuth in the app | 4 | todo |
 | `/authorize/twitter` | Twitter notifications | the app's Twitter notifier doesn't call it; check it still signs in on its own | 4 | todo |
-| `/updater/` | updater zip URL | build the GitHub codeload URL in the app | 5 | todo |
+| `/updater/` | updater zip URL | build the GitHub codeload URL in the app | fix/updater-own-repo | done 2026-11-19 (source installs also pointed at the dead upstream repo on `master`; now this repo's `main`) |
 | `/messages/` | announcements in the notification bar | the project's GitHub Releases feed, shown the same way | 5 | todo |
 | `/info/`, `/search/` | movie info and search (merged TMDB + OMDb) | the app's own TMDB and OMDb providers already answer both | 5 | todo: remove the provider and `api_base_url` only after 1-4 are live |
 | `/updates/*`, `/stats/`, `/manage/cleanup`, `/` | server-side admin pages, never called by the app | nothing to move | — | — |
