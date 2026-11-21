@@ -12,9 +12,10 @@ These parts of Movie details change on screen **without reloading the page**:
 
 | On screen | Example | Updates without reload | Where it comes from |
 |---|---|---|---|
-| Download % | `Downloading 64%` (Hero badge, Poster steps) | **every 10 s** while the page is open | Downloader (Transmission `percentDone`) |
-| Time left | `Transmission says 18 min left` | **every 10 s** while the page is open | Downloader (`eta`) |
-| Freshness | `● updated 4 s ago` | counts every second in the browser | time of the last check |
+| Download % | `Downloading 64%` (Hero badge, Poster steps). **The pill is itself the progress bar**: the accent colour fills it left → right with the % over a dark track; at 100 % it is fully filled and the connector to `In library` lights up | **every 10 s** while the page is open | Downloader (Transmission `percentDone`) |
+| Time left | `downloading for 1 h 12 m · 18 min left` | **every 10 s** while the page is open | Downloader (`eta`; elapsed from `addedDate`, else the snatch date) |
+| Done | `downloaded 3 h ago · moving to your library` (s → min → h → days) | recounted in the browser | Downloader (`doneDate`), else the time 100 % was first seen |
+| Freshness | **Nothing in normal use.** Only when no update has arrived for > 30 s: grey dot `last update 2 min ago · reconnecting` | counts every second in the browser | time of the last check |
 | Relative times | `Snatched 2 h ago from YTS` | recounted **every 60 s** in the browser, no server call | snatch date already in the release |
 | Status steps | Wanted → Snatched → Downloading → In library | **within 10 s** of the change | existing `release.update_status` / media update events |
 | Search started / ended, new releases found | `Releases (4)` | **at once** (already pushed today) | `movie.searcher.started/ended` |
@@ -53,13 +54,16 @@ When no browser has such a page open, the server goes back to today's background
    with the release ids it shows, every 30 s. While a watch is fresh (< 60 s old) the server
    checks **only those torrents** every 10 s. No heartbeat for 60 s → the fast lane stops.
    (Fits the idle rule: nothing runs faster than today when nobody is looking.)
-5. **Page updates in place.** `App.on('release.progress')` changes only the text of the %
-   badge, the time-left text and `updated N s ago`. **No re-render**: an open Quality ▾ menu or
-   the trailer must stay open. If nothing arrives for 3× the interval (30 s), the green dot turns
-   grey: `last update 40 s ago · reconnecting`.
+5. **Page updates in place.** `App.on('release.progress')` changes only the % text, the
+   pill's fill (a CSS variable `--p`, one `linear-gradient`, no extra element), the connector
+   and the `downloading for … · … min left` text. **No re-render**: an open Quality ▾ menu or
+   the trailer must stay open. There is no "updated N s ago" while updates arrive; if nothing
+   arrives for 3× the interval (30 s), a grey dot appears: `last update 40 s ago · reconnecting`,
+   and disappears with the next update.
 6. **Hidden tab = no fast lane.** Use the Page Visibility API: a hidden tab stops sending
    `download.watch`; when it becomes visible again it calls `download.live` once.
-7. **At 100 %** the line reads `Transmission says done · moving to your library`; the existing
+7. **At 100 %** the pill is fully filled, the connector to `In library` lights up and the line reads
+   `downloaded just now · moving to your library` (then `5 min ago`, `3 h ago`…); the existing
    renamer events move the steps to `In library`.
 
 ### Proof required before the PR is merged (evidence that matches the claim)
@@ -69,15 +73,15 @@ When no browser has such a page open, the server goes back to today's background
 - An open Quality ▾ menu stays open through 3 updates.
 - Close the tab → the server log shows the fast lane stopping within 60 s. Leave no tab open for
   5 min → the downloader is only asked every `run_every` minutes.
-- Stop the server with the page open → the dot turns grey within 30 s; start it → green again
-  without a reload.
+- Stop the server with the page open → the grey `last update … · reconnecting` appears within 30 s;
+  start it → it disappears without a reload.
+- The pill's fill matches the % text at each update (screenshot at two different %s and at 100 %).
 - Unit tests: progress parsing per downloader (including "unknown"), "changed only" push logic,
   heartbeat expiry.
 
 ## 2. Hero shows the snatch line too
 
-Under the badges in Hero: `Snatched 2 h ago from YTS · Transmission says 18 min left · ● updated
-4 s ago`. It's the same line Poster has under its steps, and it uses the same live fields as part 1.
+Under the badges in Hero: `Snatched 2 h ago from YTS · downloading for 1 h 12 m · 18 min left`. It's the same line Poster has under its steps, and it uses the same live fields as part 1.
 
 ## 3. Subtitles (Hero: a tab; Poster: a section under Releases)
 
