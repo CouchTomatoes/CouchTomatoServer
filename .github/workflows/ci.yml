@@ -4,10 +4,14 @@ name: CI
 # commit to the same standard.
 #
 # Releases and installers are built separately by release.yml on hosted runners.
+#
+# Branches (SickGear practice): PRs merge into `dev`, which never goes live.
+# Merging `dev` into `main` is a deliberate, numbered release - release.yml cuts
+# the tag, and the Pi4's updater pulls `main`. See docs/release-pipeline.md.
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
 
 concurrency:

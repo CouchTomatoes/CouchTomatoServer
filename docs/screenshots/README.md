@@ -83,3 +83,17 @@ Full click-through sequence, in order:
   to the browser had `margin: 28px`, while the uncompiled `.scss` source said
   `75px` — the two had gone out of sync at some point with no working build
   pipeline to catch it. Both now say `90px`.
+
+## 2026-11-20 — History page (board #21), real local boot
+
+Seeded 51 events spread over 400 days, plus 2 real "added" events from `movie.add`.
+- `2026-11-20-history-timeline-desktop-light.png` / `-desktop-dark.png` / `-phone-light.png` /
+  `-phone-dark.png` — the dated timeline with quiet-day gaps, the failed day in red, the archive
+  stop with "Change in Settings ›", and the new **History** menu entry (it was missing until
+  `Page.History`'s own `load()` stopped overriding the base page's tab-creating `load()`).
+- `2026-11-20-history-settings-archive-files.png` — Settings → General → History after
+  "Archive now" at Keep = 90 days (4 block files, 24 events moved out) and an upload through
+  "Import a file from elsewhere…".
+- `2026-11-20-history-imported-archive.png` — one imported file on the page (ARCHIVE tags,
+  "Remove from page"). The gap over files not imported says "in archive files, not on this page"
+  and "History began here" shows the real first day, not the oldest live day.

@@ -580,6 +580,8 @@ class Renamer(Plugin):
                         if is_higher == 'higher':
                             if self.conf('remove_lower_quality_copies'):
                                 log.info('Removing lesser or not wanted quality %s for %s.', (media_title, release.get('quality')))
+                                fireEvent('history.add', 'replaced', media = media, quality = group['meta_data']['quality'].get('label'),
+                                          detail = 'Removed the %s copy: a better quality arrived' % release.get('quality'))
                                 for file_type in release.get('files', {}):
                                     for release_file in release['files'][file_type]:
                                         remove_files.append(release_file)
@@ -1143,6 +1145,10 @@ Remove it if you want it to be renamed (again, or at least let it try again)
                     elif release_download['status'] == 'failed':
                         # Set the release to failed
                         fireEvent('release.update_status', rel.get('_id'), status = 'failed', single = True)
+                        fireEvent('history.add', 'failed', media_id = rel.get('media_id'), quality = rel.get('quality'),
+                                  source = release_download.get('downloader'),
+                                  detail = '%s: the download failed%s' % (release_download.get('downloader') or 'Downloader',
+                                                                         ', searching again' if self.conf('next_on_failed') else ''))
 
                         fireEvent('download.remove_failed', release_download, single = True)
 
@@ -1151,6 +1157,10 @@ Remove it if you want it to be renamed (again, or at least let it try again)
 
                     elif release_download['status'] == 'completed':
                         log.info('Download of %s completed!', release_download['name'])
+                        if rel.get('status') != 'seeding':
+                            fireEvent('history.add', 'downloaded', media_id = rel.get('media_id'), quality = rel.get('quality'),
+                                      source = release_download.get('downloader'),
+                                      detail = 'Finished in %s: %s' % (release_download.get('downloader') or 'the downloader', release_download['name']))
 
                         #Make sure the downloader sent over a path to look in
                         if self.statusInfoComplete(release_download):
