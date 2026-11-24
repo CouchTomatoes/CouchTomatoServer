@@ -500,6 +500,22 @@ class Seed(Base):
         # and even if it ran again, the same ids mean nothing is added twice
         self.assertEqual(self.h.seedFrom(self.db), 0)
 
+class BytesFields(unittest.TestCase):
+    """ Pi4 2026-11-23: an event field came back from the database as bytes and the nightly archive crashed """
+
+    def test_write_block_decodes_bytes(self):
+        d = tempfile.mkdtemp(prefix = 'ct-history-bytes-')
+        try:
+            path = os.path.join(d, 'block.jsonl')
+            e = {'eid': 'e1', 'time': 1, 'type': 'snatched', 'media_id': b'abc123', 'title': 'Dune'}
+            self.assertEqual(history_main.writeBlock(path, [e]), 1)
+            with open(path, encoding = 'utf-8') as f:
+                self.assertEqual(json.loads(f.readline())['media_id'], 'abc123')
+        finally:
+            shutil.rmtree(d)
+
+
 
 if __name__ == '__main__':
     unittest.main()
+

@@ -149,6 +149,18 @@ def readEvents(path):
     return events
 
 
+def eventDoc(e):
+    """ An event's FIELDS as a JSON-safe dict: values the database handed back as bytes become str """
+    doc = {}
+    for k in FIELDS:
+        v = e.get(k)
+        if isinstance(v, bytes):
+            v = v.decode('utf-8', 'replace')
+        if v is not None:
+            doc[k] = v
+    return doc
+
+
 def writeBlock(path, new_events):
     """
     Add events to an archive file, skipping any already in it, then fsync. The old content is kept as it was;
@@ -172,7 +184,7 @@ def writeBlock(path, new_events):
         if e.get('eid') in existing:
             continue
         existing.add(e.get('eid'))
-        lines.append(json.dumps(dict((k, e.get(k)) for k in FIELDS if e.get(k) is not None), ensure_ascii = False) + '\n')
+        lines.append(json.dumps(eventDoc(e), ensure_ascii = False) + '\n')
         added += 1
 
     replaceFile(path, lines)
@@ -500,7 +512,7 @@ class History(Plugin):
                         except:
                             doc = None
                         if doc is None:
-                            new = dict((k, e.get(k)) for k in FIELDS if e.get(k) is not None)
+                            new = eventDoc(e)
                             new['time'] = tryInt(new.get('time'))
                             new['_t'] = 'history'
                             db.insert(new)
@@ -532,7 +544,7 @@ class History(Plugin):
                 if e.get('type') not in TYPES or not e.get('eid') or self.hasEvent(db, e['eid']):
                     skipped += 1
                     continue
-                doc = dict((k, e.get(k)) for k in FIELDS if e.get(k) is not None)
+                doc = eventDoc(e)
                 doc['time'] = tryInt(doc.get('time'))
                 doc['_t'] = 'history'
                 doc['archive'] = name
