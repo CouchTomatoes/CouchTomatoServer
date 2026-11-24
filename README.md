@@ -32,13 +32,15 @@ and moved into your library once it finishes downloading.
 
 ## What Now?
 
+Welcome to CouchTomato! Dive straight in, or read on for what to expect...
+
 * **[Download the latest release](https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest)** —
   Windows installer/zip, macOS universal2 DMG, or Linux tar.gz/AppImage
-* **[Wiki: Installation guide](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Installation)** — per-platform setup instructions
-* **[Wiki: Migrating from CouchPotato](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Migration)**
-* **[Wiki: FAQ / Troubleshooting](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ)**
-* **[Wiki: Architecture & porting status](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Architecture-Overview)**
-* **[TODO.md](TODO.md)** — checkbox-tracked list of what's left for full parity with upstream
+* [Install guides](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Installation) for Windows, macOS, Linux and running from source
+* [Migrating from CouchPotato](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Migration) — keep your wanted list, library and settings
+* [Screens](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens) — every page of the new interface, in light, dark and phone views
+* [FAQ / Troubleshooting](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ) — known issues, dead external services and common questions
+* [Architecture & porting status](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Architecture-Overview)
 
 ## Providers & Downloaders
 
@@ -60,14 +62,48 @@ Twitter, and more)
 **Trakt:** imports your Trakt watchlist and can add finished downloads to your Trakt collection.
 CouchTomato uses Trakt but is not endorsed or certified by Trakt. See [PRIVACY.md](PRIVACY.md).
 
-## Screenshots
+## Screenies
 
-| Setup wizard | Home page charts | Movie detail |
-|---|---|---|
-| ![Wizard](docs/screenshots/2026-07-11-wizard-completed-main-app.png) | ![Charts](docs/screenshots/2026-07-11-home-charts-working.png) | ![Movie detail](docs/screenshots/2026-07-11-movie-detail-page.png) |
+The new interface, page by page ([all screens on the wiki](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens)). It is being built one
+page at a time; until a page is done it shows the **⟲ Classic** look (the original CouchPotato design),
+which stays available on every page for anyone who prefers it.
 
-More in [`docs/screenshots/`](docs/screenshots/), captured during real browser-driven testing sessions
-(see that folder's README for the full list and what each one verifies).
+<table><thead></thead><tbody>
+<tr align="center">
+  <td><a title="Movie details" href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens#1-movie-details"><img src="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/01-movie-details-poster-full.png" width="200" alt="Movie details"></a></td>
+  <td><a title="Activity" href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens#2-activity"><img src="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/02-activity-table.png" width="200" alt="Activity"></a></td>
+  <td><a title="Calendar" href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens#3-calendar"><img src="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/03-calendar-month.png" width="200" alt="Calendar"></a></td>
+  <td><a title="Home" href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens#6-home"><img src="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/06-home-sections.png" width="200" alt="Home"></a></td>
+  <td><a title="Search results" href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens#11-search-results"><img src="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/11-search-results-posters.png" width="200" alt="Search results"></a></td>
+  <td><a title="Settings" href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens#12-settings"><img src="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/12-settings-tabs.png" width="200" alt="Settings"></a></td>
+</tr>
+<tr align="center">
+  <td>Movie details<br />View: <a title="Movie details - Light" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/01-movie-details-poster-full.png">Light</a>, <a title="Movie details - Dark" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/01-movie-details-default-dark.png">Dark</a>, <a title="Movie details - Phone" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/01-movie-details-default-phone.png">Phone</a>, <a title="Movie details - Classic" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/01-movie-details-classic.png">Classic</a></td>
+  <td>Activity<br />View: <a title="Activity - Light" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/02-activity-table.png">Light</a>, <a title="Activity - Dark" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/02-activity-default-dark.png">Dark</a>, <a title="Activity - Phone" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/02-activity-default-phone.png">Phone</a></td>
+  <td>Calendar<br />View: <a title="Calendar - Light" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/03-calendar-month.png">Light</a>, <a title="Calendar - Dark" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/03-calendar-default-dark.png">Dark</a>, <a title="Calendar - Phone" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/03-calendar-default-phone.png">Phone</a></td>
+  <td>Home<br />View: <a title="Home - Light" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/06-home-sections.png">Light</a>, <a title="Home - Dark" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/06-home-default-dark.png">Dark</a>, <a title="Home - Phone" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/06-home-default-phone.png">Phone</a>, <a title="Home - Classic" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/06-home-classic.png">Classic</a></td>
+  <td>Search results<br />View: <a title="Search results - Light" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/11-search-results-posters.png">Light</a>, <a title="Search results - Dark" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/11-search-results-default-dark.png">Dark</a>, <a title="Search results - Phone" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/11-search-results-default-phone.png">Phone</a>, <a title="Search results - Classic" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/11-search-results-classic.png">Classic</a></td>
+  <td>Settings<br />View: <a title="Settings - Light" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/12-settings-tabs.png">Light</a>, <a title="Settings - Dark" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/12-settings-default-dark.png">Dark</a>, <a title="Settings - Phone" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/12-settings-default-phone.png">Phone</a>, <a title="Settings - Classic" href="https://raw.githubusercontent.com/wiki/CouchTomatoes/CouchTomatoServer/images/screens/12-settings-classic.png">Classic</a></td>
+</tr>
+</tbody>
+</table>
+
+Screenshots of the app as it is today, taken during real browser-driven testing, are in
+[`docs/screenshots/`](docs/screenshots/).
+
+## Available versions
+<table><thead></thead><tbody>
+<tr align="center">
+  <td>Main (<a title="Main changelog" href="https://github.com/CouchTomatoes/CouchTomatoServer/blob/main/CHANGES.md">changes</a>)</td><td>(stable, released)</td><td><a title="Latest release" href="https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest"><img src="https://img.shields.io/github/v/release/CouchTomatoes/CouchTomatoServer" alt="Latest release"></a></td><td><a title="CI on main" href="https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/ci.yml?query=branch%3Amain"><img src="https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI on main"></a></td>
+</tr>
+<tr align="center">
+  <td>Dev (<a title="Dev changelog" href="https://github.com/CouchTomatoes/CouchTomatoServer/blob/dev/CHANGES.md">changes</a>)</td><td>(next release, not live)</td><td>see <i>Unreleased</i></td><td><a title="CI on dev" href="https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/ci.yml?query=branch%3Adev"><img src="https://github.com/CouchTomatoes/CouchTomatoServer/actions/workflows/ci.yml/badge.svg?branch=dev" alt="CI on dev"></a></td>
+</tr>
+<tr align="center">
+  <td colspan=4>[ ++ Install <a href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Installation">Guides</a> ++ ][ Frequently <a href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ">Asked</a> ][ See the <a href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens">Screens</a> ][ Discover <a href="https://github.com/CouchTomatoes/CouchTomatoServer/wiki">Wiki</a> ]</td>
+</tr>
+</tbody>
+</table>
 
 > **Note on the CouchPotatoApi provider:** upstream CouchPotato shipped with a built-in provider
 > (`couchpotato/core/media/movie/providers/info/couchpotatoapi.py`) that calls a hosted backend at
@@ -137,9 +173,14 @@ Short summary of what changed and which platforms had working installer/build do
 For the pre-rebrand CouchPotato history (`build/2.x`–`build/3.x` tags), see the
 [full release list](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
 
+## Howto
+
+#### Report issues
+Found a bug or have a question? Check the [FAQ](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ) and [`TODO.md`](TODO.md) first in case it is
+already a known, tracked item, then [open an issue](https://github.com/CouchTomatoes/CouchTomatoServer/issues)
+with your CouchTomato version, platform, what you did, what you expected, and the relevant lines from
+**Settings → Logs**.
+
 ## Community
 
-Found a bug or have a question? [Open an issue](https://github.com/CouchTomatoes/CouchTomatoServer/issues) —
-check the [FAQ](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ) and [`TODO.md`](TODO.md)
-first in case it's already a known, tracked item.
-</content>
+* [Wiki](https://github.com/CouchTomatoes/CouchTomatoServer/wiki) · [Releases](https://github.com/CouchTomatoes/CouchTomatoServer/releases) · [Issues](https://github.com/CouchTomatoes/CouchTomatoServer/issues)
