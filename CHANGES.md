@@ -10,6 +10,8 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+### v4.0.71 (2026-11-24)
+
 * Fix: the nightly History clean-up crashed when an event field was stored as bytes, so
   nothing older than the Keep history limit was ever moved into an archive file.
 
