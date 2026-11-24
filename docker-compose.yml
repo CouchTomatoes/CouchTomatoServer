@@ -1,0 +1,17 @@
+# CouchTomato with Docker Compose. Change the left side of each volume to your own folders,
+# then:  docker compose up -d   and open http://<this machine>:5050/
+services:
+  couchtomato:
+    image: ghcr.io/couchtomatoes/couchtomato:latest
+    container_name: couchtomato
+    environment:
+      - PUID=1000          # your user id   (run: id -u)
+      - PGID=1000          # your group id  (run: id -g)
+      - TZ=Europe/London   # your time zone
+    volumes:
+      - ./config:/config         # settings, database, logs
+      - /path/to/downloads:/downloads
+      - /path/to/movies:/movies
+    ports:
+      - 5050:5050
+    restart: unless-stopped
