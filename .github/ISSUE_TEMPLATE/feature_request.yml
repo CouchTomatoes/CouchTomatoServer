@@ -1,0 +1,21 @@
+name: Feature request
+description: Suggest something new, or a provider / download client / notifier to support.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do?
+      description: The problem first, then your idea for solving it.
+      placeholder: When a download stalls I can't tell from the movie page, so…
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could CouchTomato do it?
+  - type: textarea
+    id: elsewhere
+    attributes:
+      label: Seen it elsewhere?
+      description: If another app (Radarr, SickGear, CouchPotato…) does this well, a link or screenshot helps.
