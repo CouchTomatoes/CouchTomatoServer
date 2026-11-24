@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: FAQ / Troubleshooting
+    url: https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ
+    about: Known issues, dead external sites and common questions. Please check here first.
+  - name: Install guides
+    url: https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Installation
+    about: Setting CouchTomato up on Windows, macOS, Linux, a Raspberry Pi or from source.
+  - name: Migrating from CouchPotato
+    url: https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Migration
+    about: Moving your wanted list, library and settings across.
+  - name: Report a security problem privately
+    url: https://github.com/CouchTomatoes/CouchTomatoServer/security/advisories/new
+    about: Please don't open a public issue for security problems.

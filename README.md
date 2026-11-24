@@ -135,16 +135,10 @@ Docker:
 
 ## Development
 
-Be sure you're running Python 3.11 or newer.
-
-If you're going to add styling or doing some javascript work you'll need a few tools that build and compress scss -> css and combine the javascript files. [Node/NPM](https://nodejs.org/), [Grunt](http://gruntjs.com/installing-grunt), [Compass](http://compass-style.org/install/)
-
-After you've got these tools you can install the packages using `npm install`. Once this process has finished you can start CouchTomato using the command `grunt`. This will start all the needed tools and watches any files for changes.
-You can now change css and javascript and it wil reload the page when needed.
-
-By default it will combine files used in the core folder. If you're adding a new .scss or .js file, you might need to add it and then restart the grunt process for it to combine it properly.
-
-Don't forget to enable development inside the settings. This disables some functions and also makes sure javascript errors are pushed to console instead of the log.
+Pull requests are welcome, against the `dev` branch. [CONTRIBUTING.md](.github/CONTRIBUTING.md) has
+the branches, how to run the tests, and how to rebuild the JavaScript bundles
+(`node tools/jsbuild/build.js`). Turn on development mode in the settings to get JavaScript errors in
+the browser console instead of the log.
 
 ## Project status
 
@@ -183,4 +177,4 @@ with your CouchTomato version, platform, what you did, what you expected, and th
 
 ## Community
 
-* [Wiki](https://github.com/CouchTomatoes/CouchTomatoServer/wiki) · [Releases](https://github.com/CouchTomatoes/CouchTomatoServer/releases) · [Issues](https://github.com/CouchTomatoes/CouchTomatoServer/issues)
+* [Wiki](https://github.com/CouchTomatoes/CouchTomatoServer/wiki) · [Contributing](.github/CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md) · [Releases](https://github.com/CouchTomatoes/CouchTomatoServer/releases) · [Issues](https://github.com/CouchTomatoes/CouchTomatoServer/issues)
