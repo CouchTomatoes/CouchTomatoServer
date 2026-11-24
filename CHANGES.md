@@ -10,6 +10,11 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+### v4.0.71 (2026-11-24)
+
+* Fix: the nightly History clean-up crashed when an event field was stored as bytes, so
+  nothing older than the Keep history limit was ever moved into an archive file.
+
 ### v4.0.70 (2026-11-20)
 
 * New: a History page, a dated timeline of what happened to each movie (added, snatched,
