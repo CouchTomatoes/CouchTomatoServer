@@ -147,6 +147,10 @@ class MovieSearcher(SearcherBase, MovieTypeBase):
 
         fireEvent('notify.frontend', type = 'movie.searcher.started', data = {'_id': movie['_id']}, message = 'Searching for "%s"' % default_title)
 
+        # Wanted's "Last search" column (a property, so the movie document isn't rewritten on every search)
+        movie_id = movie['_id'].decode('utf-8') if isinstance(movie['_id'], bytes) else movie['_id']
+        Env.prop('last_search.%s' % movie_id, value = str(int(time.time())))
+
         # Ignore eta once every 7 days
         if not always_search:
             prop_name = 'last_ignored_eta.%s' % movie['_id']

@@ -146,6 +146,7 @@ class MovieBase(MovieTypeBase):
                     log.error('Failed getting previous profile: %s', traceback.format_exc())
             except:
                 new = True
+                media['added'] = int(time.time())  # Wanted's "Added" column; only on a new movie, so a re-add keeps it
                 m = db.insert(media)
 
             # Update dict to be usable
