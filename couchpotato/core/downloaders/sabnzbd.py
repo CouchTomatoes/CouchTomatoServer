@@ -4,7 +4,7 @@ import json
 import os
 import traceback
 
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta, clockToSeconds
 from couchpotato.core.helpers.encoding import tryUrlencode, ss, sp
 from couchpotato.core.helpers.variable import cleanHost, mergeDicts
 from couchpotato.core.logger import CPLog
@@ -154,6 +154,8 @@ class Sabnzbd(DownloaderBase):
                     'status': status,
                     'original_status': nzb['status'],
                     'timeleft': nzb['timeleft'] if not queue['paused'] else -1,
+                    'progress': toProgress(nzb.get('percentage'), whole = 100),
+                    'eta': toEta(clockToSeconds(nzb.get('timeleft'))) if not queue['paused'] else None,
                 })
 
         # Get old releases

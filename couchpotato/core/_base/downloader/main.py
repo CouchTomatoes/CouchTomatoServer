@@ -201,6 +201,41 @@ class DownloaderBase(Provider):
         return
 
 
+def toProgress(value, whole = 1.0):
+    """ A downloader's progress as a whole percent 0-100, or None when it does not know.
+    `whole` is what the downloader calls finished: 1.0 for a fraction, 100 for a percent, 1000 for per mille. """
+    try:
+        value = float(value)
+    except (TypeError, ValueError):
+        return None
+    if value < 0 or whole <= 0:
+        return None
+    return max(0, min(100, int(value * 100 / whole)))
+
+
+def toEta(seconds, unknown_from = None):
+    """ Seconds left as an int, or None for the "don't know" values downloaders use (-1, -2, 8640000...). """
+    try:
+        seconds = int(float(seconds))
+    except (TypeError, ValueError):
+        return None
+    if seconds < 0 or (unknown_from is not None and seconds >= unknown_from):
+        return None
+    return seconds
+
+
+def clockToSeconds(text):
+    """ "1:02:03" (SABnzbd's timeleft) -> 3723, None when it can't be read """
+    try:
+        parts = [int(x) for x in str(text).split(':')]
+    except ValueError:
+        return None
+    seconds = 0
+    for part in parts:
+        seconds = seconds * 60 + part
+    return seconds
+
+
 class ReleaseDownloadList(list):
 
     provider = None
@@ -228,6 +263,8 @@ class ReleaseDownloadList(list):
             'downloader': self.provider.getName(),
             'folder': '',
             'files': [],
+            'progress': None,  # 0-100, None = the downloader doesn't say
+            'eta': None,  # seconds left, None = unknown
         }
 
         return mergeDicts(defaults, result)
