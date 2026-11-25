@@ -29,16 +29,33 @@ class TelegramBot(Notification):
         # Cosntruct message
         payload = {'chat_id': usr_id, 'text': message, 'parse_mode': 'Markdown'}
 
-        # Send message user Telegram's Bot API
-        response = requests.post(self.TELEGRAM_API % (token, "sendMessage"), data=payload)
+        # Send message user Telegram's Bot API. The token is a password: it must never
+        # reach the log, and requests puts the full /bot<token>/ URL into its errors.
+        try:
+            response = requests.post(self.TELEGRAM_API % (token, "sendMessage"), data=payload, timeout=30)
+        except requests.RequestException as e:
+            log.error('Could not send notification to TelegramBot (bot %s): %s',
+                      (self.botId(token), self.hideToken(str(e), token)))
+            return False
 
-        # Error logging
-        sent_successfuly = True
         if not response.status_code == 200:
-            log.error('Could not send notification to TelegramBot (token=%s). Response: [%s]', (token, response.text))
-            sent_successfuly = False
+            log.error('Could not send notification to TelegramBot (bot %s). Response: [%s]',
+                      (self.botId(token), self.hideToken(response.text, token)))
+            return False
 
-        return sent_successfuly
+        return True
+
+    @staticmethod
+    def botId(token):
+        # "123456:ABC..." -> "123456": the bot's public id, the part after ':' is the secret
+        token = token or ''
+        return token.split(':', 1)[0] if ':' in token else '(no token)'
+
+    @staticmethod
+    def hideToken(text, token):
+        if token and text:
+            text = text.replace(token, '%s:***' % TelegramBot.botId(token))
+        return text
 
 
 config = [{
