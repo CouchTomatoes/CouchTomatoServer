@@ -66,6 +66,10 @@ var MovieDetailsStyle = [
 	'.mdx-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}',
 	'.mdx-stepsrow{margin:10px 0}',
 	'.mdx-line{font-size:12px;opacity:.9;margin:-4px 0 8px}',
+	// Live status: the Downloading pill is itself the progress bar (accent fills left to right over a dark track)
+	'.mdx-steps span.now.mdx-bar{background:linear-gradient(90deg,var(--acc) var(--p,0%),#5c2a17 var(--p,0%))}',
+	'.mdx-stale{opacity:.75}',
+	'.mdx-stale i{display:inline-block;width:7px;height:7px;border-radius:50%;background:#888;margin:0 4px 1px 0;vertical-align:middle}',
 	'.mdx-badge{display:inline-block;font-size:11px;font-weight:700;border-radius:3px;padding:1px 7px;white-space:nowrap;background:var(--off);color:var(--muted)}',
 	'.mdx-actions{margin:14px 0 6px}',
 	'.mdx-slot .section{padding-left:0;padding-right:0}',
@@ -485,15 +489,22 @@ var MovieDetails = new Class({
 			stage = self.stage(),
 			el = new Element('span.mdx-steps');
 
+		self.download_pill = null;
+		self.library_em = null;
+
 		self.step_names.each(function(name, i){
-			if(i > 0) new Element('em', {'class': i <= stage ? 'lit' : ''}).inject(el);
+			var em = null;
+			if(i > 0) em = new Element('em', {'class': i <= stage ? 'lit' : ''}).inject(el);
 			var state = i < stage ? 'done' : (i == stage ? 'now' : '');
 			var label = name;
 			if(state == 'done') label = '✓ ' + (name == 'Download' ? 'Downloaded' : name);
 			else if(state == 'now' && name == 'Download') label = 'Downloading';
-			new Element('span', {'class': state, 'text': label}).inject(el);
+			var pill = new Element('span', {'class': state, 'text': label}).inject(el);
+			if(state == 'now' && name == 'Download') self.download_pill = pill;
+			if(name == 'In library') self.library_em = em;
 		});
 
+		self.steps_el = el;
 		return el;
 	},
 
@@ -550,15 +561,139 @@ var MovieDetails = new Class({
 			rel = self.newestRelease(['snatched']);
 			if(!rel || !rel.last_edit) return null;
 			from = rel.info ? (rel.info.provider || '') + (rel.info.provider_extra || '') : '';
-			return 'Snatched ' + self.ago(rel.last_edit) + (from ? ' from ' + from : '');
+			return 'Snatched ' + self.ago(rel.last_edit) + (from ? ' from ' + from : '') + self.liveText(rel);
 		}
 		return null;
 	},
 
 	fillLine: function(){
-		var text = this.lineText();
-		this.status_line.set('text', text || '');
-		this.status_line.setStyle('display', text ? '' : 'none');
+		var self = this,
+			text = self.lineText();
+		self.status_line.empty();
+		if(text) self.status_line.appendText(text);
+		// Only when updates stopped arriving: a grey dot, how long ago, reconnecting
+		if(text && self.live_watching && self.live_contact){
+			var quiet = Math.floor(Date.now() / 1000) - self.live_contact;
+			if(quiet > 30)
+				new Element('span.mdx-stale').adopt(
+					new Element('i'),
+					document.createTextNode('last update ' + self.ago(self.live_contact) + ' · reconnecting')
+				).inject(self.status_line.appendText(' · '));
+		}
+		self.status_line.setStyle('display', text ? '' : 'none');
+	},
+
+	// ----- Live status (part 1): % and time left without a reload -----
+
+	// 65 -> "1 min", 4320 -> "1 h 12 m"
+	duration: function(s){
+		if(s < 60) return Math.max(0, Math.floor(s)) + ' s';
+		if(s < 3600) return Math.floor(s / 60) + ' min';
+		return Math.floor(s / 3600) + ' h ' + Math.floor((s % 3600) / 60) + ' m';
+	},
+
+	liveFor: function(rel){
+		return rel && this.live_items ? this.live_items[rel._id] : null;
+	},
+
+	liveText: function(rel){
+		var self = this,
+			live = self.liveFor(rel),
+			now = Math.floor(Date.now() / 1000);
+		if(!live) return '';
+		if(live.progress == 100){
+			var when = self.ago(live.done || now);
+			return ' · downloaded ' + when + ' · moving to your library';
+		}
+		var started = live.added || rel.last_edit,
+			parts = [];
+		if(started) parts.push('downloading for ' + self.duration(now - started));
+		if(live.eta !== null && live.eta !== undefined) parts.push(live.eta < 60 ? 'less than a minute left' : self.duration(live.eta) + ' left');
+		return parts.length ? ' · ' + parts.join(' · ') : '';
+	},
+
+	// Put the newest numbers on the page: pill text and fill, the connector, the line. Never re-renders.
+	paintLive: function(){
+		var self = this,
+			rel = self.newestRelease(['snatched']),
+			live = self.liveFor(rel);
+
+		if(self.download_pill){
+			var p = live ? live.progress : null;
+			if(p !== null && p !== undefined){
+				self.download_pill.addClass('mdx-bar');
+				self.download_pill.style.setProperty('--p', p + '%');
+				self.download_pill.set('text', p >= 100 ? '✓ Downloaded 100%' : 'Downloading ' + p + '%');
+			}
+			else {
+				self.download_pill.removeClass('mdx-bar');
+				self.download_pill.set('text', 'Downloading');
+			}
+			if(self.library_em) self.library_em[p >= 100 ? 'addClass' : 'removeClass']('lit');
+		}
+		self.fillLine();
+	},
+
+	takeLive: function(items){
+		var self = this,
+			mine = false;
+		(items || []).each(function(item){
+			if(item.media_id != self.movie.get('_id')) return;
+			self.live_items[item.release_id] = item;
+			mine = true;
+		});
+		return mine;
+	},
+
+	startLive: function(){
+		var self = this;
+		if(self.live_watching || !self.status_line || self.stage() != 2) return;
+
+		self.live_watching = true;
+		self.live_items = {};
+		self.live_contact = Math.floor(Date.now() / 1000);
+
+		self.live_push = function(notification){
+			if(self.takeLive(notification.data)){
+				self.live_contact = Math.floor(Date.now() / 1000);
+				self.paintLive();
+			}
+		};
+		App.on('release.progress', self.live_push);
+
+		// The server checks this movie's download every 10 s only while we keep saying we're looking.
+		// A hidden tab stops saying it; coming back asks once straight away.
+		self.live_watch = function(){
+			if(document.hidden) return;
+			Api.request('download.watch', {
+				'data': {'media_id': self.movie.get('_id')},
+				'onComplete': function(json){
+					if(!json || !json.success) return;
+					self.takeLive(json.releases);
+					self.live_contact = Math.floor(Date.now() / 1000);
+					self.paintLive();
+				}
+			});
+		};
+		self.live_visible = function(){
+			if(!document.hidden) self.live_watch();
+		};
+		document.addEventListener('visibilitychange', self.live_visible);
+
+		self.live_watch();
+		self.live_timer = setInterval(self.live_watch, 15000);
+		// Seconds-level clock for "downloading for …" and the reconnecting dot; no server call
+		self.live_clock = setInterval(self.fillLine.bind(self), 5000);
+	},
+
+	stopLive: function(){
+		var self = this;
+		if(!self.live_watching) return;
+		self.live_watching = false;
+		clearInterval(self.live_timer);
+		clearInterval(self.live_clock);
+		App.off('release.progress', self.live_push);
+		document.removeEventListener('visibilitychange', self.live_visible);
 	},
 
 	// ----- Buttons -----
@@ -863,6 +998,23 @@ var MovieDetails = new Class({
 		if(self.status_line)
 			self.line_timer = setInterval(self.fillLine.bind(self), 60000);
 
+		// A release changed status (snatched -> downloaded -> done): redraw the steps and the line in place
+		self.status_changed = function(notification){
+			var data = notification.data;
+			if(!data || data.media_id != self.movie.get('_id') || !self.steps_el) return;
+			// movie.js updates movie.data.releases from the same event; run after it
+			setTimeout(function(){
+				var old = self.steps_el,
+					fresh = self.createSteps();  // sets self.steps_el, download_pill, library_em
+				if(old.getParent()) fresh.replaces(old);
+				if(self.stage() == 2) self.startLive(); else self.stopLive();
+				self.paintLive();
+			}, 0);
+		};
+		App.on('release.update_status', self.status_changed);
+
+		self.startLive();
+
 	},
 
 	keyup: function(e) {
@@ -889,6 +1041,8 @@ var MovieDetails = new Class({
 
 		App.removeEvent('history.push', self.outer_click);
 		clearInterval(self.line_timer);
+		App.off('release.update_status', self.status_changed);
+		self.stopLive();
 	}
 });
 

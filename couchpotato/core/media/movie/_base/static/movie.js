@@ -104,6 +104,7 @@ var Movie = new Class({
 				self.data.releases.each(function(release){
 					if(release._id == data._id){
 						release.status = data.status;
+						if(data.last_edit) release.last_edit = data.last_edit;
 						updated = true;
 					}
 				});

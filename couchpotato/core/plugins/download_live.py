@@ -13,6 +13,7 @@ import threading
 import time
 import traceback
 
+from couchpotato import get_db
 from couchpotato.api import addApiView
 from couchpotato.core.event import addEvent, fireEvent
 from couchpotato.core.helpers.variable import splitString
@@ -191,8 +192,14 @@ class DownloadLive(Plugin):
                 return
 
             rels = []
+            db = get_db()
             for mid in media_ids:
-                for rel in fireEvent('release.for_media', mid, single = True) or []:
+                try:
+                    media = db.get('id', mid)
+                except Exception:
+                    continue  # removed meanwhile
+                # The release index wants the id exactly as the database gives it (bytes), not the API's str
+                for rel in fireEvent('release.for_media', media['_id'], single = True) or []:
                     if rel.get('status') in WATCHED_STATUSES and isinstance(rel.get('download_info'), dict) \
                             and rel['download_info'].get('id'):
                         rels.append(rel)

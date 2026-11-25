@@ -131,6 +131,9 @@ class FastLaneTest(unittest.TestCase):
             mock.patch.object(download_live, 'addEvent'),
             mock.patch.object(download_live, 'addApiView'),
         ]
+        db = mock.Mock()
+        db.get.side_effect = lambda index, key: {'_id': key}
+        patches.append(mock.patch.object(download_live, 'get_db', return_value = db))
         for p in patches:
             p.start()
             self.addCleanup(p.stop)
