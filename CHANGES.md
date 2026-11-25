@@ -10,6 +10,9 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: Movie details shows a download live: the "Downloading" step fills up as a progress bar with the %, the
+  line under it adds "downloading for 1 h 12 m · 18 min left", and it all updates every 10 s without a reload while
+  the page is open (Transmission, Deluge, qBittorrent, rTorrent, uTorrent, SABnzbd, NZBGet, put.io).
 * New: Movie details (Hero and Poster) now says where the movie is in one line under the steps:
   "Snatched 2 h ago from YTS", "Downloaded 3 h ago · moving to your library" or "In your library since …".
   The times count up by themselves while the page is open.
