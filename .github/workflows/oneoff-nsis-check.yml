@@ -6,6 +6,7 @@ jobs:
   nsis:
     runs-on: windows-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Install NSIS
         run: |
           $paths = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe")
@@ -27,3 +28,10 @@ jobs:
 
       - name: makensis answers
         run: '& "$env:MAKENSIS" /VERSION'
+      - name: compile the real installer.nsi against a stub dist
+        run: |
+          New-Item -ItemType Directory -Force stubdist | Out-Null
+          Set-Content stubdist\CouchTomato.exe "stub"
+          & "$env:MAKENSIS" "/DAPP_VERSION=0.0.1" "/DDIST_DIR=$pwd\stubdist" "/DICON_PATH=$pwd\couchpotato\static\images\icons\favicon.ico" packaging\windows\installer.nsi
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Get-Item packaging\windows\CouchTomato-Setup-0.0.1.exe | Format-List Name,Length
