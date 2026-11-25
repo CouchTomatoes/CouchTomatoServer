@@ -8,6 +8,11 @@ number and date.
 Releases up to v4.0.69 have their notes on the
 [GitHub Releases page](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
 
+### Unreleased
+
+* New: Torznab searcher, so CouchTomato can search your Prowlarr or Jackett indexers (Settings → Searcher → Torznab,
+  one row per indexer). It asks by IMDb id first, falls back to title + year, and sends magnet links when the indexer has them.
+
 ### v4.0.75 (2026-11-25)
 
 * Fix: the Telegram notifier no longer writes your bot token into the log when a message fails to send
