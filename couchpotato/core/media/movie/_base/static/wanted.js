@@ -31,6 +31,7 @@ var MoviesWanted = new Class({
 			// Wanted movies
 			self.list = new MovieList({
 				'identifier': 'wanted',
+				'screens': 'wanted_view',
 				'status': 'active',
 				'actions': [MA.MarkAsDone, MA.IMDB, MA.Release, MA.Trailer, MA.Refresh, MA.Readd, MA.Delete, MA.Category, MA.Profile],
 				'add_new': true,
