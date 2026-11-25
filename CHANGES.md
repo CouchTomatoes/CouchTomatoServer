@@ -8,6 +8,11 @@ number and date.
 Releases up to v4.0.69 have their notes on the
 [GitHub Releases page](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
 
+### Unreleased
+
+* Fix: with debug logging on, the log no longer contains your indexers' API keys and passkeys (a low-level HTTP
+  library was writing every request URL unmasked).
+
 ### v4.0.75 (2026-11-25)
 
 * Fix: the Telegram notifier no longer writes your bot token into the log when a message fails to send
