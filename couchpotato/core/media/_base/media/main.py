@@ -11,10 +11,21 @@ from couchpotato.core.helpers.encoding import toUnicode
 from couchpotato.core.helpers.variable import splitString, getImdb, getTitle
 from couchpotato.core.logger import CPLog
 from couchpotato.core.media import MediaBase
+from couchpotato.environment import Env
 from .index import MediaIndex, MediaStatusIndex, MediaTypeIndex, TitleSearchIndex, TitleIndex, StartsWithIndex, MediaChildrenIndex, MediaTagIndex
 
 
 log = CPLog(__name__)
+
+
+def addTimes(media):
+    """ Wanted's List view columns: when it was added (stored on new media since v4.0.77) and when it was last searched """
+    media_id = media.get('_id')
+    if isinstance(media_id, bytes):
+        media_id = media_id.decode('utf-8')
+    media['added'] = tryInt(media.get('added')) or None
+    media['last_search'] = tryInt(Env.prop('last_search.%s' % media_id)) or None
+    return media
 
 
 class MediaPlugin(MediaBase):
@@ -45,6 +56,8 @@ class MediaPlugin(MediaBase):
                 'type': {'type': 'string', 'desc': 'Media type to filter on.'},
                 'status': {'type': 'array or csv', 'desc': 'Filter media by status. Example:"active,done"'},
                 'release_status': {'type': 'array or csv', 'desc': 'Filter media by status of its releases. Example:"snatched,available"'},
+                'no_release_status': {'type': 'array or csv', 'desc': 'Leave out media that has a release with one of these statuses. Example:"snatched,available" (= still wanted)'},
+                'with_times': {'desc': 'Add "added" and "last_search" (unix time or null) to every media'},
                 'limit_offset': {'desc': 'Limit and offset the media list. Examples: "50" or "50,30"'},
                 'starts_with': {'desc': 'Starts with these characters. Example: "a" returns all media starting with the letter "a"'},
                 'search': {'desc': 'Search media title'},
@@ -210,7 +223,7 @@ class MediaPlugin(MediaBase):
         log.debug('No media found with identifiers: %s', identifiers)
         return False
 
-    def list(self, types = None, status = None, release_status = None, status_or = False, limit_offset = None, with_tags = None, starts_with = None, search = None):
+    def list(self, types = None, status = None, release_status = None, status_or = False, limit_offset = None, with_tags = None, starts_with = None, search = None, no_release_status = None):
 
         db = get_db()
 
@@ -219,6 +232,8 @@ class MediaPlugin(MediaBase):
             status = [status]
         if release_status and not isinstance(release_status, (list, tuple)):
             release_status = [release_status]
+        if no_release_status and not isinstance(no_release_status, (list, tuple)):
+            no_release_status = [no_release_status]
         if types and not isinstance(types, (list, tuple)):
             types = [types]
         if with_tags and not isinstance(with_tags, (list, tuple)):
@@ -273,6 +288,11 @@ class MediaPlugin(MediaBase):
         for x in filter_by:
             media_ids = [n for n in media_ids if n in filter_by[x]]
 
+        # Leave out media with a release in one of these statuses (Wanted's "Still wanted" chip)
+        if no_release_status:
+            excluded = set(r.get('media_id') for r in fireEvent('release.with_status', no_release_status, with_doc = False, single = True) or [])
+            media_ids = [n for n in media_ids if n not in excluded]
+
         total_count = len(media_ids)
         if total_count == 0:
             return 0, []
@@ -318,8 +338,13 @@ class MediaPlugin(MediaBase):
             limit_offset = kwargs.get('limit_offset'),
             with_tags = splitString(kwargs.get('with_tags')),
             starts_with = kwargs.get('starts_with'),
-            search = kwargs.get('search')
+            search = kwargs.get('search'),
+            no_release_status = splitString(kwargs.get('no_release_status')),
         )
+
+        if kwargs.get('with_times'):
+            for movie in movies:
+                addTimes(movie)
 
         return {
             'success': True,
