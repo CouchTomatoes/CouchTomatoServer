@@ -63,6 +63,7 @@ var MovieDetailsStyle = [
 	'.mdx-plot{font-size:13px;line-height:1.5;max-width:680px;margin:8px 0 12px;opacity:.9}',
 	'.mdx-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}',
 	'.mdx-stepsrow{margin:10px 0}',
+	'.mdx-line{font-size:12px;opacity:.9;margin:-4px 0 8px}',
 	'.mdx-badge{display:inline-block;font-size:11px;font-weight:700;border-radius:3px;padding:1px 7px;white-space:nowrap;background:var(--off);color:var(--muted)}',
 	'.mdx-actions{margin:14px 0 6px}',
 	'.mdx-slot .section{padding-left:0;padding-right:0}',
@@ -386,6 +387,7 @@ var MovieDetails = new Class({
 						self.createSteps(),
 						self.quality_badge = new Element('span.mdx-badge', {'text': (m.profile && m.profile.get) ? m.profile.get('label') : ''})
 					),
+					self.status_line = new Element('div.mdx-line'),
 					info.plot ? new Element('div.mdx-plot', {'text': info.plot}) : null,
 					self.actions_el = new Element('div.mdx-row.mdx-actions'),
 					self.slot = new Element('div.mdx-slot')
@@ -394,6 +396,7 @@ var MovieDetails = new Class({
 		);
 
 		if(!self.quality_badge.get('text')) self.quality_badge.hide();
+		self.fillLine();
 
 		self.createActions();
 
@@ -490,6 +493,70 @@ var MovieDetails = new Class({
 		});
 
 		return el;
+	},
+
+	// ----- The line under the steps (Hero and Poster) -----
+	// "Snatched 2 h ago from YTS", "Downloaded 3 h ago · moving to your library",
+	// "In your library since 2 days ago · /Movies/X (2023)". Only what the database knows; the
+	// live "downloading for … · … min left" part comes with the live status.
+
+	// The newest release in one of these statuses
+	newestRelease: function(statuses){
+		var found = null;
+		(this.movie.data.releases || []).each(function(r){
+			if(statuses.indexOf(r.status) < 0) return;
+			if(!found || (r.last_edit || 0) > (found.last_edit || 0)) found = r;
+		});
+		return found;
+	},
+
+	// Seconds since a unix time, as text: just now, 5 min, 2 h, 3 days, then a date
+	ago: function(ts){
+		var s = Math.floor(Date.now() / 1000) - ts;
+		if(s < 60) return 'just now';
+		var text;
+		if(s < 3600) text = Math.floor(s / 60) + ' min';
+		else if(s < 86400) text = Math.floor(s / 3600) + ' h';
+		else if(s < 30 * 86400){
+			var d = Math.floor(s / 86400);
+			text = d + (d == 1 ? ' day' : ' days');
+		}
+		else return 'on ' + new Date(ts * 1000).format('%e %b %Y').trim();
+		return text + ' ago';
+	},
+
+	lineText: function(){
+		var self = this,
+			m = self.movie,
+			stage = self.stage(),
+			rel, when, from;
+
+		if(stage == 4){
+			rel = self.newestRelease(['done', 'seeding']);
+			var file = ((m.data.files || {}).movie || [])[0],
+				sep = Api.getOption('path_sep') || '/',
+				folder = file ? file.split(sep).slice(0, -1).join(sep) : null;
+			if(!rel || !rel.last_edit) return folder;
+			return 'In your library since ' + self.ago(rel.last_edit).replace(/^on /, '') + (folder ? ' · ' + folder : '');
+		}
+		if(stage == 3){
+			rel = self.newestRelease(['downloaded']);
+			if(!rel || !rel.last_edit) return null;
+			return 'Downloaded ' + self.ago(rel.last_edit) + ' · moving to your library';
+		}
+		if(stage == 2){
+			rel = self.newestRelease(['snatched']);
+			if(!rel || !rel.last_edit) return null;
+			from = rel.info ? (rel.info.provider || '') + (rel.info.provider_extra || '') : '';
+			return 'Snatched ' + self.ago(rel.last_edit) + (from ? ' from ' + from : '');
+		}
+		return null;
+	},
+
+	fillLine: function(){
+		var text = this.lineText();
+		this.status_line.set('text', text || '');
+		this.status_line.setStyle('display', text ? '' : 'none');
 	},
 
 	// ----- Buttons -----
@@ -790,6 +857,10 @@ var MovieDetails = new Class({
 
 		App.addEvent('history.push', self.outer_click);
 
+		// Recount "2 h ago" every minute, in the browser only
+		if(self.status_line)
+			self.line_timer = setInterval(self.fillLine.bind(self), 60000);
+
 	},
 
 	keyup: function(e) {
@@ -815,6 +886,7 @@ var MovieDetails = new Class({
 		self.el.removeClass('show');
 
 		App.removeEvent('history.push', self.outer_click);
+		clearInterval(self.line_timer);
 	}
 });
 

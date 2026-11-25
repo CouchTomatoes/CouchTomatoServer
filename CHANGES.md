@@ -10,6 +10,10 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: Movie details (Hero and Poster) now says where the movie is in one line under the steps:
+  "Snatched 2 h ago from YTS", "Downloaded 3 h ago · moving to your library" or "In your library since …".
+  The times count up by themselves while the page is open.
+
 * New: a small NEW tag marks things added in recent updates (the History page and Settings → Screens for
   now). Turn them all off in Settings → Screens → Show NEW tags; each tag also goes away by itself after a
   few months.
