@@ -14,6 +14,9 @@ Releases up to v4.0.69 have their notes on the
   one row per indexer). It asks by IMDb id first, falls back to title + year, and sends magnet links when the indexer has them.
 * Fix: with debug logging on, the log no longer contains your indexers' API keys and passkeys (a low-level HTTP
   library was writing every request URL unmasked).
+* New: Home has a view switch (top right): Sections (each list as one row of posters with "See all") and Dashboard
+  (Wanted / Snatched / Available / In library counts, then every list as a compact card), next to Classic, which stays
+  the default. Settings → Screens → Home sets it too, and the choice is saved for every browser.
 
 ### v4.0.75 (2026-11-25)
 
