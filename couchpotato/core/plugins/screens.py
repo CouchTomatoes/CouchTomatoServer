@@ -5,6 +5,7 @@
 DETAILS_VIEWS = ('poster', 'hero', 'classic')
 DETAILS_BACKDROPS = ('full', 'small', 'none')
 HOME_VIEWS = ('classic', 'sections', 'dashboard')
+LIST_VIEWS = ('classic', 'posters', 'list')  # Wanted and Manage
 
 config = [{
     'name': 'screens',
@@ -23,6 +24,38 @@ config = [{
                     'type': 'dropdown',
                     'values': [('Classic', 'classic'), ('Sections', 'sections'), ('Dashboard', 'dashboard')],
                     'description': 'Classic: the old CouchPotato look. Sections: each list as a row of posters. Dashboard: counts on top, then every list as a compact card.',
+                },
+            ],
+        },
+        {
+            'tab': 'screens',
+            'name': 'wanted',
+            'label': 'Wanted',
+            'description': 'Movies → Wanted. The switch at the top of that page changes this too.',
+            'options': [
+                {
+                    'name': 'wanted_view',
+                    'label': 'Opens in',
+                    'default': 'classic',
+                    'type': 'dropdown',
+                    'values': [('Classic', 'classic'), ('Posters', 'posters'), ('List', 'list')],
+                    'description': 'Classic: the old CouchPotato look. Posters: a poster grid with search and A-Z always shown. List: one line per movie.',
+                },
+            ],
+        },
+        {
+            'tab': 'screens',
+            'name': 'manage',
+            'label': 'Manage',
+            'description': 'Movies → Manage (your library). The switch at the top of that page changes this too.',
+            'options': [
+                {
+                    'name': 'manage_view',
+                    'label': 'Opens in',
+                    'default': 'classic',
+                    'type': 'dropdown',
+                    'values': [('Classic', 'classic'), ('Posters', 'posters'), ('List', 'list')],
+                    'description': 'Classic: the old CouchPotato look. Posters: a poster grid with search and A-Z always shown. List: one line per movie.',
                 },
             ],
         },
@@ -74,8 +107,12 @@ def frontendOptions(get_setting):
     backdrop = get_setting('details_backdrop', section = 'screens', default = 'full')
     show_new = get_setting('show_new_tags', section = 'screens', default = True)
     home = get_setting('home_view', section = 'screens', default = 'classic')
+    wanted = get_setting('wanted_view', section = 'screens', default = 'classic')
+    manage = get_setting('manage_view', section = 'screens', default = 'classic')
     return {
         'home_view': home if home in HOME_VIEWS else 'classic',
+        'wanted_view': wanted if wanted in LIST_VIEWS else 'classic',
+        'manage_view': manage if manage in LIST_VIEWS else 'classic',
         'details_view': view if view in DETAILS_VIEWS else 'poster',
         'details_backdrop': backdrop if backdrop in DETAILS_BACKDROPS else 'full',
         'show_new_tags': asBool(show_new, True),

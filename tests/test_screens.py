@@ -31,7 +31,7 @@ class FrontendOptionsTest(unittest.TestCase):
 
     def test_defaults_when_nothing_saved(self):
         self.assertEqual(screens.frontendOptions(getter({})),
-                         {'home_view': 'classic', 'details_view': 'poster', 'details_backdrop': 'full', 'show_new_tags': True})
+                         {'home_view': 'classic', 'wanted_view': 'classic', 'manage_view': 'classic', 'details_view': 'poster', 'details_backdrop': 'full', 'show_new_tags': True})
 
     def test_saved_values_are_passed_through(self):
         for view in screens.DETAILS_VIEWS:
@@ -40,12 +40,17 @@ class FrontendOptionsTest(unittest.TestCase):
                 self.assertEqual((got['details_view'], got['details_backdrop']), (view, backdrop))
 
     def test_unknown_values_fall_back(self):
-        got = screens.frontendOptions(getter({'home_view': 'Sections', 'details_view': 'Hero ', 'details_backdrop': 'huge', 'show_new_tags': 'maybe'}))
-        self.assertEqual(got, {'home_view': 'classic', 'details_view': 'poster', 'details_backdrop': 'full', 'show_new_tags': True})
+        got = screens.frontendOptions(getter({'home_view': 'Sections', 'wanted_view': 'grid', 'manage_view': 'Posters', 'details_view': 'Hero ', 'details_backdrop': 'huge', 'show_new_tags': 'maybe'}))
+        self.assertEqual(got, {'home_view': 'classic', 'wanted_view': 'classic', 'manage_view': 'classic', 'details_view': 'poster', 'details_backdrop': 'full', 'show_new_tags': True})
 
     def test_home_view_passed_through(self):
         for view in screens.HOME_VIEWS:
             self.assertEqual(screens.frontendOptions(getter({'home_view': view}))['home_view'], view)
+
+    def test_wanted_and_manage_views_passed_through(self):
+        for view in screens.LIST_VIEWS:
+            got = screens.frontendOptions(getter({'wanted_view': view, 'manage_view': view}))
+            self.assertEqual((got['wanted_view'], got['manage_view']), (view, view))
 
     def test_show_new_tags_reads_bools_and_settings_text(self):
         for saved, want in ((True, True), (False, False), ('1', True), ('0', False), ('False', False), ('True', True)):
@@ -56,7 +61,8 @@ class FrontendOptionsTest(unittest.TestCase):
         get = getter({})
         screens.frontendOptions(get)
         self.assertEqual(sorted(get.calls), [('screens', 'details_backdrop'), ('screens', 'details_view'),
-                                             ('screens', 'home_view'), ('screens', 'show_new_tags')])
+                                             ('screens', 'home_view'), ('screens', 'manage_view'),
+                                             ('screens', 'show_new_tags'), ('screens', 'wanted_view')])
 
     def test_settings_dropdowns_match_what_the_page_accepts(self):
         options = {o['name']: o for g in screens.config[0]['groups'] for o in g['options']}
@@ -64,6 +70,9 @@ class FrontendOptionsTest(unittest.TestCase):
         self.assertEqual(tuple(v for _, v in options['details_backdrop']['values']), screens.DETAILS_BACKDROPS)
         self.assertEqual(tuple(v for _, v in options['home_view']['values']), screens.HOME_VIEWS)
         self.assertEqual(options['home_view']['default'], 'classic')  # existing screens open in Classic (locked 11-20)
+        for key in ('wanted_view', 'manage_view'):
+            self.assertEqual(tuple(v for _, v in options[key]['values']), screens.LIST_VIEWS)
+            self.assertEqual(options[key]['default'], 'classic')
         self.assertEqual(options['details_view']['default'], 'poster')
         self.assertEqual(options['details_backdrop']['default'], 'full')
         self.assertEqual((options['show_new_tags']['type'], options['show_new_tags']['default']), ('bool', True))
