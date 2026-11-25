@@ -31,6 +31,8 @@ var MovieDetailsStyle = [
 	'.mdx-wrap:not(.mdx-v-classic).mdx-bd-full.mdx-has-bd .scroll_content{background:#161616}',
 	'.mdx-wrap:not(.mdx-v-classic).mdx-bd-full.mdx-has-bd .mdx-switch .mdx-seg{background:rgba(0,0,0,.45);border-color:rgba(255,255,255,.3)}',
 	'.mdx-wrap:not(.mdx-v-classic).mdx-bd-full.mdx-has-bd .mdx-switch .mdx-seg button:not(.on){color:#ddd}',
+	// Tables (Releases, Files) are unreadable straight on a busy backdrop: give the sections a solid-ish panel.
+	'.mdx-wrap:not(.mdx-v-classic).mdx-bd-full.mdx-has-bd .mdx-sections{background:rgba(18,18,18,.88);border-radius:8px}',
 	'.mdx-wrap .scroll_content > *{position:relative;z-index:1}',
 	'.mdx-wrap .scroll_content > .mdx-bg{position:sticky;z-index:0}',
 	'.mdx-wrap .scroll_content > .mdx-switch{z-index:3}',

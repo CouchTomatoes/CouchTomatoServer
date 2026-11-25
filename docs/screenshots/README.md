@@ -97,3 +97,16 @@ Seeded 51 events spread over 400 days, plus 2 real "added" events from `movie.ad
 - `2026-11-20-history-imported-archive.png` — one imported file on the page (ARCHIVE tags,
   "Remove from page"). The gap over files not imported says "in archive files, not on this page"
   and "History began here" shows the real first day, not the oldest live day.
+
+## 2026-11-24 — Movie details views (board #95, PR 1), real local boot
+
+Releases were seeded through a test-only plugin in the scratch data dir (never in the repo).
+- `2026-11-24-details-poster-releases.png` — Poster view, no backdrop: The Matrix with one snatched
+  release, steps ✓ Wanted ✓ Snatched → Downloading, Releases table under the actions.
+- `2026-11-24-details-hero-full-releases.png` — Hero view, Full backdrop. The Releases table now sits on
+  a dark panel: straight on the backdrop its middle columns were unreadable (found in this test).
+- `2026-11-24-details-poster-dark-in-library.png` — dark theme, Oppenheimer done: all four steps ✓.
+- `2026-11-24-details-phone-hero.png` — 390px wide, Hero + Full: switch clickable, no sideways scroll.
+- `2026-11-24-details-hero-small.png`, `-classic-full.png` — Small band, and Classic (old look, untouched).
+- `2026-11-24-details-more-menu.png`, `-trailer.png`, `-remove-confirm.png` — the ⋯ menu, the trailer
+  pop-up, and Remove asking first.
