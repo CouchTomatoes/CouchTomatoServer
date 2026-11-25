@@ -17,6 +17,9 @@ Releases up to v4.0.69 have their notes on the
 * New: Home has a view switch (top right): Sections (each list as one row of posters with "See all") and Dashboard
   (Wanted / Snatched / Available / In library counts, then every list as a compact card), next to Classic, which stays
   the default. Settings → Screens → Home sets it too, and the choice is saved for every browser.
+* New: Wanted and Manage have the same switch: Posters or List show the search box, A–Z and the page's buttons
+  (Search all wanted, Manual folder scan / Full library refresh, Quick library scan) right on the page instead of in
+  menus. Classic stays the default; Settings → Screens has one picker per page.
 
 ### v4.0.75 (2026-11-25)
 
