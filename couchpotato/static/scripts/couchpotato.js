@@ -445,10 +445,7 @@
 						'text': '⇽ Drag this to your bookmarks'
 					})
 				)
-			),
-			new Element('img', {
-				'src': 'https://couchpota.to/media/images/userscript.gif'
-			})
+			)
 		);
 	},
 
