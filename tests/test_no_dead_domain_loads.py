@@ -44,6 +44,15 @@ class NoDeadDomainLoadsTest(unittest.TestCase):
                         hits.append('%s:%d' % (os.path.relpath(path, root), n))
         self.assertEqual(hits, [], 'loads from the parked couchpota.to domain')
 
+    def test_donate_link_points_at_the_github_repo(self):
+        # The menu's Donate link used to open couchpota.to/support/ (the ad-serving parked page).
+        for rel in ('couchpotato/static/scripts/couchpotato.js',
+                    'couchpotato/static/scripts/combined.base.min.js'):
+            with open(os.path.join(root, rel), encoding = 'utf-8') as f:
+                src = f.read()
+            self.assertNotIn('couchpota.to/support', src, rel)
+            self.assertIn('github.com/CouchTomatoes/CouchTomatoServer', src, rel)
+
 
 if __name__ == '__main__':
     unittest.main()
