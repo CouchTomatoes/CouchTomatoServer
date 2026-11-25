@@ -8,7 +8,33 @@ number and date.
 Releases up to v4.0.69 have their notes on the
 [GitHub Releases page](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
 
-### Unreleased
+### v4.0.73 (2026-11-25)
+
+* New: Movie details has Subtitles (Poster: under Releases; Hero: a tab). Pick a language, see what yts-subs.com has
+  for the movie with the one made for your release marked, and choose one: in the library it replaces
+  `<movie>.<lang>.srt` at once (the old file kept as `.srt.bak`); still downloading, it's used when the movie arrives.
+* Fix: automatic subtitles now find Spanish and Persian (they never matched), and yts-subs ratings are read again
+  (every subtitle scored 0, so the best-rated one wasn't preferred).
+* New: Movie details shows a download live: the "Downloading" step fills up as a progress bar with the %, the
+  line under it adds "downloading for 1 h 12 m · 18 min left", and it all updates every 10 s without a reload while
+  the page is open (Transmission, Deluge, qBittorrent, rTorrent, uTorrent, SABnzbd, NZBGet, put.io).
+* New: Movie details (Hero and Poster) now says where the movie is in one line under the steps:
+  "Snatched 2 h ago from YTS", "Downloaded 3 h ago · moving to your library" or "In your library since …".
+  The times count up by themselves while the page is open.
+
+* New: a small NEW tag marks things added in recent updates (the History page and Settings → Screens for
+  now). Turn them all off in Settings → Screens → Show NEW tags; each tag also goes away by itself after a
+  few months.
+
+* New: a redesigned movie details page. Pick **Poster** (poster and facts on the left), **Hero** (a wide
+  banner) or **Classic** (the old look), and a **Full**, **Small** or no backdrop, with the switch at the
+  top of the page or in Settings → Screens. Your choice is saved on the server, so every browser and phone
+  opens the same way. It shows where the movie is (Wanted → Snatched → Downloading → In library) and adds
+  Search now, a Trailer pop-up, and Quality and Category menus right on the page.
+
+* New: an official Docker image, `ghcr.io/couchtomatoes/couchtomato` (amd64 and arm64, so it runs on a
+  Raspberry Pi too), published with every release. Files are written as your own user (`PUID`/`PGID`),
+  and inside Docker the updater tells you when to pull a new image instead of trying to update itself.
 
 ### v4.0.72 (2026-11-25)
 

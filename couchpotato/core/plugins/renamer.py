@@ -1046,6 +1046,9 @@ Remove it if you want it to be renamed (again, or at least let it try again)
 
             release_downloads = fireEvent('download.status', download_ids, merge = True) if download_ids else []
 
+            # Movie details shows the % and time left live (in memory only)
+            fireEvent('download.live.update', rels, release_downloads or [], full = True, single = True)
+
             if len(no_status_support) > 0:
                 log.debug('Download status functionality is not implemented for one of the active downloaders: %s', list(set(no_status_support)))
 

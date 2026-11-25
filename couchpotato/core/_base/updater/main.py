@@ -37,6 +37,8 @@ class Updater(Plugin):
 
         if Env.get('desktop'):
             self.updater = DesktopUpdater()
+        elif os.environ.get('COUCHTOMATO_DOCKER'):
+            self.updater = DockerUpdater()
         elif os.path.isdir(os.path.join(Env.get('app_dir'), '.git')):
             git_default = 'git'
             git_command = self.conf('git_command', default = git_default)
@@ -92,7 +94,7 @@ class Updater(Plugin):
         except:
             log.error('Failed checking last time to update: %s', traceback.format_exc())
 
-        if do_check and self.isEnabled() and self.check() and self.conf('automatic') and not self.updater.update_failed:
+        if do_check and self.isEnabled() and self.check() and self.automatic() and not self.updater.update_failed:
 
             if self.updater.doUpdate():
                 # The "updated" notification waits until the new version has answered (confirmUpdate)
@@ -107,14 +109,21 @@ class Updater(Plugin):
             return
 
         if self.updater.check():
-            if not self.available_notified and self.conf('notification') and not self.conf('automatic'):
+            if not self.available_notified and self.conf('notification') and not self.automatic():
                 info = self.updater.info()
                 version_date = datetime.fromtimestamp(info['update_version']['date'])
-                fireEvent('updater.available', message = 'A new update with hash "%s" is available, this version is from %s' % (info['update_version']['hash'], version_date), data = info)
+                message = 'A new update with hash "%s" is available, this version is from %s' % (info['update_version']['hash'], version_date)
+                if not self.updater.can_update:
+                    message += '. ' + self.updater.how_to_update
+                fireEvent('updater.available', message = message, data = info)
                 self.available_notified = True
             return True
 
         return False
+
+    def automatic(self):
+        """ Automatic updates only where the updater can replace its own files (not inside a Docker image). """
+        return bool(self.conf('automatic')) and self.updater.can_update
 
     def confirmUpdate(self):
         """ After an automatic update: report a rollback, or confirm the new version once its own API answers. """
@@ -215,6 +224,8 @@ class BaseUpdater(Plugin):
     branch = version.BRANCH
 
     version = None
+    can_update = True     # False: the app can't replace itself (Docker); it only reports new versions
+    how_to_update = ''
     update_failed = False
     update_version = None
     last_check = 0
@@ -520,6 +531,33 @@ class SourceUpdater(BaseUpdater):
             log.warning('Failed getting latest commit from github: %s', e)
 
         return {}
+
+
+class DockerUpdater(SourceUpdater):
+    """ Inside the official Docker image the code is part of the image, so the app never overwrites itself:
+    a self-update would vanish on the next container re-create. It still checks GitHub and says how to update.
+    The image's commit and date are baked in at build time (docker-version.json), so the version is exact. """
+
+    can_update = False
+    how_to_update = 'Running in Docker: update by pulling the new image (docker compose pull && docker compose up -d).'
+    baked_file = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))), 'docker-version.json')
+
+    def __init__(self):
+        if os.path.isfile(self.baked_file):
+            self.version_file = self.baked_file
+        else:
+            super(DockerUpdater, self).__init__()
+
+    def doUpdate(self):
+        log.info(self.how_to_update)
+        return False
+
+    def getVersion(self):
+        output = super(DockerUpdater, self).getVersion()
+        if output and output.get('type') != 'docker':
+            output['type'] = 'docker'
+            output['repr'] = output['repr'].replace('source:', 'docker:', 1)
+        return output
 
 
 class DesktopUpdater(BaseUpdater):

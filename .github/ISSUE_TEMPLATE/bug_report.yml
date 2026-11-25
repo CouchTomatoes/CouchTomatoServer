@@ -1,0 +1,73 @@
+name: Bug report
+description: Something in CouchTomato doesn't work the way it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please check the [FAQ](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ) and [existing issues](https://github.com/CouchTomatoes/CouchTomatoServer/issues?q=is%3Aissue) first.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+      placeholder: I added "The Matrix (1999)" and pressed Search now. I expected releases from YTS, but…
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to …
+        2. Click …
+        3. See …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: CouchTomato version
+      description: Settings → About, or the release you downloaded.
+      placeholder: v4.0.71
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run it?
+      options:
+        - Windows installer / zip
+        - macOS app (DMG)
+        - Linux tar.gz / AppImage
+        - From source (git)
+        - Docker
+        - Raspberry Pi / NAS
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: Raspberry Pi OS 12 (arm64), Windows 11, macOS 15…
+  - type: input
+    id: parts
+    attributes:
+      label: Providers and download client involved
+      placeholder: YTS, ThePirateBay → Transmission 4.0
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines
+      description: From Settings → Logs. Remove API keys, passwords and your IP addresses before pasting.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues (open and closed) and this isn't one of them.
+          required: true
+        - label: I removed passwords and API keys from the logs above.
+          required: true

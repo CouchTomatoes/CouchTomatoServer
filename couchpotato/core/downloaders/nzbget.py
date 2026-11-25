@@ -6,7 +6,7 @@ import socket
 import traceback
 import xmlrpc.client
 
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta
 from couchpotato.core.helpers.encoding import ss, sp
 from couchpotato.core.helpers.variable import tryInt, md5, cleanHost
 from couchpotato.core.logger import CPLog
@@ -169,6 +169,8 @@ class NZBGet(DownloaderBase):
                     'original_status': 'DOWNLOADING' if nzb['ActiveDownloads'] > 0 else 'QUEUED',
                     # Seems to have no native API function for time left. This will return the time left after NZBGet started downloading this item
                     'timeleft': timeleft,
+                    'progress': toProgress(nzb.get('FileSizeMB', 0) - nzb.get('RemainingSizeMB', 0), whole = nzb.get('FileSizeMB', 0)) if nzb.get('FileSizeMB') else None,
+                    'eta': toEta(nzb['RemainingSizeMB'] * 1048576 / status['DownloadRate']) if timeleft != -1 and status.get('DownloadRate') else None,
                 })
 
         for nzb in queue:  # 'Parameters' is not passed in rpc.postqueue

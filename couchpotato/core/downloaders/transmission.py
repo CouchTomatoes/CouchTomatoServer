@@ -6,7 +6,7 @@ import os.path
 import re
 import urllib.request, urllib.error, urllib.parse
 
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta
 from couchpotato.core.helpers.encoding import isInt, sp
 from couchpotato.core.helpers.variable import tryInt, tryFloat, cleanHost
 from couchpotato.core.logger import CPLog
@@ -138,7 +138,7 @@ class Transmission(DownloaderBase):
         release_downloads = ReleaseDownloadList(self)
 
         return_params = {
-            'fields': ['id', 'name', 'hashString', 'percentDone', 'status', 'eta', 'isStalled', 'isFinished', 'downloadDir', 'uploadRatio', 'secondsSeeding', 'seedIdleLimit', 'files']
+            'fields': ['id', 'name', 'hashString', 'percentDone', 'status', 'eta', 'isStalled', 'isFinished', 'downloadDir', 'uploadRatio', 'secondsSeeding', 'seedIdleLimit', 'files', 'addedDate', 'doneDate']
         }
 
         session = self.trpc.get_session()
@@ -187,6 +187,10 @@ class Transmission(DownloaderBase):
                     'original_status': torrent['status'],
                     'seed_ratio': torrent['uploadRatio'],
                     'timeleft': str(timedelta(seconds = torrent['eta'])),
+                    'progress': toProgress(torrent['percentDone']),
+                    'eta': toEta(torrent['eta']),
+                    'added': torrent.get('addedDate') or None,
+                    'done': torrent.get('doneDate') or None,
                     'folder': sp(torrent_folder if len(torrent_files) == 1 else os.path.join(torrent_folder, torrent['name'])),
                     'files': torrent_files
                 })

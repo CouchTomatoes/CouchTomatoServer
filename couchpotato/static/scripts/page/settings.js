@@ -238,6 +238,9 @@ Page.Settings = new Class({
 			}).adopt()
 		).inject(self.tabs_container);
 
+		var new_tag = App.newTag(self.name + '.' + tab_name);
+		if(new_tag) new_tag.inject(tab_el.getElement('a'));
+
 		if(!self.tabs[tab_name])
 			self.tabs[tab_name] = {
 				'label': label

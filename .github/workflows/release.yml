@@ -533,3 +533,70 @@ jobs:
             "$APP_TARBALL" \
             --repo "${{ github.repository }}" \
             --clobber
+
+  # Official Docker image: ghcr.io/couchtomatoes/couchtomato:<version> and :latest, for
+  # linux/amd64 and linux/arm64 (Raspberry Pi 4/5). The app is pure Python and every pip
+  # dependency ships arm64 wheels, so QEMU emulation builds the arm64 half in a few minutes
+  # without a second runner. Inside the image the updater only reports new versions
+  # (DockerUpdater) - users update by pulling the new tag.
+  build-docker:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Image name and build stamp
+        id: meta
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          version="${{ needs.release.outputs.version }}"
+          {
+            echo "image=ghcr.io/${owner}/couchtomato"
+            echo "version=${version#v}"
+            echo "date=$(git log -1 --format=%ct)"
+          } >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          build-args: |
+            VCS_REF=${{ github.sha }}
+            VCS_DATE=${{ steps.meta.outputs.date }}
+            VERSION=${{ steps.meta.outputs.version }}
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}
+            ${{ steps.meta.outputs.image }}:latest
+
+      - name: Smoke-test the pushed image
+        run: |
+          image="${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}"
+          docker run -d --name ct -p 5050:5050 "$image"
+          for _ in $(seq 1 45); do
+            if curl -fsS -o /dev/null http://127.0.0.1:5050/; then ok=1; break; fi
+            sleep 2
+          done
+          docker logs ct 2>&1 | grep -E '=== VERSION|Traceback' || true
+          test "${ok:-}" = 1 || { echo "::error::the image did not answer on :5050 within 90 s"; docker logs ct | tail -40; exit 1; }
+          docker logs ct 2>&1 | grep -q 'using DockerUpdater' || { echo "::error::updater is not DockerUpdater inside the image"; exit 1; }
+          echo "### Docker: \`$image\` pushed (amd64 + arm64) and answers on :5050" >> "$GITHUB_STEP_SUMMARY"
