@@ -173,7 +173,7 @@ class Subtitle(Plugin):
             # 404 = yts-subs has no page for this movie yet (common for new releases)
             log.info('No subtitle page on yts-subs for %s: %s', (identifier, e))
             return None
-        return parseSubtitles(toUnicode(page or ''), lang)
+        return parseSubtitles(pageText(page), lang)
 
     # ----- Movie details -> Subtitles -----
 
@@ -209,7 +209,7 @@ class Subtitle(Plugin):
         if identifier:
             try:
                 page = self.getCache('yts-subs.%s' % identifier, self.search_url % identifier, show_error = False)
-                rows = parseSubtitles(toUnicode(page or ''))
+                rows = parseSubtitles(pageText(page))
             except Exception as e:
                 log.info('No subtitle page on yts-subs for %s: %s', (identifier, e))
                 rows = []
@@ -298,6 +298,14 @@ class Subtitle(Plugin):
         return splitString(self.conf('languages'))
 
 
+def pageText(page):
+    """ getCache gives bytes; toUnicode(bytes) is the "b'...'" repr, where every newline is a literal \\n and the
+    rating regex never matched (all ratings 0) """
+    if isinstance(page, bytes):
+        return page.decode('utf-8', 'replace')
+    return page or ''
+
+
 # yts-subs names that are not plain language names
 SITE_LANGUAGES = {
     'farsi/persian': 'fa',
@@ -379,23 +387,30 @@ def parseSubtitles(html, language = None):
 
 
 def madeFor(releases):
-    """ What a subtitle was timed for, in a word: YIFY, a release group, WEB or BluRay; '+ SDH' for hearing impaired """
-    words = set(re.split(r'[\W_]+', ' '.join(releases).lower()))
-    if words & {'yify', 'yts'}:
-        kind = 'YIFY'
-    else:
-        group = re.search(r'-([A-Za-z0-9]+)(?:\.[A-Za-z]{2,4})*$', releases[0]) if releases else None
+    """ What a subtitle was timed for, in a word: YIFY, a release group, WEB or BluRay (from the first name it lists),
+    ', YIFY' when a YTS release is also listed, '· SDH' for hearing impaired """
+    if not releases:
+        return ''
+
+    def kind(name):
+        words = set(re.split(r'[\W_]+', name.lower()))
+        if words & {'yify', 'yts'}:
+            return 'YIFY'
+        group = re.search(r'-([A-Za-z0-9]+)(?:\.[A-Za-z]{2,4})*$', name)
         if group and not group.group(1).isdigit():
-            kind = group.group(1)
-        elif words & {'web', 'webrip', 'webdl'}:
-            kind = 'WEB'
-        elif words & {'bluray', 'brrip', 'bdrip'}:
-            kind = 'BluRay'
-        else:
-            kind = ''
-    if words & {'sdh', 'hi'}:
-        kind = (kind + ' · SDH').strip(' ·')
-    return kind
+            return group.group(1)
+        if words & {'web', 'webrip', 'webdl'}:
+            return 'WEB'
+        if words & {'bluray', 'brrip', 'bdrip'}:
+            return 'BluRay'
+        return ''
+
+    text = kind(releases[0])
+    if text != 'YIFY' and any(kind(r) == 'YIFY' for r in releases[1:]):
+        text = (text + ', YIFY').strip(', ')
+    if set(re.split(r'[\W_]+', ' '.join(releases).lower())) & {'sdh', 'hi'}:
+        text = (text + ' · SDH').strip(' ·')
+    return text
 
 
 def matchScore(candidate, release_name):

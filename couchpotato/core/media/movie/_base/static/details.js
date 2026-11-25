@@ -106,6 +106,27 @@ var MovieDetailsStyle = [
 	'.mdx-menu .sub{padding-left:32px;font-size:12px}',
 	'.mdx-menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}',
 
+	// Subtitles (Poster: a section under Releases; Hero: a tab). Classic never shows them.
+	'.mdx-v-classic .section_subtitles,.mdx-tabs{display:none}',
+	'.mdx-v-hero .mdx-tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:4px 20px 0;padding:0}',
+	'.mdx-tabs a{padding:9px 14px;font-size:14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}',
+	'.mdx-tabs a.on{color:var(--text);border-bottom-color:var(--acc);font-weight:600}',
+	'.mdx-v-hero:not(.mdx-tab-subs) .section_subtitles{display:none}',
+	'.mdx-v-hero.mdx-tab-subs .mdx-sections > .section:not(.section_subtitles){display:none}',
+	'.mdx-subs{font-size:13px}',
+	'.mdx-subs h3{font-size:15px;font-weight:600;margin:6px 0 0}',
+	'.mdx-v-hero .mdx-subs h3{display:none}',
+	'.mdx-subs .mdx-subhead{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0}',
+	'.mdx-subs .mdx-note{font-size:12px;color:var(--muted)}',
+	'.mdx-subs .mdx-card{border:1px solid var(--line);border-radius:6px;padding:9px 12px;margin-top:8px}',
+	'.mdx-subs .mdx-sub{display:flex;align-items:center;gap:12px}',
+	'.mdx-subs .mdx-sub > div{flex:1;min-width:0}',
+	'.mdx-subs .mdx-sname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+	'.mdx-subs .mdx-ok{display:inline-block;font-size:11px;font-weight:700;border-radius:3px;padding:1px 7px;white-space:nowrap;background:var(--ok-bg);color:var(--ok)}',
+	'.mdx-subs .mdx-more{display:inline-block;margin-top:8px;cursor:pointer;color:var(--acc)}',
+	'.mdx-subs .mdx-err{color:#c4002f}',
+	'.dark .mdx-subs .mdx-err,.mdx-wrap.dark .mdx-subs .mdx-err{color:#ff7b8a}',
+
 	// White text on a backdrop (Small band, Hero only; Full is the dark theme already)
 	'.mdx-v-hero.mdx-bd-small.mdx-has-bd .mdx-top{color:#fff;min-height:230px;align-items:flex-end;box-sizing:border-box}',
 	'.mdx-v-hero.mdx-bd-small.mdx-has-bd .mdx-top .mdx-btn:not(.solid){color:#fff;border-color:rgba(255,255,255,.55)}',
@@ -346,8 +367,10 @@ var MovieDetails = new Class({
 			self.slot.grab(self.sections_el);
 		else
 			self.sections_el.inject(self.content);
+		if(self.tabs_el) self.tabs_el.inject(self.sections_el, 'before');
 
 		self.closeMenus();
+		self.showTab(self.tab);
 	},
 
 	// ----- Poster / Hero top part -----
@@ -964,6 +987,185 @@ var MovieDetails = new Class({
 		}
 	},
 
+	// ----- Subtitles (part 3): Poster = a section under Releases, Hero = a tab -----
+
+	createSubtitles: function(){
+		var self = this;
+		if(self.subs_el) return;
+
+		self.subs = {'language': null, 'all': false};
+		self.subs_el = new Element('div.mdx-subs').adopt(
+			new Element('h3', {'text': 'Subtitles'}).adopt(App.newTag('details.subtitles')),
+			self.subs_body = new Element('div')
+		);
+		self.addSection('subtitles', self.subs_el);
+
+		// Hero: tabs over the sections
+		// The first tab holds every other section: Releases (Wanted list) or only Files (library list)
+		var count = (self.movie.data.releases || []).length,
+			first = self.sections.releases ? 'Releases' + (count ? ' (' + count + ')' : '') : (self.sections.files ? 'Files' : 'Releases');
+		self.tabs_el = new Element('div.mdx-tabs').adopt(
+			self.tab_rel = new Element('a', {
+				'text': first,
+				'events': {'click': function(){ self.showTab('rel'); }}
+			}),
+			self.tab_subs = new Element('a', {
+				'text': 'Subtitles',
+				'events': {'click': function(){ self.showTab('subs'); }}
+			}).adopt(App.newTag('details.subtitles'))
+		).inject(self.sections_el, 'before');
+
+		self.subs_saved = function(notification){
+			var d = notification.data || {};
+			if(d.media_id != self.movie.get('_id') || !self.subs.data || d.language != self.subs.data.language) return;
+			self.subs.data.chosen = d.slug;
+			self.subs.data.has_file = true;
+			self.paintSubtitles();
+		};
+		App.on('subtitle.saved', self.subs_saved);
+
+		self.showTab(self.tab);
+	},
+
+	showTab: function(tab){
+		var self = this;
+		self.tab = tab || 'rel';
+		if(!self.tabs_el) return;
+
+		self.wrap[self.tab == 'subs' ? 'addClass' : 'removeClass']('mdx-tab-subs');
+		self.tab_rel[self.tab == 'rel' ? 'addClass' : 'removeClass']('on');
+		self.tab_subs[self.tab == 'subs' ? 'addClass' : 'removeClass']('on');
+
+		// Ask yts-subs.com only once the list is on screen
+		if(self.view == 'poster' || (self.view == 'hero' && self.tab == 'subs'))
+			if(!self.subs.data && !self.subs.loading) self.loadSubtitles();
+	},
+
+	loadSubtitles: function(language){
+		var self = this;
+		self.subs.loading = true;
+		self.subs.all = false;
+		self.subs_body.empty().grab(new Element('div.mdx-note', {'text': 'Looking on yts-subs.com…'}));
+
+		Api.request('subtitle.search', {
+			'data': language ? {'id': self.movie.get('_id'), 'language': language} : {'id': self.movie.get('_id')},
+			'onComplete': function(json){
+				self.subs.loading = false;
+				if(!json || !json.success){
+					self.subs.data = null;
+					self.subs_body.empty().grab(new Element('div.mdx-card.mdx-err', {
+						'text': (json && json.error) || 'Could not reach yts-subs.com. Try again later.'
+					}));
+					return;
+				}
+				self.subs.data = json;
+				self.paintSubtitles();
+			}
+		});
+	},
+
+	paintSubtitles: function(){
+		var self = this,
+			d = self.subs.data,
+			body = self.subs_body;
+		if(!d) return;
+
+		body.empty();
+
+		var langs = (d.languages || []).map(function(l){
+			return {'text': l.name + (l.count ? ' (' + l.count + ')' : ''), 'value': l.code};
+		});
+		var head = new Element('div.mdx-subhead').inject(body);
+		self.createPicker('Language', langs, d.language, function(item){
+			self.loadSubtitles(item.value);
+			self.toast('Showing ' + item.text.replace(/ \(\d+\)$/, '') + ' subtitles');
+		}).inject(head);
+		new Element('span.mdx-note', {'html': 'From yts-subs.com · no account · saved as <b></b> next to the movie, so Plex shows it'})
+			.inject(head).getElement('b').set('text', d.filename);
+
+		var chosen = null;
+		(d.subtitles || []).each(function(x){ if(x.slug == d.chosen) chosen = x; });
+
+		var card = new Element('div.mdx-card').inject(body);
+		if(chosen) card.adopt(new Element('b', {'text': '✓ Chosen: '}), document.createTextNode(chosen.name + ' · ' + d.language_name + '. '));
+		else if(d.chosen) card.adopt(new Element('b', {'text': '✓ Chosen: '}), document.createTextNode(d.chosen + '. '));
+		else card.adopt(new Element('b', {'text': 'Automatic: '}), document.createTextNode('the best match for your release. '));
+		if(!d.in_library)
+			card.appendText('The movie is not in your library yet, so your choice is saved when it gets there. Once it is there, the button reads Replace and works straight away.');
+		else if(d.has_file)
+			card.appendText('Replace writes over ' + d.filename + ' straight away; the old one is kept as .srt.bak.');
+		else
+			card.appendText('Use this saves it next to the movie straight away.');
+
+		var list = d.subtitles || [];
+		if(!list.length){
+			new Element('div.mdx-card.mdx-note', {
+				'text': 'No ' + d.language_name + ' subtitles found for this movie on yts-subs.com.'
+			}).inject(body);
+			return;
+		}
+
+		var shown = self.subs.all ? list : list.slice(0, 8);
+		shown.each(function(x){
+			var meta = [d.language_name];
+			if(x.uploader) meta.push(x.uploader);
+			if(x.made_for) meta.push('made for ' + x.made_for);
+			meta.push('★ ' + x.rating);
+
+			var info = new Element('div').adopt(
+				new Element('div.mdx-sname', {'text': x.name, 'title': x.releases.join('\n')}),
+				new Element('div.mdx-note', {'text': meta.join(' · ') + ' '})
+			);
+			if(x.matches) info.getLast().grab(new Element('span.mdx-ok', {'text': 'matches your release'}));
+
+			var right;
+			if(x.slug == d.chosen && (!d.in_library || d.has_file))
+				right = new Element('span.mdx-ok', {'text': '✓ chosen'});
+			else
+				right = new Element('button.mdx-btn', {
+					'type': 'button',
+					'text': d.in_library && d.has_file ? 'Replace' : 'Use this',
+					'events': {
+						'click': function(e){
+							(e).stop();
+							self.chooseSubtitle(x, this);
+						}
+					}
+				});
+
+			new Element('div.mdx-card.mdx-sub').adopt(info, right).inject(body);
+		});
+
+		if(list.length > shown.length)
+			new Element('a.mdx-more', {
+				'text': 'Show all ' + list.length,
+				'events': {'click': function(){ self.subs.all = true; self.paintSubtitles(); }}
+			}).inject(body);
+	},
+
+	chooseSubtitle: function(x, button){
+		var self = this,
+			d = self.subs.data;
+
+		button.set({'text': d.in_library ? 'Saving…' : 'Choosing…', 'disabled': true});
+		Api.request('subtitle.choose', {
+			'data': {'id': self.movie.get('_id'), 'language': d.language, 'slug': x.slug},
+			'onComplete': function(json){
+				if(!json || !json.success){
+					button.set({'text': 'Try again', 'disabled': false});
+					self.toast((json && json.error) || 'Could not save that subtitle');
+					return;
+				}
+				d.chosen = x.slug;
+				if(json.saved) d.has_file = true;
+				self.paintSubtitles();
+				self.toast(json.saved
+					? 'Saved ' + json.filename + ' next to the movie'
+					: 'Chosen: ' + x.name + ' (' + d.language_name + ') · saved when the movie reaches your library');
+			}
+		});
+	},
+
 	// ----- Plugin hooks (unchanged) -----
 
 	addSection: function(name, section_el){
@@ -1015,6 +1217,7 @@ var MovieDetails = new Class({
 		App.on('release.update_status', self.status_changed);
 
 		self.startLive();
+		self.createSubtitles();
 
 	},
 
@@ -1044,6 +1247,12 @@ var MovieDetails = new Class({
 		clearInterval(self.line_timer);
 		App.off('release.update_status', self.status_changed);
 		self.stopLive();
+		if(self.subs_saved){
+			App.off('subtitle.saved', self.subs_saved);
+			self.subs_el.getParent('.section').destroy();
+			self.tabs_el.destroy();
+			self.subs_el = self.tabs_el = self.subs_saved = null;
+		}
 	}
 });
 

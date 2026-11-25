@@ -73,6 +73,8 @@ class LanguageTest(unittest.TestCase):
         self.assertEqual(madeFor(['Oppenheimer.2023.1080p.MA.WEB-DL.DDP5.1.Atmos.H.264']), 'WEB')
         self.assertEqual(madeFor(['Oppenheimer.2023.720p.BluRay.999MB.x264-GalaxyRG.Sdh']), 'GalaxyRG · SDH')
         self.assertEqual(madeFor([]), '')
+        # A YTS name further down the list doesn't make a FraMeSToR subtitle 'made for YIFY'
+        self.assertEqual(madeFor(['Oppenheimer.2023.BluRay.1080p.REMUX-FraMeSToR', 'Oppenheimer.2023.720p.BluRay.x264.[YTS.MX]']), 'FraMeSToR, YIFY')
 
 
 class ApiTest(unittest.TestCase):
@@ -131,6 +133,14 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(codes[:2], ['en', 'ur'])
         self.assertIn('ar', codes)
         self.assertEqual(r['languages'][0]['count'], 24)
+
+    def test_search_reads_the_bytes_getcache_really_returns(self):
+        # toUnicode(bytes) gave the b'...' repr: literal \n in every name and every rating 0
+        self.plugin.getCache.return_value = page().encode('utf-8')
+        subs = self.plugin.searchView(id = 'abc123')['subtitles']
+        self.assertEqual(len(subs), 24)
+        self.assertTrue(any(s['rating'] > 0 for s in subs))
+        self.assertFalse(any('\\n' in n for s in subs for n in s['releases']))
 
     def test_search_a_language_with_nothing(self):
         self.downloading()
