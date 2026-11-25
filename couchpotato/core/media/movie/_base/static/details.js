@@ -46,6 +46,8 @@ var MovieDetailsStyle = [
 
 	// Layout
 	'.mdx{position:relative;color:var(--text)}',
+	// Hero keeps the releases outside .mdx, so give them the same text colour (black on the dark Full backdrop otherwise)
+	'.mdx-sections{color:var(--text)}',
 	'.mdx-top{position:relative;display:flex;gap:22px;padding:18px 20px 20px}',
 	'.mdx-side{width:200px;flex:none}',
 	'.mdx-poster{position:relative;width:200px;height:300px;border-radius:4px;background:var(--off) center/cover no-repeat;box-shadow:0 6px 20px rgba(0,0,0,.35)}',
