@@ -168,7 +168,7 @@
 				self.block.navigation = new BlockHeader(self, {}),
 				self.block.search = new BlockSearch(self, {}),
 				self.support = new Element('a.donate.icon-donate', {
-					'href': 'https://couchpota.to/support/',
+					'href': 'https://github.com/CouchTomatoes/CouchTomatoServer',
 					'target': '_blank'
 				}).grab(
 					new Element('span', {
@@ -481,10 +481,7 @@
 						'text': '⇽ Drag this to your bookmarks'
 					})
 				)
-			),
-			new Element('img', {
-				'src': 'https://couchpota.to/media/images/userscript.gif'
-			})
+			)
 		);
 	},
 

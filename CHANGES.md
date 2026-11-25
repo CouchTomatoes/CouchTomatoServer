@@ -24,6 +24,12 @@ Releases up to v4.0.69 have their notes on the
   Raspberry Pi too), published with every release. Files are written as your own user (`PUID`/`PGID`),
   and inside Docker the updater tells you when to pull a new image instead of trying to update itself.
 
+### v4.0.72 (2026-11-25)
+
+* Fix: Settings → About and the bookmarklet no longer load anything from couchpota.to. The old
+  domain is parked and its page sends visitors on to ad campaigns. The menu's Donate link now
+  opens the CouchTomato GitHub repo.
+
 ### v4.0.71 (2026-11-24)
 
 * Fix: the nightly History clean-up crashed when an event field was stored as bytes, so
