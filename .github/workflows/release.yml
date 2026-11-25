@@ -144,25 +144,53 @@ jobs:
           $version = "${{ needs.release.outputs.version }}".TrimStart("v")
           Compress-Archive -Path "dist\CouchTomato\*" -DestinationPath "CouchTomato-$version-win_x64.zip"
 
-      - name: Install NSIS
-        run: choco install -y nsis
-
-      - name: Build installer
-        run: |
-          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
-          & "C:\Program Files (x86)\NSIS\makensis.exe" `
-            "/DAPP_VERSION=$version" `
-            "/DDIST_DIR=$pwd\dist\CouchTomato" `
-            "/DICON_PATH=$pwd\couchpotato\static\images\icons\favicon.ico" `
-            packaging\windows\installer.nsi
-
-      - name: Upload to release
+      - name: Upload portable zip to release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $version = "${{ needs.release.outputs.version }}".TrimStart("v")
           gh release upload "${{ needs.release.outputs.version }}" `
             "CouchTomato-$version-win_x64.zip" `
+            --repo "${{ github.repository }}" `
+            --clobber
+
+      # The Chocolatey feed has refused the newest nsis package (v4.0.73: "Unable to
+      # find package 'nsis'", 0/0 installed, exit 0), so fall back to NSIS's own zip
+      # and find makensis.exe instead of assuming it installed.
+      - name: Install NSIS
+        run: |
+          $paths = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe")
+          $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $mk) { choco install -y nsis }
+          $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $mk) {
+            # Chocolatey's feed was unreachable from the runners too, so take NSIS's
+            # own portable zip from SourceForge (its official download host).
+            $zip = "$env:RUNNER_TEMP\nsis.zip"
+            Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip" `
+              -OutFile $zip -UserAgent "Wget" -MaximumRetryCount 3 -RetryIntervalSec 5
+            Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\nsis" -Force
+            $paths += "$env:RUNNER_TEMP\nsis\nsis-3.10\makensis.exe"
+          }
+          $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $mk) { Write-Error "makensis.exe not found after installing NSIS"; exit 1 }
+          "MAKENSIS=$mk" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Build installer
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          & "$env:MAKENSIS" `
+            "/DAPP_VERSION=$version" `
+            "/DDIST_DIR=$pwd\dist\CouchTomato" `
+            "/DICON_PATH=$pwd\couchpotato\static\images\icons\favicon.ico" `
+            packaging\windows\installer.nsi
+
+      - name: Upload installer to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = "${{ needs.release.outputs.version }}".TrimStart("v")
+          gh release upload "${{ needs.release.outputs.version }}" `
             "packaging\windows\CouchTomato-Setup-$version.exe" `
             --repo "${{ github.repository }}" `
             --clobber
@@ -229,8 +257,12 @@ jobs:
           $version = "${{ needs.release.outputs.version }}".TrimStart("v")
           $installer = "packaging\windows\CouchTomato-Setup-$version.exe"
           if (Test-Path $installer) {
+            # Own name: the same name as the x64 installer let whichever job finished
+            # last overwrite the other (v4.0.73 shipped arm64 binaries as the x64 Setup).
+            $arm = "packaging\windows\CouchTomato-Setup-$version-arm64.exe"
+            Move-Item $installer $arm -Force
             gh release upload "${{ needs.release.outputs.version }}" `
-              "$installer" --repo "${{ github.repository }}" --clobber
+              "$arm" --repo "${{ github.repository }}" --clobber
           }
 
   build-linux:
