@@ -4,11 +4,28 @@
 
 DETAILS_VIEWS = ('poster', 'hero', 'classic')
 DETAILS_BACKDROPS = ('full', 'small', 'none')
+HOME_VIEWS = ('classic', 'sections', 'dashboard')
 
 config = [{
     'name': 'screens',
     'order': 3,
     'groups': [
+        {
+            'tab': 'screens',
+            'name': 'home',
+            'label': 'Home',
+            'description': 'The first page. The switch at the top right of Home changes this too.',
+            'options': [
+                {
+                    'name': 'home_view',
+                    'label': 'Opens in',
+                    'default': 'classic',
+                    'type': 'dropdown',
+                    'values': [('Classic', 'classic'), ('Sections', 'sections'), ('Dashboard', 'dashboard')],
+                    'description': 'Classic: the old CouchPotato look. Sections: each list as a row of posters. Dashboard: counts on top, then every list as a compact card.',
+                },
+            ],
+        },
         {
             'tab': 'screens',
             'name': 'movie_details',
@@ -56,7 +73,9 @@ def frontendOptions(get_setting):
     view = get_setting('details_view', section = 'screens', default = 'poster')
     backdrop = get_setting('details_backdrop', section = 'screens', default = 'full')
     show_new = get_setting('show_new_tags', section = 'screens', default = True)
+    home = get_setting('home_view', section = 'screens', default = 'classic')
     return {
+        'home_view': home if home in HOME_VIEWS else 'classic',
         'details_view': view if view in DETAILS_VIEWS else 'poster',
         'details_backdrop': backdrop if backdrop in DETAILS_BACKDROPS else 'full',
         'show_new_tags': asBool(show_new, True),
