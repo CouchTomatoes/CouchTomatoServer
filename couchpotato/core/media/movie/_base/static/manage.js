@@ -28,6 +28,7 @@ var MoviesManage = new Class({
 
 			self.list = new MovieList({
 				'identifier': 'manage',
+				'screens': 'manage_view',
 				'filter': {
 					'status': 'done',
 					'release_status': 'done',

@@ -312,25 +312,10 @@ var MovieList = new Class({
 			})
 		).addClass('search icon-search');
 
-		var available_chars;
 		self.filter_menu.addEvent('open', function(){
 			self.navigation_search_input.focus();
-
-			// Get available chars and highlight
-			if(!available_chars && (self.navigation.isDisplayed() || self.navigation.isVisible()))
-				Api.request('media.available_chars', {
-					'data': Object.merge({
-						'status': self.options.status
-					}, self.filter),
-					'onSuccess': function(json){
-						available_chars = json.chars;
-
-						available_chars.each(function(c){
-							self.letters[c.capitalize()].addClass('available');
-						});
-
-					}
-				});
+			if(self.navigation.isDisplayed() || self.navigation.isVisible())
+				self.loadAvailableChars();
 		});
 
 		self.filter_menu.addLink(
@@ -368,13 +353,130 @@ var MovieList = new Class({
 		});
 
 		// Add menu or hide
+		self.menu_lis = [];
 		if (self.options.menu.length > 0)
 			self.options.menu.each(function(menu_item){
-				self.navigation_menu.addLink(menu_item);
+				self.menu_lis.push([menu_item, self.navigation_menu.addLink(menu_item)]);
 			});
 		else
 			self.navigation_menu.hide();
 
+		if(self.options.screens)
+			self.createViews();
+
+	},
+
+	// Get available chars and highlight them in A-Z (once)
+	loadAvailableChars: function(){
+		var self = this;
+		if(self.available_chars_loaded) return;
+		self.available_chars_loaded = true;
+
+		Api.request('media.available_chars', {
+			'data': Object.merge({
+				'status': self.options.status
+			}, self.filter),
+			'onSuccess': function(json){
+				(json.chars || []).each(function(c){
+					var letter = self.letters[c.capitalize()];
+					if(letter) letter.addClass('available');
+				});
+			}
+		});
+	},
+
+	// ----- Views (Settings -> Screens): Posters / List / Classic, for Wanted and Manage -----
+	// Classic = today's page untouched. Posters and List MOVE the existing buttons, search box and A-Z
+	// out of the menus into a visible row (Classic moves them back), so nothing is re-implemented.
+
+	list_views: [['posters', '\u25A6 Posters'], ['list', '\u2630 List'], ['classic', '\u27F2 Classic']],
+
+	createViews: function(){
+		var self = this;
+
+		var screens = App.getOption('screens') || {};
+		self.screen_view = screens[self.options.screens] || 'classic';
+
+		self.view_seg = new Element('div.wv-seg');
+		self.list_views.each(function(v){
+			new Element('button', {
+				'type': 'button',
+				'text': v[1],
+				'data-v': v[0],
+				'events': {
+					'click': function(e){
+						(e).stop();
+						self.pickScreenView(v[0]);
+					}
+				}
+			}).inject(self.view_seg);
+		});
+
+		self.view_tools = new Element('div.wv-tools').adopt(
+			new Element('div.wv-top').adopt(
+				self.view_buttons = new Element('div.wv-buttons'),
+				self.view_seg
+			),
+			self.view_filter = new Element('div.wv-filter')
+		).inject(self.el, 'top');
+
+		self.el.addClass('wv');
+		self.search_li = self.navigation_search_input.getParent('li');
+		self.alpha_li = self.navigation_alpha.getParent('li');
+		self.applyScreenView();
+	},
+
+	pickScreenView: function(view){
+		var self = this;
+		if(self.screen_view == view) return;
+
+		self.screen_view = view;
+		self.applyScreenView();
+
+		// Same setting as Settings -> Screens, so the choice sticks on every browser
+		var screens = App.getOption('screens');
+		if(screens) screens[self.options.screens] = view;
+
+		Api.request('settings.save', {
+			'data': {
+				'section': 'screens',
+				'name': self.options.screens,
+				'value': view
+			}
+		});
+	},
+
+	applyScreenView: function(){
+		var self = this,
+			view = self.screen_view,
+			classic = view == 'classic';
+
+		self.el.removeClass('wv-v-classic').removeClass('wv-v-posters').removeClass('wv-v-list')
+			.addClass('wv-v-' + view);
+		self.navigation.removeClass('wv-v-classic').removeClass('wv-v-posters').removeClass('wv-v-list')
+			.addClass('wv-v-' + view);
+		self.view_seg.getElements('button').each(function(b){
+			b[b.get('data-v') == view ? 'addClass' : 'removeClass']('on');
+		});
+
+		if(classic){
+			self.navigation_search_input.inject(self.search_li);
+			self.navigation_alpha.inject(self.alpha_li);
+			self.menu_lis.each(function(m){ m[0].inject(m[1]); });
+		}
+		else {
+			self.navigation_search_input.inject(self.view_filter);
+			self.navigation_alpha.inject(self.view_filter);
+			self.menu_lis.each(function(m){ m[0].inject(self.view_buttons); });
+			self.loadAvailableChars();
+
+			var want = view == 'posters' ? 'thumb' : 'list';
+			if(self.current_view != want){
+				self.changeView(want);
+				self.navigation_actions.getElements('.active').removeClass('active');
+				self.navigation_actions.getElement('[data-view=' + want + ']').addClass('active');
+			}
+		}
 	},
 
 	calculateSelected: function(){
@@ -678,4 +780,59 @@ var MovieList = new Class({
 		return this.el;
 	}
 
+});
+
+// Styles for the Wanted / Manage views (see createViews)
+var MovieListViewsStyle = [
+	'.wv{--acc:#ac0000;--off:#ebebeb;--line:#e2e2e2;--muted:#6a6a6a;--bg:#fff;--text:#000}',
+	'.dark .wv{--acc:#f85c22;--off:#363636;--line:#404040;--muted:#a8a8a8;--bg:#2d2d2d;--text:#fff}',
+	'.wv-tools{padding:10px 20px 0}',
+	'.wv-top{display:flex;align-items:center;flex-wrap:wrap;gap:8px}',
+	'.wv-buttons{display:none;flex-wrap:wrap;gap:8px;flex:1}',
+	'.wv-filter{display:none}',
+	'.wv-seg{display:inline-flex;margin-left:auto;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--bg)}',
+	'.wv-seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:5px 10px;cursor:pointer;white-space:nowrap}',
+	'.wv-seg button.on{background:var(--acc);color:#fff}',
+
+	// New views: today's menus (filter, thumb/list, more) are replaced by the row
+	'.alph_nav:not(.wv-v-classic) .more_menu.filter,.alph_nav:not(.wv-v-classic) .actions{display:none}',
+	'.alph_nav:not(.wv-v-classic) .more_menu.extra{display:none}',
+	'.wv:not(.wv-v-classic) .wv-tools{padding:16px 24px 6px}',
+	'.wv:not(.wv-v-classic) .wv-buttons{display:flex}',
+	'.wv-buttons a{display:inline-block;border:1px solid var(--acc);color:var(--acc);border-radius:4px;padding:6px 12px;font-size:13px;cursor:pointer;white-space:nowrap}',
+	'.wv-buttons a:first-child{background:var(--acc);color:#fff}',
+	'.wv:not(.wv-v-classic) .wv-filter{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:14px}',
+	'.wv-filter input{width:240px;max-width:100%;border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:14px;background:var(--bg);color:var(--text)}',
+	'.wv-filter ul.numbers{display:flex;flex-wrap:wrap;gap:2px;margin:0;padding:0;list-style:none;font-size:11px}',
+	'.wv-filter ul.numbers li{padding:3px 4px;color:var(--muted);opacity:.45;cursor:default}',
+	'.wv-filter ul.numbers li.available{opacity:1;cursor:pointer}',
+	'.wv-filter ul.numbers li.active{color:var(--acc);font-weight:700}',
+
+	// Posters
+	'.wv-v-posters.thumb_list > div:last-of-type{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding:12px 24px}',
+	'.wv-v-posters.thumb_list .movie{width:auto !important;border:0 !important;margin:0}',
+	'.wv-v-posters.thumb_list .movie .info .title{font-size:13px}',
+	'.wv-v-posters.thumb_list .movie .info .quality{display:flex;flex-wrap:wrap;gap:2px;white-space:normal;height:auto}',
+
+	// List
+	'.wv-v-list.list_list > div:last-of-type{padding:8px 24px}',
+	'.wv-v-list.list_list .movie{border-bottom:1px solid var(--line)}',
+	'.wv-v-list.list_list .movie .inner{display:flex;align-items:center;gap:12px;padding:6px 0}',
+	'.wv-v-list.list_list .movie .poster_container{flex:none;width:26px;height:39px;position:relative;border-radius:3px;overflow:hidden}',
+	'.wv-v-list.list_list .movie .poster{display:block;position:absolute;inset:0;background:center/cover no-repeat;background-color:var(--off)}',
+	'.wv-v-list.list_list .movie .poster_container .actions{display:none}',
+	'.wv-v-list.list_list .movie .info{flex:1;min-width:0;padding:0 8px 0 0}',
+	'.wv-v-list.list_list .movie .title span{font-weight:600}',
+
+	'@media (max-width:480px){',
+	'.wv:not(.wv-v-classic) .wv-tools{padding:12px 12px 4px}',
+	'.wv-filter input{width:100%}',
+	'.wv-v-posters.thumb_list > div:last-of-type{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:10px 12px}',
+	'.wv-v-list.list_list > div:last-of-type{padding:6px 12px}',
+	'}'
+].join('');
+
+window.addEvent('domready', function(){
+	if(!document.head) return;
+	new Element('style#movie_list_views_style', {'type': 'text/css', 'text': MovieListViewsStyle}).inject(document.head);
 });
