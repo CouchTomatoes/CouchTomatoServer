@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="1.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:torznab="http://torznab.com/schemas/2015/feed">
+  <channel>
+    <atom:link rel="self" type="application/rss+xml" />
+    <title>Prowlarr</title>
+    <item>
+      <title>The Matrix (1999) 720p BRRip x264 -YTS</title>
+      <description />
+      <guid>https://yts.pw/torrent/download/363BC6C534B1430C6758318D196CCD61DB61B647</guid>
+      <prowlarrindexer id="1" type="public">YTS</prowlarrindexer>
+      <comments>https://yts.pw/movies/the-matrix-1999</comments>
+      <pubDate>Sun, 01 Nov 2015 02:02:16 +0000</pubDate>
+      <size>737872445</size>
+      <link>http://localhost:19696/1/download?apikey=TESTKEY&amp;link=WjBEUWtxVXBlU0xNOG5Bc2JHSFhRUHk1NE1sSGd5U0IyTTVHUHN1MkRPK20xNEd5bW1SeThjaXJaRWwxMzdNb2JvdENJeFFsa0RpM25DbU9Mb1ZjQmhJam1uR0RiUWlXcTgwdS94QUk1QTZkWjJQdWNvKzVqc1B3V0VHWDA3bEI&amp;file=The+Matrix+(1999)+720p+BRRip+x264+-YTS</link>
+      <category>2040</category>
+      <category>100045</category>
+      <enclosure url="http://localhost:19696/1/download?apikey=TESTKEY&amp;link=WjBEUWtxVXBlU0xNOG5Bc2JHSFhRUHk1NE1sSGd5U0IyTTVHUHN1MkRPK20xNEd5bW1SeThjaXJaRWwxMzdNb2JvdENJeFFsa0RpM25DbU9Mb1ZjQmhJam1uR0RiUWlXcTgwdS94QUk1QTZkWjJQdWNvKzVqc1B3V0VHWDA3bEI&amp;file=The+Matrix+(1999)+720p+BRRip+x264+-YTS" length="737872445" type="application/x-bittorrent" />
+      <torznab:attr name="category" value="2040" />
+      <torznab:attr name="category" value="100045" />
+      <torznab:attr name="tag" value="freeleech" />
+      <torznab:attr name="genre" value="" />
+      <torznab:attr name="imdb" value="0133093" />
+      <torznab:attr name="seeders" value="100" />
+      <torznab:attr name="peers" value="141" />
+      <torznab:attr name="year" value="1999" />
+      <torznab:attr name="infohash" value="363BC6C534B1430C6758318D196CCD61DB61B647" />
+      <torznab:attr name="downloadvolumefactor" value="0" />
+      <torznab:attr name="uploadvolumefactor" value="1" />
+      <torznab:attr name="coverurl" value="https://yts.pw/assets/images/movies/The_Matrix_1999/large-cover.jpg" />
+    </item>
+<item>
+      <title>The Matrix (1999) 1080p BRRip x264 -YTS</title>
+      <description />
+      <guid>https://yts.pw/torrent/download/D7A46713EAEE18C746B3254B7D1492A50FD9D6CE</guid>
+      <prowlarrindexer id="1" type="public">YTS</prowlarrindexer>
+      <comments>https://yts.pw/movies/the-matrix-1999</comments>
+      <pubDate>Sun, 01 Nov 2015 02:02:18 +0000</pubDate>
+      <size>1997159793</size>
+      <link>http://localhost:19696/1/download?apikey=TESTKEY&amp;link=Nmh6UUtUL2RUSzRVNDhlSHhyWmJXdjEzVVpPODZwbXFlTThITUVVdWxhS3lScDlDZHJFaWdHMDhVU3o3bXJMN20xK09wK0s3NmZhQVNjNmt5djlmQWlwWUxvM1hwb09WZGRkTzhlYUQyVTBsZDVlTkVsbHI4SjJQbitEZDF0U3g&amp;file=The+Matrix+(1999)+1080p+BRRip+x264+-YTS</link>
+      <category>2040</category>
+      <category>100044</category>
+      <enclosure url="http://localhost:19696/1/download?apikey=TESTKEY&amp;link=Nmh6UUtUL2RUSzRVNDhlSHhyWmJXdjEzVVpPODZwbXFlTThITUVVdWxhS3lScDlDZHJFaWdHMDhVU3o3bXJMN20xK09wK0s3NmZhQVNjNmt5djlmQWlwWUxvM1hwb09WZGRkTzhlYUQyVTBsZDVlTkVsbHI4SjJQbitEZDF0U3g&amp;file=The+Matrix+(1999)+1080p+BRRip+x264+-YTS" length="1997159793" type="application/x-bittorrent" />
+      <torznab:attr name="category" value="2040" />
+      <torznab:attr name="category" value="100044" />
+      <torznab:attr name="tag" value="freeleech" />
+      <torznab:attr name="genre" value="" />
+      <torznab:attr name="imdb" value="0133093" />
+      <torznab:attr name="seeders" value="100" />
+      <torznab:attr name="peers" value="200" />
+      <torznab:attr name="year" value="1999" />
+      <torznab:attr name="infohash" value="D7A46713EAEE18C746B3254B7D1492A50FD9D6CE" />
+      <torznab:attr name="downloadvolumefactor" value="0" />
+      <torznab:attr name="uploadvolumefactor" value="1" />
+      <torznab:attr name="coverurl" value="https://yts.pw/assets/images/movies/The_Matrix_1999/large-cover.jpg" />
+    </item>
+<item>
+      <title>The Matrix (1999) 2160p BRRip 5.1 10Bit x265 -YTS</title>
+      <description />
+      <guid>https://yts.pw/torrent/download/28DEC3AC8CC8C5758730A334D98705DD698F7BC1</guid>
+      <prowlarrindexer id="1" type="public">YTS</prowlarrindexer>
+      <comments>https://yts.pw/movies/the-matrix-1999</comments>
+      <pubDate>Mon, 17 Jan 2022 05:27:11 +0000</pubDate>
+      <size>6968584438</size>
+      <link>http://localhost:19696/1/download?apikey=TESTKEY&amp;link=R1QvT1V1NDEwTDFJOGdMSUlXbmdxR2xwYVc0MmVhY29BcWJLOUo2dlFDTUdWd2lUeWxCbUVUa28zL1h5UmY0cUQ4TlcxNzB5by95KzVnb0pjbGlobTN2cW9KNWJOUXBLOFNBa0lsYmQ2QXNBYjVhSWpienI1QnpVa2NaSUVxMHk&amp;file=The+Matrix+(1999)+2160p+BRRip+5.1+10Bit+x265+-YTS</link>
+      <category>2045</category>
+      <category>100046</category>
+      <enclosure url="http://localhost:19696/1/download?apikey=TESTKEY&amp;link=R1QvT1V1NDEwTDFJOGdMSUlXbmdxR2xwYVc0MmVhY29BcWJLOUo2dlFDTUdWd2lUeWxCbUVUa28zL1h5UmY0cUQ4TlcxNzB5by95KzVnb0pjbGlobTN2cW9KNWJOUXBLOFNBa0lsYmQ2QXNBYjVhSWpienI1QnpVa2NaSUVxMHk&amp;file=The+Matrix+(1999)+2160p+BRRip+5.1+10Bit+x265+-YTS" length="6968584438" type="application/x-bittorrent" />
+      <torznab:attr name="category" value="2045" />
+      <torznab:attr name="category" value="100046" />
+      <torznab:attr name="tag" value="freeleech" />
+      <torznab:attr name="genre" value="" />
+      <torznab:attr name="imdb" value="0133093" />
+      <torznab:attr name="seeders" value="100" />
+      <torznab:attr name="peers" value="159" />
+      <torznab:attr name="year" value="1999" />
+      <torznab:attr name="infohash" value="28DEC3AC8CC8C5758730A334D98705DD698F7BC1" />
+      <torznab:attr name="downloadvolumefactor" value="0" />
+      <torznab:attr name="uploadvolumefactor" value="1" />
+      <torznab:attr name="coverurl" value="https://yts.pw/assets/images/movies/The_Matrix_1999/large-cover.jpg" />
+    </item>
+  </channel>
+</rss>

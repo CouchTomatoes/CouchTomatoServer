@@ -75,6 +75,17 @@ def _log(status_code, request):
     log_method("%d %s %.2fms", status_code, summary, request_time)
 
 
+def quietNoisyLoggers():
+    # Disable logging for some modules.
+    # 'urllib3' is its own top-level logger on Python 3 (on Python 2 it lived inside 'requests').
+    # Its debug lines print every request URL unmasked, API keys and passkeys included.
+    for logger_name in ['enzyme', 'guessit', 'subliminal', 'apscheduler', 'tornado', 'requests', 'urllib3']:
+        logging.getLogger(logger_name).setLevel(logging.ERROR)
+
+    for logger_name in ['gntp']:
+        logging.getLogger(logger_name).setLevel(logging.WARNING)
+
+
 def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, Env = None, desktop = None):
 
     try:
@@ -180,12 +191,7 @@ def runCouchPotato(options, base_path, args, data_dir = None, log_dir = None, En
     development = Env.setting('development', default = False, type = 'bool')
     Env.set('dev', development)
 
-    # Disable logging for some modules
-    for logger_name in ['enzyme', 'guessit', 'subliminal', 'apscheduler', 'tornado', 'requests']:
-        logging.getLogger(logger_name).setLevel(logging.ERROR)
-
-    for logger_name in ['gntp']:
-        logging.getLogger(logger_name).setLevel(logging.WARNING)
+    quietNoisyLoggers()
 
     # Disable SSL warning
     disable_warnings()
