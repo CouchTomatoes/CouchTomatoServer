@@ -12,6 +12,8 @@ Releases up to v4.0.69 have their notes on the
 
 * New: Torznab searcher, so CouchTomato can search your Prowlarr or Jackett indexers (Settings → Searcher → Torznab,
   one row per indexer). It asks by IMDb id first, falls back to title + year, and sends magnet links when the indexer has them.
+* Fix: with debug logging on, the log no longer contains your indexers' API keys and passkeys (a low-level HTTP
+  library was writing every request URL unmasked).
 
 ### v4.0.75 (2026-11-25)
 
