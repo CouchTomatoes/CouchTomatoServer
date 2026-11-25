@@ -1,0 +1,21 @@
+name: One-off NSIS install check
+on:
+  push:
+    branches: [hotfix/windows-installer]
+jobs:
+  nsis:
+    runs-on: windows-latest
+    steps:
+      - name: Install NSIS
+        run: |
+          $paths = @("${env:ProgramFiles(x86)}\NSIS\makensis.exe", "$env:ProgramFiles\NSIS\makensis.exe")
+          $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $mk) { choco install -y nsis }
+          $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $mk) { choco install -y nsis --version=3.10.0 }
+          $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $mk) { Write-Error "makensis.exe not found after installing NSIS"; exit 1 }
+          "MAKENSIS=$mk" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: makensis answers
+        run: '& "$env:MAKENSIS" /VERSION'
