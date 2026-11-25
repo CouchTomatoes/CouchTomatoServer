@@ -220,7 +220,7 @@ config = [{
                            '(any Torznab feed). One row per indexer: the indexer\'s Torznab URL, e.g. '
                            '<code>http://prowlarr:9696/1/api</code>, and the Prowlarr or Jackett API key.',
             'wizard': True,
-            'icon': 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQAgMAAABinRfyAAAACVBMVEX/xQBEMjL///+R5qO4AAAAM0lEQVQI12NgYGBgDA1lYGBgcGBgYGBgZWBgYGRiYGBgYmFgYGBgZmBgYAhlYGBgYGAAAEdmAyEB+AviAAAAAElFTkSuQmCC',
+            'icon': 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAV0lEQVR42mNgAAJlh7z/5GAGSjTDDcElAQMkG4ALEGUALsX4DMEwAJ+X8BpAyKm45KlnAMVeIBiIWxgoiEagZhgmOyHhMoSkpIzNEJLzAsUGUDVHgvQCAGj7HU9psH2QAAAAAElFTkSuQmCC',
             'options': [
                 {
                     'name': 'enabled',
@@ -229,7 +229,7 @@ config = [{
                 },
                 {
                     'name': 'use',
-                    'default': '',
+                    'default': '1',
                 },
                 {
                     'name': 'host',
