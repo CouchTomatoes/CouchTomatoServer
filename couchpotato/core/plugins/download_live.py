@@ -29,6 +29,11 @@ WATCH_SECONDS = 60
 WATCHED_STATUSES = ['snatched', 'missing', 'seeding', 'downloaded']
 
 
+def toStr(value):
+    # The database gives ids as bytes; the page asks with str ids and the push is JSON
+    return value.decode('utf-8') if isinstance(value, bytes) else value
+
+
 def mergeStatus(live, rels, release_downloads, now, full = False):
     """ Fold a downloader answer into `live` ({release_id: item}).
 
@@ -53,7 +58,7 @@ def mergeStatus(live, rels, release_downloads, now, full = False):
         if not found:
             continue
 
-        rid = rel.get('_id')
+        rid = toStr(rel.get('_id'))
         seen.add(rid)
         old = live.get(rid) or {}
 
@@ -67,7 +72,7 @@ def mergeStatus(live, rels, release_downloads, now, full = False):
 
         item = {
             'release_id': rid,
-            'media_id': rel.get('media_id'),
+            'media_id': toStr(rel.get('media_id')),
             'progress': progress,
             'eta': found.get('eta') if progress != 100 else None,
             'status': found.get('status'),

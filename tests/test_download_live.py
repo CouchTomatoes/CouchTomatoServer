@@ -172,6 +172,12 @@ class FastLaneTest(unittest.TestCase):
         self.plugin.watchView(media_id = 'm1')
         self.assertEqual(self.names().count('schedule.interval'), 2)
 
+    def test_database_bytes_ids_are_served_as_str(self):
+        # CodernityDB hands back _id / media_id as bytes; the page asks with str ids and reads JSON
+        self.plugin.update([rel(b'r1', 'h1', media_id = b'm1')], [rd('h1', 5)])
+        out = self.plugin.liveView(media_id = 'm1')
+        self.assertEqual([(x['release_id'], x['media_id']) for x in out['releases']], [('r1', 'm1')])
+
     def test_live_view_filters_by_movie(self):
         self.plugin.update([rel('r1', 'h1', media_id = 'm1'), rel('r2', 'h2', media_id = 'm2')], [rd('h1', 5), rd('h2', 6)])
         out = self.plugin.liveView(media_id = 'm2')
