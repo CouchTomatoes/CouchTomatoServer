@@ -10,6 +10,12 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+### v4.0.72 (2026-11-25)
+
+* Fix: Settings → About and the bookmarklet no longer load anything from couchpota.to. The old
+  domain is parked and its page sends visitors on to ad campaigns. The menu's Donate link now
+  opens the CouchTomato GitHub repo.
+
 ### v4.0.71 (2026-11-24)
 
 * Fix: the nightly History clean-up crashed when an event field was stored as bytes, so
