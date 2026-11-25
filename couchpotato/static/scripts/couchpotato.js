@@ -79,7 +79,8 @@
 	// feature ships, and the tag disappears by itself after the date, so tags never go stale.
 	new_features: {
 		'page.history': '2027-02-28',
-		'settings.screens': '2027-02-28'
+		'settings.screens': '2027-02-28',
+		'details.subtitles': '2027-02-28'
 	},
 
 	// A NEW tag for a feature key, or null when the key isn't listed or its date has passed.

@@ -10,6 +10,11 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: Movie details has Subtitles (Poster: under Releases; Hero: a tab). Pick a language, see what yts-subs.com has
+  for the movie with the one made for your release marked, and choose one: in the library it replaces
+  `<movie>.<lang>.srt` at once (the old file kept as `.srt.bak`); still downloading, it's used when the movie arrives.
+* Fix: automatic subtitles now find Spanish and Persian (they never matched), and yts-subs ratings are read again
+  (every subtitle scored 0, so the best-rated one wasn't preferred).
 * New: Movie details shows a download live: the "Downloading" step fills up as a progress bar with the %, the
   line under it adds "downloading for 1 h 12 m · 18 min left", and it all updates every 10 s without a reload while
   the page is open (Transmission, Deluge, qBittorrent, rTorrent, uTorrent, SABnzbd, NZBGet, put.io).

@@ -1,6 +1,6 @@
 # Movie details: live status, Subtitles, NEW tags (build plan)
 
-Status: **design approved 2026-11-21** (mockup v10). Not built yet. This file is what the build
+Status: **design approved 2026-11-21** (mockup v10). **All four parts built** (part 3 = PR #43, 2026-11-25). This file is what the build
 follows. One PR per numbered part below, each to `dev`, each with its own CHANGES line.
 
 Mockup: the "CouchTomato screens FINAL v10" artifact, screen 1 (Movie details, Hero and Poster).
@@ -105,6 +105,9 @@ Recounted every 60 s in the browser; the timer stops when the page closes. Part 
   subtitle id). Reuse the existing yts-subs code; the automatic download stays as it is.
 - Proof: on the Pi4, replace a movie's English subtitle from the page; the new `.en.srt` is on
   disk next to the movie and Plex shows it after a section refresh.
+- Built 2026-11-25 (PR #43). As built: one row layout (cards) in both views rather than a table in Hero;
+  the Hero tab strip is "Releases (N) | Subtitles" ("Files" on the library page, where only Files is under it).
+  Proved on a local server against real yts-subs.com; **the Pi4 + Plex proof is still open** (needs a release to `main`).
 
 ## 4. Show NEW tags (Settings → Screens → Labels)
 
