@@ -8,6 +8,11 @@ number and date.
 Releases up to v4.0.69 have their notes on the
 [GitHub Releases page](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
 
+### Unreleased
+
+* Fix: the Telegram notifier no longer writes your bot token into the log when a message fails to send
+  (the log names the bot by its public number instead). If you've shared a log, make a new token with @BotFather.
+
 ### v4.0.74 (2026-11-25)
 
 * Fix: the Windows x64 downloads are back. v4.0.73 shipped without the x64 portable zip, and its
