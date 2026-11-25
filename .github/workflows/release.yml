@@ -155,7 +155,7 @@ jobs:
             --clobber
 
       # The Chocolatey feed has refused the newest nsis package (v4.0.73: "Unable to
-      # find package 'nsis'", 0/0 installed, exit 0), so fall back to a pinned version
+      # find package 'nsis'", 0/0 installed, exit 0), so fall back to NSIS's own zip
       # and find makensis.exe instead of assuming it installed.
       - name: Install NSIS
         run: |
@@ -163,7 +163,15 @@ jobs:
           $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $mk) { choco install -y nsis }
           $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $mk) { choco install -y nsis --version=3.10.0 }
+          if (-not $mk) {
+            # Chocolatey's feed was unreachable from the runners too, so take NSIS's
+            # own portable zip from SourceForge (its official download host).
+            $zip = "$env:RUNNER_TEMP\nsis.zip"
+            Invoke-WebRequest -Uri "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip" `
+              -OutFile $zip -UserAgent "Wget" -MaximumRetryCount 3 -RetryIntervalSec 5
+            Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP\nsis" -Force
+            $paths += "$env:RUNNER_TEMP\nsis\nsis-3.10\makensis.exe"
+          }
           $mk = $paths | Where-Object { Test-Path $_ } | Select-Object -First 1
           if (-not $mk) { Write-Error "makensis.exe not found after installing NSIS"; exit 1 }
           "MAKENSIS=$mk" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
