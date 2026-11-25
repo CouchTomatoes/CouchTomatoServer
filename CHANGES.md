@@ -10,6 +10,10 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: a small NEW tag marks things added in recent updates (the History page and Settings → Screens for
+  now). Turn them all off in Settings → Screens → Show NEW tags; each tag also goes away by itself after a
+  few months.
+
 * New: a redesigned movie details page. Pick **Poster** (poster and facts on the left), **Hero** (a wide
   banner) or **Classic** (the old look), and a **Full**, **Small** or no backdrop, with the switch at the
   top of the page or in Settings → Screens. Your choice is saved on the server, so every browser and phone

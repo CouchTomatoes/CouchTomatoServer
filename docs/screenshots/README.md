@@ -110,3 +110,9 @@ Releases were seeded through a test-only plugin in the scratch data dir (never i
 - `2026-11-24-details-hero-small.png`, `-classic-full.png` — Small band, and Classic (old look, untouched).
 - `2026-11-24-details-more-menu.png`, `-trailer.png`, `-remove-confirm.png` — the ⋯ menu, the trailer
   pop-up, and Remove asking first.
+
+## 2026-11-24 — Show NEW tags (board #95, part 4)
+
+- `2026-11-24-new-tags-on.png` — NEW tags on the History menu entry and the Settings → Screens tab, and
+  the new Labels → Show NEW tags box. Unticking it (a real click) hid both tags at once, saved
+  `show_new_tags = 0` to settings.conf, and they stayed hidden after a reload; ticking it showed them again.

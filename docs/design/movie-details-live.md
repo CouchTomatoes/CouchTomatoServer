@@ -101,11 +101,14 @@ Under the badges in Hero: `Snatched 2 h ago from YTS · downloading for 1 h 12 m
 
 ## 4. Show NEW tags (Settings → Screens → Labels)
 
-- Checkbox **Show NEW tags**, default **on**, setting `core.show_new_tags`. It saves on click,
-  like the other Screens settings.
+- Checkbox **Show NEW tags**, default **on**, setting `screens.show_new_tags` (built 2026-11-24, in the
+  Screens section next to the details settings rather than `core`). It saves on click, like the other Screens settings.
 - Off → every NEW tag in the app is hidden (one class on `<body>`, `.hide-new .new{display:none}`).
   It changes at once on the current page; other open browsers pick it up on their next page load.
 - Each NEW tag is one shared helper/element so the switch covers all of them. No per-page copies.
+- Built as `App.newTag(key)` in `static/scripts/couchpotato.js`, with one list `App.new_features`
+  (`key → last day shown`): a tag disappears by itself after its date. Menu pages use the key `page.<name>`
+  and Settings tabs `settings.<tab>`, so tagging one is a one-line change to that list.
 
 ## Order
 

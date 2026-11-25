@@ -56,6 +56,9 @@ var PageBase = new Class({
 				'html': '<span>' + self.name.capitalize() + '</span>',
 				'class': self.icon ? 'icon-' + self.icon : null
 			});
+
+			var new_tag = App.newTag('page.' + self.name);
+			if(new_tag) new_tag.inject(self.tab.getElement('span'));
 		}
 
 		if(self.sub_pages){
