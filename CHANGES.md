@@ -8,7 +8,7 @@ number and date.
 Releases up to v4.0.69 have their notes on the
 [GitHub Releases page](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
 
-### Unreleased
+### v4.0.73 (2026-11-25)
 
 * New: Movie details has Subtitles (Poster: under Releases; Hero: a tab). Pick a language, see what yts-subs.com has
   for the movie with the one made for your release marked, and choose one: in the library it replaces
