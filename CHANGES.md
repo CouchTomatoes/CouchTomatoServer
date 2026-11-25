@@ -10,6 +10,10 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: an official Docker image, `ghcr.io/couchtomatoes/couchtomato` (amd64 and arm64, so it runs on a
+  Raspberry Pi too), published with every release. Files are written as your own user (`PUID`/`PGID`),
+  and inside Docker the updater tells you when to pull a new image instead of trying to update itself.
+
 ### v4.0.71 (2026-11-24)
 
 * Fix: the nightly History clean-up crashed when an event field was stored as bytes, so

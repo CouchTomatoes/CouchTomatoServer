@@ -36,6 +36,7 @@ Welcome to CouchTomato! Dive straight in, or read on for what to expect...
 
 * **[Download the latest release](https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest)** —
   Windows installer/zip, macOS universal2 DMG, or Linux tar.gz/AppImage
+* **[Run it with Docker](#docker)** — `ghcr.io/couchtomatoes/couchtomato`, for PCs, NAS boxes and the Raspberry Pi
 * [Install guides](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Installation) for Windows, macOS, Linux and running from source
 * [Migrating from CouchPotato](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Migration) — keep your wanted list, library and settings
 * [Screens](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Screens) — every page of the new interface, in light, dark and phone views
@@ -130,8 +131,45 @@ Prefer a packaged build instead? See the [Installation wiki page](https://github
 platform-specific installers, or the [latest release](https://github.com/CouchTomatoes/CouchTomatoServer/releases/latest)
 directly.
 
-Docker:
-* You can adapt the community CouchPotato Docker images (e.g. [linuxserver.io](https://github.com/linuxserver/docker-couchpotato)) as a starting point — CouchTomato hasn't published its own image yet, see `TODO.md`.
+## Docker
+
+The official image runs on any 64-bit PC, NAS or Raspberry Pi 4/5 (`linux/amd64` and `linux/arm64`):
+
+```yaml
+# docker-compose.yml
+services:
+  couchtomato:
+    image: ghcr.io/couchtomatoes/couchtomato:latest
+    container_name: couchtomato
+    environment:
+      - PUID=1000          # your user id   (run: id -u)
+      - PGID=1000          # your group id  (run: id -g)
+      - TZ=Europe/London   # your time zone
+    volumes:
+      - ./config:/config         # settings, database, logs
+      - /path/to/downloads:/downloads
+      - /path/to/movies:/movies
+    ports:
+      - 5050:5050
+    restart: unless-stopped
+```
+
+Then `docker compose up -d` and open `http://<this machine>:5050/`. Or with plain Docker:
+
+```bash
+docker run -d --name couchtomato -p 5050:5050 \
+  -e PUID=$(id -u) -e PGID=$(id -g) -e TZ=Europe/London \
+  -v ./config:/config -v /path/to/downloads:/downloads -v /path/to/movies:/movies \
+  --restart unless-stopped ghcr.io/couchtomatoes/couchtomato:latest
+```
+
+* In the setup wizard, use the **container** paths: `/downloads` for finished downloads and `/movies`
+  for your library. Your download client must see the same files (mount the same host folder into it).
+* Files are created as `PUID:PGID`, so they belong to your user on the host.
+* **Updating:** `docker compose pull && docker compose up -d`. Inside Docker the app tells you when a new
+  version is out but never replaces itself; pin a version with a tag like `:4.0.72` instead of `:latest`.
+* Moving from CouchPotato? Point `/config` at a copy of your old data folder. See
+  [Migrating from CouchPotato](https://github.com/CouchTomatoes/CouchTomatoServer/wiki/Migration).
 
 ## Development
 
