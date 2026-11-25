@@ -8,6 +8,12 @@ number and date.
 Releases up to v4.0.69 have their notes on the
 [GitHub Releases page](https://github.com/CouchTomatoes/CouchTomatoServer/releases).
 
+### v4.0.74 (2026-11-25)
+
+* Fix: the Windows x64 downloads are back. v4.0.73 shipped without the x64 portable zip, and its
+  `CouchTomato-Setup-4.0.73.exe` held the arm64 build (it won't run on a normal Windows PC). The
+  Windows on ARM installer, when it builds, now has its own name (`…-arm64.exe`).
+
 ### v4.0.73 (2026-11-25)
 
 * New: Movie details has Subtitles (Poster: under Releases; Hero: a tab). Pick a language, see what yts-subs.com has
