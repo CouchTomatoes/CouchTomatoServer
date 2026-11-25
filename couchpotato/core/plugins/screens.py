@@ -33,6 +33,20 @@ config = [{
                 },
             ],
         },
+        {
+            'tab': 'screens',
+            'name': 'labels',
+            'label': 'Labels',
+            'options': [
+                {
+                    'name': 'show_new_tags',
+                    'label': 'Show NEW tags',
+                    'default': True,
+                    'type': 'bool',
+                    'description': 'On: a small NEW tag marks things added in recent updates. Off: hidden everywhere. Saves as soon as you click.',
+                },
+            ],
+        },
     ],
 }]
 
@@ -41,7 +55,21 @@ def frontendOptions(get_setting):
     """What the page needs at start. Unknown values fall back to the defaults."""
     view = get_setting('details_view', section = 'screens', default = 'poster')
     backdrop = get_setting('details_backdrop', section = 'screens', default = 'full')
+    show_new = get_setting('show_new_tags', section = 'screens', default = True)
     return {
         'details_view': view if view in DETAILS_VIEWS else 'poster',
         'details_backdrop': backdrop if backdrop in DETAILS_BACKDROPS else 'full',
+        'show_new_tags': asBool(show_new, True),
     }
+
+
+def asBool(value, default):
+    """The settings file holds text ('1', 'True', '0'...); getBool only applies once the option type is known."""
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in ('1', 'true', 'yes', 'on'):
+        return True
+    if text in ('0', 'false', 'no', 'off'):
+        return False
+    return default

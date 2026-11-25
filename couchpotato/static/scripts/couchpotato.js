@@ -46,6 +46,12 @@
 		window.addEvent('resize', self.resize.bind(self));
 		self.resize();
 
+		// Settings → Screens → Show NEW tags: one class on <body> hides every tag; flips at once on save.
+		self.showNewTags((self.getOption('screens') || {}).show_new_tags !== false);
+		self.addEvent('setting.save.screens.show_new_tags', function(value){
+			self.showNewTags(!!+value);
+		});
+
 		//self.checkCache();
 
 	},
@@ -67,6 +73,36 @@
 
 		self.mobile_screen = Math.max(document.documentElement.clientWidth, window.innerWidth || 0) <= 480;
 		self.c[self.mobile_screen ? 'addClass' : 'removeClass']('mobile');
+	},
+
+	// What counts as NEW, and until when (end of that day). The only list: add a line when a
+	// feature ships, and the tag disappears by itself after the date, so tags never go stale.
+	new_features: {
+		'page.history': '2027-02-28',
+		'settings.screens': '2027-02-28'
+	},
+
+	// A NEW tag for a feature key, or null when the key isn't listed or its date has passed.
+	newTag: function(key){
+		var until = this.new_features[key];
+		if(!until || new Date() > new Date(until + 'T23:59:59')) return null;
+		this.newTagStyle();
+		return new Element('span.new-tag', {'text': 'NEW', 'title': 'Added in a recent update'});
+	},
+
+	showNewTags: function(show){
+		this.newTagStyle();
+		document.body[show ? 'removeClass' : 'addClass']('hide-new');
+	},
+
+	newTagStyle: function(){
+		if(this.new_tag_style) return;
+		this.new_tag_style = new Element('style', {'type': 'text/css', 'text': [
+			'.new-tag{display:inline-block;font-size:10px;font-weight:700;line-height:14px;letter-spacing:.3px;',
+			'color:#ac0000;border:1px solid currentColor;border-radius:3px;padding:0 4px;margin-left:6px;vertical-align:1px;text-transform:none}',
+			'.dark .new-tag,.navigation .new-tag{color:#f85c22}',
+			'.hide-new .new-tag{display:none!important}'
+		].join('')}).inject(document.head);
 	},
 
 	ripple: function(e, el){
