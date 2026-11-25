@@ -975,7 +975,7 @@ var MovieListViewsStyle = [
 
 	// List columns (hidden in Posters and Classic)
 	'.wv-head,.wv .wv-cols{display:none}',
-	'.wv-v-list .wv-head{display:flex;gap:12px;margin:12px 0 -8px;padding:0 0 6px 38px;border-bottom:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}',
+	'.wv-v-list .wv-head{display:flex;gap:12px;margin:12px 0 -8px;padding:0 0 6px 63px;border-bottom:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}',
 	'.wv-v-list .wv-head .wv-h-movie{flex:1}',
 	'.wv-v-list.list_list .movie .wv-cols{display:flex;gap:12px;align-items:center;font-size:13px}',
 	'.wv-v-list .wv-c-quality{width:80px}',
@@ -1005,7 +1005,9 @@ var MovieListViewsStyle = [
 	'.wv-v-list.list_list .movie .poster{display:block;position:absolute;inset:0;background:center/cover no-repeat;background-color:var(--off)}',
 	'.wv-v-list.list_list .movie .poster_container .actions{display:none}',
 	'.wv-v-list.list_list .movie .info{flex:1;min-width:0;padding:0 8px 0 0}',
-	'.wv-v-list.list_list .movie .title span{font-weight:600}',
+	'.wv-v-list.list_list .movie .title span{font-weight:600;margin-left:0 !important}',
+	// mass edit: the checkbox gets its own column instead of sitting on the poster
+	'.wv-v-list.list_list .movie input[type=checkbox]{position:static;transform:none;flex:none;margin:0}',
 
 	'@media (max-width:480px){',
 	'.wv:not(.wv-v-classic) .wv-tools{padding:12px 12px 4px}',
