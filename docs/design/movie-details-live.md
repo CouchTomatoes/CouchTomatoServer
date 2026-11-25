@@ -83,6 +83,13 @@ When no browser has such a page open, the server goes back to today's background
 
 Under the badges in Hero: `Snatched 2 h ago from YTS · downloading for 1 h 12 m · 18 min left`. It's the same line Poster has under its steps, and it uses the same live fields as part 1.
 
+**Built 2026-11-25** (before part 1, so neither view had the line yet): one `.mdx-line` under the steps in both
+Hero and Poster, from what the database has — the newest release's `last_edit` (set on every status change) and
+`info.provider`. Snatched → `Snatched 2 h ago from YTS`; Downloaded → `Downloaded 3 h ago · moving to your library`;
+Done → `In your library since 2 days ago · <folder>`. Hidden while only Wanted (a movie stores no added date).
+Recounted every 60 s in the browser; the timer stops when the page closes. Part 1 appends the live
+`downloading for … · … min left` to the Snatched text.
+
 ## 3. Subtitles (Hero: a tab; Poster: a section under Releases)
 
 - **Language ▾** button (same button + menu style as Quality ▾). Default = the subtitle
