@@ -5,7 +5,7 @@ import os
 import re
 
 from bencode import bencode, bdecode
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta
 from couchpotato.core.helpers.encoding import sp
 from couchpotato.core.helpers.variable import cleanHost
 from couchpotato.core.logger import CPLog
@@ -158,6 +158,10 @@ class qBittorrent(DownloaderBase):
                         'seed_ratio': torrent['ratio'],
                         'original_status': torrent['state'],
                         'timeleft': str(timedelta(seconds = torrent['eta'])),
+                        'progress': toProgress(torrent.get('progress')),
+                        'eta': toEta(torrent.get('eta'), unknown_from = 8640000),
+                        'added': torrent.get('added_on') or None,
+                        'done': torrent.get('completion_on') if (torrent.get('completion_on') or 0) > 0 else None,
                         'folder': sp(torrent['save_path']),
                         'files': torrent_files
                     })

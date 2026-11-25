@@ -12,7 +12,7 @@ import urllib.request, urllib.parse, urllib.error
 import urllib.request, urllib.error, urllib.parse
 
 from bencode import bencode as benc, bdecode
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta
 from couchpotato.core.helpers.encoding import isInt, ss, sp
 from couchpotato.core.helpers.variable import tryInt, tryFloat, cleanHost
 from couchpotato.core.logger import CPLog
@@ -191,6 +191,8 @@ class uTorrent(DownloaderBase):
                     'seed_ratio': float(torrent[7]) / 1000,
                     'original_status': torrent[1],
                     'timeleft': str(timedelta(seconds = torrent[10])),
+                    'progress': toProgress(torrent[4], whole = 1000),
+                    'eta': toEta(torrent[10]),
                     'folder': sp(torrent[26]),
                     'files': torrent_files
                 })

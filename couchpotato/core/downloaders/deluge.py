@@ -6,7 +6,7 @@ import re
 import traceback
 
 from bencode import bencode as benc, bdecode
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta
 from couchpotato.core.helpers.encoding import isInt, sp
 from couchpotato.core.helpers.variable import tryFloat, cleanHost
 from couchpotato.core.logger import CPLog
@@ -182,6 +182,8 @@ class Deluge(DownloaderBase):
                 'original_status': torrent['state'],
                 'seed_ratio': torrent['ratio'],
                 'timeleft': str(timedelta(seconds = torrent['eta'])),
+                'progress': toProgress(torrent.get('progress'), whole = 100),
+                'eta': toEta(torrent.get('eta')) if torrent.get('eta') else None,
                 'folder': sp(download_dir if len(torrent_files) == 1 else os.path.join(download_dir, torrent['name'])),
                 'files': torrent_files,
             })

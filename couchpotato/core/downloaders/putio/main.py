@@ -1,6 +1,6 @@
 from couchpotato.api import addApiView
 from couchpotato.core.event import addEvent, fireEvent, fireEventAsync
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta
 from couchpotato.core.logger import CPLog
 from couchpotato.environment import Env
 from pio import api as pio
@@ -190,6 +190,8 @@ class PutIO(DownloaderBase):
                     'name': t.name,
                     'status': status,
                     'timeleft': t.estimated_time,
+                    'progress': toProgress(getattr(t, 'percent_done', None), whole = 100),
+                    'eta': toEta(getattr(t, 'estimated_time', None)),
                 })
 
         return release_downloads

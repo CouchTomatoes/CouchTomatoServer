@@ -5,7 +5,7 @@ from urllib.parse import urlparse
 import os
 import re
 
-from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList
+from couchpotato.core._base.downloader.main import DownloaderBase, ReleaseDownloadList, toProgress, toEta
 from couchpotato.core.event import addEvent
 from couchpotato.core.helpers.encoding import sp
 from couchpotato.core.helpers.variable import cleanHost, splitString
@@ -260,6 +260,8 @@ class rTorrent(DownloaderBase):
                         'seed_ratio': torrent.ratio,
                         'original_status': torrent.state,
                         'timeleft': str(timedelta(seconds = float(torrent.left_bytes) / torrent.down_rate)) if torrent.down_rate > 0 else -1,
+                        'progress': toProgress(torrent.completed_bytes, whole = torrent.size_bytes) if torrent.size_bytes else None,
+                        'eta': toEta(float(torrent.left_bytes) / torrent.down_rate) if torrent.down_rate > 0 else None,
                         'folder': sp(torrent.directory),
                         'files': torrent_files
                     })
