@@ -91,6 +91,8 @@
 					'data_dir': {{ json_encode(Env.get('data_dir', str = True)) }},
 					'pid': {{ json_encode(Env.getPid()) }},
 					'userscript_version': {{ json_encode(fireEvent('userscript.get_version', single = True)) }},
+					{% from couchpotato.core.plugins.screens import frontendOptions %}
+					'screens': {{ json_encode(frontendOptions(Env.setting)) }},
 					'webui_feature': {
 						'hide_about_dirs' : {{ json_encode( Env.setting('hide_about_dirs', default=False, section = 'webui_feature', type='bool') ) }},
 						'hide_menuitem_update' : {{ json_encode( Env.setting('hide_menuitem_update', default=False, section = 'webui_feature', type='bool') ) }},

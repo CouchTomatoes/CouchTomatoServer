@@ -10,6 +10,12 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: a redesigned movie details page. Pick **Poster** (poster and facts on the left), **Hero** (a wide
+  banner) or **Classic** (the old look), and a **Full**, **Small** or no backdrop, with the switch at the
+  top of the page or in Settings → Screens. Your choice is saved on the server, so every browser and phone
+  opens the same way. It shows where the movie is (Wanted → Snatched → Downloading → In library) and adds
+  Search now, a Trailer pop-up, and Quality and Category menus right on the page.
+
 * New: an official Docker image, `ghcr.io/couchtomatoes/couchtomato` (amd64 and arm64, so it runs on a
   Raspberry Pi too), published with every release. Files are written as your own user (`PUID`/`PGID`),
   and inside Docker the updater tells you when to pull a new image instead of trying to update itself.
