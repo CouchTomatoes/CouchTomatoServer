@@ -577,7 +577,8 @@ var MovieDetails = new Class({
 			if(quiet > 30)
 				new Element('span.mdx-stale').adopt(
 					new Element('i'),
-					document.createTextNode('last update ' + self.ago(self.live_contact) + ' · reconnecting')
+					// Seconds under a minute: ago() says "just now", which reads wrong next to "reconnecting"
+					document.createTextNode('last update ' + (quiet < 60 ? quiet + ' s ago' : self.ago(self.live_contact)) + ' · reconnecting')
 				).inject(self.status_line.appendText(' · '));
 		}
 		self.status_line.setStyle('display', text ? '' : 'none');
