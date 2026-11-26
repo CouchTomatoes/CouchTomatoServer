@@ -209,11 +209,12 @@ class Database:
             code = f.read().decode('utf8')
         try:
             obj = compile(code, '<Index: %s' % os.path.join(p, ind), 'exec')
-            if _class not in globals():
-                exec(obj, globals())
-            else:
-                exec(obj, globals(), locals())
-            ind_obj = globals()[_class](self.path, name, **ind_kwargs)
+            # Own namespace per read: the old code exec'd into locals() when a class of that name was already
+            # loaded, then built globals()[_class] -- the OLD class, so an index upgraded in this run (a _version
+            # bump) kept running its previous code until the next restart.
+            namespace = dict(globals())
+            exec(obj, namespace)
+            ind_obj = namespace[_class](self.path, name, **ind_kwargs)
             ind_obj._order = int(ind[:2])
         except:
             ind_path = os.path.join(p, ind)
