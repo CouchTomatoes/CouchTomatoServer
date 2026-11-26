@@ -147,7 +147,7 @@ Page.Activity = new Class({
 	title: 'What is downloading now',
 	icon: 'download',
 
-	tab: 'queue',
+	list_tab: 'queue',  // not 'tab': PageBase keeps its menu tab element in self.tab
 
 	indexAction: function(){
 		var self = this;
@@ -182,14 +182,14 @@ Page.Activity = new Class({
 				self.render();
 			});
 			App.on('release.update_status', function(){
-				if(self.el.hasClass('active')) self.load();
+				if(self.el.hasClass('active')) self.loadRows();
 			});
 			document.addEventListener('visibilitychange', function(){
 				if(!document.hidden && self.el.hasClass('active')) self.watch();
 			});
 		}
 
-		self.load();
+		self.loadRows();
 		clearInterval(self.timer);
 		self.timer = setInterval(function(){
 			if(!self.el.hasClass('active')){ clearInterval(self.timer); return; }
@@ -217,7 +217,8 @@ Page.Activity = new Class({
 		});
 	},
 
-	load: function(){
+	// Not load(): PageBase.load() builds the menu tab (memory pagebase-load-override)
+	loadRows: function(){
 		var self = this;
 		if(self.request && self.request.running) self.request.cancel();
 		self.request = Api.request('media.list', {
@@ -296,17 +297,17 @@ Page.Activity = new Class({
 
 	renderTable: function(queue, blocked){
 		var self = this;
-		if(self.tab == 'blocked' && !blocked.length) self.tab = 'queue';
+		if(self.list_tab == 'blocked' && !blocked.length) self.list_tab = 'queue';
 
 		var tabs = new Element('div.tabs');
 		[['queue', 'Queue', queue.length], ['blocked', 'Blocked', blocked.length]].each(function(t){
-			new Element('a' + (self.tab == t[0] ? '.on' : ''), {
+			new Element('a' + (self.list_tab == t[0] ? '.on' : ''), {
 				'text': t[1] + ' (' + t[2] + ')',
-				'events': {'click': function(){ self.tab = t[0]; self.render(); }}
+				'events': {'click': function(){ self.list_tab = t[0]; self.render(); }}
 			}).inject(tabs);
 		});
 
-		var list = self.tab == 'blocked' ? blocked : queue,
+		var list = self.list_tab == 'blocked' ? blocked : queue,
 			tbody = new Element('tbody');
 		list.each(function(r){ tbody.grab(self.tableRow(r)); });
 
@@ -412,7 +413,7 @@ Page.Activity = new Class({
 			box.empty();
 			new Element('button.btn.solid', {'type': 'button', 'text': 'Try another release', 'events': {'click': function(){
 				box.empty().grab(new Element('span.pct', {'text': 'Searching for another release…'}));
-				Api.request('movie.searcher.try_next', {'data': {'media_id': r.movie._id}, 'onComplete': function(){ self.load(); }});
+				Api.request('movie.searcher.try_next', {'data': {'media_id': r.movie._id}, 'onComplete': function(){ self.loadRows(); }});
 			}}}).inject(box);
 			new Element('button.btn', {'type': 'button', 'text': 'Keep waiting', 'events': {'click': function(){
 				self.waived[r.rel._id] = true;
