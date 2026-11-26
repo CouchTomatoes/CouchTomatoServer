@@ -10,6 +10,11 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: Activity page (menu → Activity): every snatched download with live progress and time left, and the ones that
+  need you (Stuck, Failed, Gone, Can't import) with a Fix… button: Try another release or Keep waiting. Table or Cards
+  view (switch top right, or Settings → Screens).
+* Fix: "Try another release" did nothing (a database lookup crashed), and the automatic retry after a failed download
+  never ran either. Database index upgrades now take effect on the first start instead of the second.
 * New: Wanted gets status chips (All / Snatched / Available / Still wanted, with counts), and its List view shows
   Quality, Status, Added and Last search columns; Manage's List view shows each movie's folder.
 * New: Torznab searcher, so CouchTomato can search your Prowlarr or Jackett indexers (Settings → Searcher → Torznab,

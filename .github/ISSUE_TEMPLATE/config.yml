@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions and ideas
+    url: https://github.com/CouchTomatoes/CouchTomatoServer/discussions
+    about: Ask for help, suggest an idea or show your setup in Discussions.
   - name: FAQ / Troubleshooting
     url: https://github.com/CouchTomatoes/CouchTomatoServer/wiki/FAQ
     about: Known issues, dead external sites and common questions. Please check here first.
