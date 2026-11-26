@@ -8,6 +8,7 @@ HOME_VIEWS = ('classic', 'sections', 'dashboard')
 LIST_VIEWS = ('classic', 'posters', 'list')  # Wanted and Manage
 ACTIVITY_VIEWS = ('table', 'cards')  # a new page: no Classic
 SNATCHED_VIEWS = ('classic', 'cards', 'table')  # Home's Snatched & Available list
+ADD_VIEWS = ('classic', 'dropdown', 'fullpage')  # the search box that adds a movie
 
 config = [{
     'name': 'screens',
@@ -79,6 +80,22 @@ config = [{
         },
         {
             'tab': 'screens',
+            'name': 'add_movie',
+            'label': 'Add a movie',
+            'description': 'The search box that adds a movie. The switch above its results changes this too.',
+            'options': [
+                {
+                    'name': 'add_view',
+                    'label': 'Results show as',
+                    'default': 'classic',
+                    'type': 'dropdown',
+                    'values': [('Classic', 'classic'), ('Dropdown', 'dropdown'), ('Full page', 'fullpage')],
+                    'description': 'Classic: the old CouchPotato look. Dropdown: the best 4 matches with a View all link. Full page: a poster grid with one-click + Add.',
+                },
+            ],
+        },
+        {
+            'tab': 'screens',
             'name': 'activity',
             'label': 'Activity',
             'description': 'What is downloading now. The switch at the top right of Activity changes this too.',
@@ -145,12 +162,14 @@ def frontendOptions(get_setting):
     manage = get_setting('manage_view', section = 'screens', default = 'classic')
     activity = get_setting('activity_view', section = 'screens', default = 'table')
     snatched = get_setting('snatched_view', section = 'screens', default = 'classic')
+    add = get_setting('add_view', section = 'screens', default = 'classic')
     return {
         'home_view': home if home in HOME_VIEWS else 'classic',
         'wanted_view': wanted if wanted in LIST_VIEWS else 'classic',
         'manage_view': manage if manage in LIST_VIEWS else 'classic',
         'activity_view': activity if activity in ACTIVITY_VIEWS else 'table',
         'snatched_view': snatched if snatched in SNATCHED_VIEWS else 'classic',
+        'add_view': add if add in ADD_VIEWS else 'classic',
         'details_view': view if view in DETAILS_VIEWS else 'poster',
         'details_backdrop': backdrop if backdrop in DETAILS_BACKDROPS else 'full',
         'show_new_tags': asBool(show_new, True),

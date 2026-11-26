@@ -54,7 +54,14 @@ var BlockSearchMovieItem = new Class({
 							'text': 'Already in wanted list: ' + Quality.getProfile(info.in_wanted.profile_id).get('label')
 						}) : (in_library ? new Element('span.in_library', {
 							'text': 'Already in library: ' + in_library.join(', ')
-						}) : null)
+						}) : null),
+						// Add a movie -> Full page: a small state pill or a one-click "+ Add" (addviews.js)
+						info.in_wanted && info.in_wanted.profile_id ? new Element('span.av-pill', {'text': 'In wanted'}) :
+							(in_library ? new Element('span.av-pill.lib', {'text': 'In library'}) :
+								self.quick_add = new Element('a.av-add', {
+									'text': '+ Add',
+									'events': {'click': self.quickAdd.bind(self)}
+								}))
 					)
 				)
 			)
@@ -66,6 +73,34 @@ var BlockSearchMovieItem = new Class({
 					'title': title
 				});
 			});
+	},
+
+	// One click, no options: first title, the profile chosen on the Full page panel, no category
+	quickAdd: function(e){
+		var self = this;
+		if(e) (e).stop();
+		var profile = window.AddViews ? AddViews.profile() : Quality.getActiveProfiles()[0];
+		if(!profile || self.quick_add.hasClass('busy')) return;
+		self.quick_add.addClass('busy').set('text', 'Adding\u2026');
+		Api.request('movie.add', {
+			'data': {
+				'identifier': self.info.imdb,
+				'title': self.alternative_titles.length ? self.alternative_titles[0].title : self.getTitle(),
+				'profile_id': profile.get('_id'),
+				'category_id': -1
+			},
+			'onComplete': function(json){
+				if(json && json.success){
+					new Element('span.av-pill', {'text': 'In wanted'}).replaces(self.quick_add);
+					self.fireEvent('added');
+				}
+				else
+					self.quick_add.removeClass('busy').set('text', 'Failed \u2013 retry');
+			},
+			'onFailure': function(){
+				self.quick_add.removeClass('busy').set('text', 'Failed \u2013 retry');
+			}
+		});
 	},
 
 	alternativeTitle: function(alternative){

@@ -10,6 +10,9 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: Add a movie has Dropdown and Full page views next to Classic (switch above the search results, or
+  Settings → Screens). Dropdown shows the best 4 matches and View all N results; Full page is a poster grid with
+  In wanted / In library tags and a one-click + Add (pick the quality with "change").
 * New: Home's Snatched & Available list has Cards and Table views next to Classic (switch beside its title, or
   Settings → Screens). Each release shows its state (Downloading %, Stuck, Gone, Available, In library) with Try next
   release, Download again, Ignore release and Details; Table adds quality, size, age, score and provider.
