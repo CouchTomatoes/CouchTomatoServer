@@ -55,6 +55,8 @@ var BlockSearch = new Class({
 
 		self.mask = new Element('div.mask').inject(self.result_container);
 
+		if(window.AddViews) AddViews.attach(self);
+
 	},
 
 	clear: function(e){
@@ -197,6 +199,8 @@ var BlockSearch = new Class({
 		});
 
 		self.mask.removeClass('show');
+
+		if(window.AddViews) AddViews.filled(self, q);
 
 	},
 
