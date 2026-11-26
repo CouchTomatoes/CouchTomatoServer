@@ -141,6 +141,7 @@ var AddViews = {
 		var n = block.results.getElements('.media_result').length;
 		block.el[n > 4 ? 'addClass' : 'removeClass']('av-many');
 		block.av_more.set('text', 'View all ' + n + ' results ›');
+		AddViews.markSegments();  // a block made before it was in the document missed the first marking
 		if(AddViews.view() == 'fullpage' || AddViews.page_block == block)
 			AddViews.openPage(block, false);
 	},
