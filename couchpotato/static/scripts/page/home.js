@@ -316,6 +316,9 @@ Page.Home = new Class({
 
 		$(self.available_list).inject(self.content);
 
+		// Cards / Table / Classic switch next to the title (snatched.js, Settings -> Screens)
+		if(window.SnatchedViews) self.snatched_views = new SnatchedViews(self.available_list);
+
 	},
 
 	createSoon: function(){
