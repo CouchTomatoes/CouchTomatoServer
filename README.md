@@ -215,4 +215,5 @@ with your CouchTomato version, platform, what you did, what you expected, and th
 
 ## Community
 
+* [Discussions](https://github.com/CouchTomatoes/CouchTomatoServer/discussions): questions, ideas, show your setup
 * [Wiki](https://github.com/CouchTomatoes/CouchTomatoServer/wiki) · [Contributing](.github/CONTRIBUTING.md) · [Code of conduct](CODE_OF_CONDUCT.md) · [Security](SECURITY.md) · [Releases](https://github.com/CouchTomatoes/CouchTomatoServer/releases) · [Issues](https://github.com/CouchTomatoes/CouchTomatoServer/issues)

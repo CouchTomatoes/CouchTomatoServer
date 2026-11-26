@@ -79,6 +79,7 @@
 	// feature ships, and the tag disappears by itself after the date, so tags never go stale.
 	new_features: {
 		'page.history': '2027-02-28',
+		'page.activity': '2027-02-28',
 		'settings.screens': '2027-02-28',
 		'details.subtitles': '2027-02-28'
 	},

@@ -172,6 +172,7 @@ var MovieList = new Class({
 								'search': null
 							};
 							self.navigation_search_input.set('value', '');
+							if(self.chip_els) self.markChip('all');
 							self.reset();
 							self.activateLetter();
 							self.getMovies(true);
@@ -200,6 +201,7 @@ var MovieList = new Class({
 			}, movie);
 
 			var el = $(m);
+			if(self.options.screens) self.addColumns(m, movie);
 
 			if(inject_at === 'bottom'){
 				movie_els.push(el);
@@ -420,10 +422,164 @@ var MovieList = new Class({
 			self.view_filter = new Element('div.wv-filter')
 		).inject(self.el, 'top');
 
-		self.el.addClass('wv');
+		if(self.options.status_chips) self.createChips();
+		self.view_head = new Element('div.wv-head').adopt(
+			new Element('span.wv-h-movie', {'text': 'Movie'}),
+			self.columns().map(function(c){ return new Element('span.wv-c-' + c[0], {'text': c[1]}); })
+		).inject(self.view_tools);
+
+		self.el.addClass('wv').addClass('wv-' + self.options.identifier);
 		self.search_li = self.navigation_search_input.getParent('li');
 		self.alpha_li = self.navigation_alpha.getParent('li');
 		self.applyScreenView();
+	},
+
+	// List view columns: [key, header]
+	columns: function(){
+		return this.options.identifier == 'manage' ?
+			[['quality', 'Quality'], ['folder', 'Folder']] :
+			[['quality', 'Quality'], ['status', 'Status'], ['added', 'Added'], ['searched', 'Last search']];
+	},
+
+	// What a Wanted movie is waiting on, from its releases
+	movieStatus: function(movie){
+		var st = (movie.releases || []).map(function(r){ return r.status; });
+		if(st.some(function(x){ return ['snatched', 'downloaded', 'seeding', 'missing'].indexOf(x) > -1; }))
+			return ['snatched', 'Snatched'];
+		if(st.indexOf('available') > -1) return ['available', 'Available'];
+		if(st.indexOf('done') > -1) return ['done', 'In library'];
+		return ['wanted', 'Wanted'];
+	},
+
+	movieFolder: function(movie){
+		var files = movie.files && movie.files.movie;
+		if(!files || !files.length)
+			(movie.releases || []).each(function(r){
+				if(!files && r.files && r.files.movie && r.files.movie.length) files = r.files.movie;
+			});
+		if(!files || !files.length) return '';
+		var f = files[0], cut = Math.max(f.lastIndexOf('/'), f.lastIndexOf('\\'));
+		return cut > 0 ? f.substr(0, cut) : f;
+	},
+
+	addColumns: function(m, movie){
+		var self = this,
+			months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+			cols = new Element('div.wv-cols');
+
+		var day = function(t){
+			if(!t) return '—';
+			var d = new Date(t * 1000);
+			return d.getDate() + ' ' + months[d.getMonth()] + (d.getFullYear() != new Date().getFullYear() ? ' ' + d.getFullYear() : '');
+		};
+		var ago = function(t){
+			if(!t) return 'never';
+			var s = Math.max(0, Date.now() / 1000 - t);
+			if(s < 3600) return Math.max(1, Math.round(s / 60)) + ' min ago';
+			if(s < 86400) return Math.round(s / 3600) + ' h ago';
+			return Math.round(s / 86400) + ' d ago';
+		};
+
+		self.columns().each(function(c){
+			var cell = new Element('span.wv-c-' + c[0]);
+			if(c[0] == 'quality'){
+				// the movie's own quality tags, shown as one cell
+				var q = m.quality ? m.quality.getElements('span') : [];
+				var done = q.filter(function(x){ return x.hasClass('done') || x.hasClass('snatched') || x.hasClass('available'); });
+				var pick = done.length ? done[0] : q[0];
+				cell.set('text', pick ? pick.get('text') : '');
+			}
+			else if(c[0] == 'status'){
+				var st = self.movieStatus(movie);
+				cell.adopt(new Element('span.wv-pill.wv-s-' + st[0], {'text': st[1]}));
+			}
+			else if(c[0] == 'added') cell.set('text', day(movie.added));
+			else if(c[0] == 'searched') cell.set('text', ago(movie.last_search));
+			else if(c[0] == 'folder'){
+				var folder = self.movieFolder(movie);
+				cell.set({'text': folder, 'title': folder});
+			}
+			cols.grab(cell);
+		});
+
+		var info = $(m).getElement('.info');
+		if(info) cols.inject(info, 'after');
+	},
+
+	// Wanted: All / Snatched / Available / Still wanted, with counts
+	chips: [
+		['all', 'All', {}],
+		['snatched', 'Snatched', {'release_status': 'snatched,downloaded,seeding,missing'}],
+		['available', 'Available', {'release_status': 'available'}],
+		['still', 'Still wanted', {'no_release_status': 'snatched,downloaded,seeding,missing,available'}]
+	],
+
+	createChips: function(){
+		var self = this;
+		self.chip = 'all';
+		self.chip_els = {};
+		self.view_chips = new Element('div.wv-chips');
+
+		self.chips.each(function(c){
+			self.chip_els[c[0]] = new Element('button', {
+				'type': 'button',
+				'class': c[0] == 'all' ? 'on' : '',
+				'data-chip': c[0],
+				'events': {
+					'click': function(e){
+						(e).stop();
+						self.pickChip(c[0]);
+					}
+				}
+			}).adopt(
+				new Element('span', {'text': c[1]}),
+				new Element('em')
+			).inject(self.view_chips);
+		});
+
+		self.view_chips.inject(self.view_filter);
+		self.loadChipCounts();
+		self.addEvent('loaded', function(){
+			// counts follow adds, deletes and searches that reload the list
+			if(self.chip_counts_at && Date.now() - self.chip_counts_at > 3000) self.loadChipCounts();
+		});
+	},
+
+	loadChipCounts: function(){
+		var self = this;
+		self.chip_counts_at = Date.now();
+		self.chips.each(function(c){
+			Api.request('media.list', {
+				'data': Object.merge({
+					'type': self.options.type || 'movie',
+					'status': self.options.status,
+					'limit_offset': 1
+				}, c[2]),
+				'onSuccess': function(json){
+					self.chip_els[c[0]].getElement('em').set('text', json && json.total !== undefined ? json.total : '');
+				}
+			});
+		});
+	},
+
+	pickChip: function(chip){
+		var self = this;
+		if(self.chip == chip) return;
+		self.markChip(chip);
+
+		delete self.filter.release_status;
+		delete self.filter.no_release_status;
+		self.chips.each(function(c){
+			if(c[0] == chip) Object.merge(self.filter, c[2]);
+		});
+		self.reset();
+		self.getMovies(true);
+	},
+
+	markChip: function(chip){
+		var self = this;
+		self.chip = chip;
+		Object.each(self.chip_els, function(el, k){ el[k == chip ? 'addClass' : 'removeClass']('on'); });
 	},
 
 	pickScreenView: function(view){
@@ -702,7 +858,8 @@ var MovieList = new Class({
 			'data': Object.merge({
 				'type': self.options.type || 'movie',
 				'status': self.options.status,
-				'limit_offset': self.options.limit ? self.options.limit + ',' + self.offset : null
+				'limit_offset': self.options.limit ? self.options.limit + ',' + self.offset : null,
+				'with_times': self.options.screens ? 1 : null
 			}, self.filter),
 			'onSuccess': function(json){
 
@@ -808,6 +965,32 @@ var MovieListViewsStyle = [
 	'.wv-filter ul.numbers li.available{opacity:1;cursor:pointer}',
 	'.wv-filter ul.numbers li.active{color:var(--acc);font-weight:700}',
 
+	// Status chips (Wanted)
+	'.wv-chips{display:flex;flex-wrap:wrap;gap:6px}',
+	'.wv-chips button{border:1px solid var(--line);background:var(--bg);color:var(--text);border-radius:14px;padding:5px 12px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}',
+	'.wv-chips button em{font-style:normal;margin-left:5px;color:var(--muted)}',
+	'.wv-chips button.on{background:var(--acc);border-color:var(--acc);color:#fff}',
+	'.wv-chips button.on em{color:#fff}',
+	'.wv-filter ul.numbers{flex-basis:100%}',
+
+	// List columns (hidden in Posters and Classic)
+	'.wv-head,.wv .wv-cols{display:none}',
+	'.wv-v-list .wv-head{display:flex;gap:12px;margin:12px 0 -8px;padding:0 0 6px 63px;border-bottom:1px solid var(--line);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}',
+	'.wv-v-list .wv-head .wv-h-movie{flex:1}',
+	'.wv-v-list.list_list .movie .wv-cols{display:flex;gap:12px;align-items:center;font-size:13px}',
+	'.wv-v-list .wv-c-quality{width:80px}',
+	'.wv-v-list .wv-c-status{width:100px}',
+	'.wv-v-list .wv-c-added{width:80px}',
+	'.wv-v-list .wv-c-searched{width:90px}',
+	'.wv-v-list .wv-c-folder{width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12px}',
+	'.wv-v-list.list_list .movie .info .quality,.wv-v-list.list_list .movie .info .rating{display:none}',
+	'.wv-pill{display:inline-block;border-radius:3px;padding:2px 7px;font-size:11px;font-weight:700;background:var(--off);color:var(--muted)}',
+	'.wv-pill.wv-s-snatched{background:#e3effd;color:#1a5fb4}',
+	'.wv-pill.wv-s-available{background:#e3f6e6;color:#1d7a33}',
+	'.wv-pill.wv-s-done{background:#e3f6e6;color:#1d7a33}',
+	'.dark .wv-pill.wv-s-snatched{background:#1f3550;color:#9cc7ff}',
+	'.dark .wv-pill.wv-s-available,.dark .wv-pill.wv-s-done{background:#1f3d27;color:#8fdc9f}',
+
 	// Posters
 	'.wv-v-posters.thumb_list > div:last-of-type{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:14px;padding:12px 24px}',
 	'.wv-v-posters.thumb_list .movie{width:auto !important;border:0 !important;margin:0}',
@@ -822,13 +1005,18 @@ var MovieListViewsStyle = [
 	'.wv-v-list.list_list .movie .poster{display:block;position:absolute;inset:0;background:center/cover no-repeat;background-color:var(--off)}',
 	'.wv-v-list.list_list .movie .poster_container .actions{display:none}',
 	'.wv-v-list.list_list .movie .info{flex:1;min-width:0;padding:0 8px 0 0}',
-	'.wv-v-list.list_list .movie .title span{font-weight:600}',
+	'.wv-v-list.list_list .movie .title span{font-weight:600;margin-left:0 !important}',
+	// mass edit: the checkbox gets its own column instead of sitting on the poster
+	'.wv-v-list.list_list .movie input[type=checkbox]{position:static;transform:none;flex:none;margin:0}',
 
 	'@media (max-width:480px){',
 	'.wv:not(.wv-v-classic) .wv-tools{padding:12px 12px 4px}',
 	'.wv-filter input{width:100%}',
 	'.wv-v-posters.thumb_list > div:last-of-type{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;padding:10px 12px}',
 	'.wv-v-list.list_list > div:last-of-type{padding:6px 12px}',
+	'.wv-v-list .wv-head{padding-left:0}',
+	'.wv-v-list .wv-head span:not(.wv-h-movie),.wv-v-list .wv-c-added,.wv-v-list .wv-c-searched,.wv-v-list .wv-c-quality{display:none}',
+	'.wv-v-list .wv-c-folder{width:120px}',
 	'}'
 ].join('');
 

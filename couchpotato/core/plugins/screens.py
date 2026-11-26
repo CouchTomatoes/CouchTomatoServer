@@ -6,6 +6,7 @@ DETAILS_VIEWS = ('poster', 'hero', 'classic')
 DETAILS_BACKDROPS = ('full', 'small', 'none')
 HOME_VIEWS = ('classic', 'sections', 'dashboard')
 LIST_VIEWS = ('classic', 'posters', 'list')  # Wanted and Manage
+ACTIVITY_VIEWS = ('table', 'cards')  # a new page: no Classic
 
 config = [{
     'name': 'screens',
@@ -61,6 +62,22 @@ config = [{
         },
         {
             'tab': 'screens',
+            'name': 'activity',
+            'label': 'Activity',
+            'description': 'What is downloading now. The switch at the top right of Activity changes this too.',
+            'options': [
+                {
+                    'name': 'activity_view',
+                    'label': 'Opens in',
+                    'default': 'table',
+                    'type': 'dropdown',
+                    'values': [('Table', 'table'), ('Cards', 'cards')],
+                    'description': 'Table: one row per download with progress and time left. Cards: one card per download, problems on top with a fix button.',
+                },
+            ],
+        },
+        {
+            'tab': 'screens',
             'name': 'movie_details',
             'label': 'Movie details',
             'description': 'The page that opens when you click a movie. The switch at the top right of that page changes these too.',
@@ -109,10 +126,12 @@ def frontendOptions(get_setting):
     home = get_setting('home_view', section = 'screens', default = 'classic')
     wanted = get_setting('wanted_view', section = 'screens', default = 'classic')
     manage = get_setting('manage_view', section = 'screens', default = 'classic')
+    activity = get_setting('activity_view', section = 'screens', default = 'table')
     return {
         'home_view': home if home in HOME_VIEWS else 'classic',
         'wanted_view': wanted if wanted in LIST_VIEWS else 'classic',
         'manage_view': manage if manage in LIST_VIEWS else 'classic',
+        'activity_view': activity if activity in ACTIVITY_VIEWS else 'table',
         'details_view': view if view in DETAILS_VIEWS else 'poster',
         'details_backdrop': backdrop if backdrop in DETAILS_BACKDROPS else 'full',
         'show_new_tags': asBool(show_new, True),
