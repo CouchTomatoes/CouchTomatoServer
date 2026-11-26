@@ -10,6 +10,9 @@ Releases up to v4.0.69 have their notes on the
 
 ### Unreleased
 
+* New: Home's Snatched & Available list has Cards and Table views next to Classic (switch beside its title, or
+  Settings → Screens). Each release shows its state (Downloading %, Stuck, Gone, Available, In library) with Try next
+  release, Download again, Ignore release and Details; Table adds quality, size, age, score and provider.
 * New: Activity page (menu → Activity): every snatched download with live progress and time left, and the ones that
   need you (Stuck, Failed, Gone, Can't import) with a Fix… button: Try another release or Keep waiting. Table or Cards
   view (switch top right, or Settings → Screens).
