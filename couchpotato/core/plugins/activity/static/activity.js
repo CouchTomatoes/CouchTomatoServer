@@ -63,6 +63,7 @@ var ActivityStyle = [
 	'.act td{border:0;padding:0}',
 	'.act td.c-movie{grid-column:1/-1}',
 	'.act td.c-prog{grid-column:1/-1}',
+	'.act td.c-left.none{display:none}',
 	'.act .bar{max-width:none}',
 	'.act .card .poster{width:44px;height:66px}',
 	'}'
@@ -242,7 +243,8 @@ Page.Activity = new Class({
 	watch: function(){
 		var self = this;
 		if(document.hidden || !self.rows || !self.rows.length) return;
-		var ids = self.rows.map(function(r){ return r.movie._id; }).unique();
+		var ids = [];
+		self.rows.each(function(r){ if(ids.indexOf(r.movie._id) < 0) ids.push(r.movie._id); });
 		Api.request('download.watch', {
 			'data': {'media_id': ids.join(',')},
 			'onComplete': function(json){
@@ -332,7 +334,7 @@ Page.Activity = new Class({
 			),
 			new Element('td.c-status').grab(self.pill(st)),
 			new Element('td.c-prog').adopt(self.bar(st)),
-			new Element('td.c-left', {'text': st.k == 'dl' ? ActivityHelpers.eta(r.live.eta) : '—'}),
+			new Element('td.c-left' + (st.k == 'dl' ? '' : '.none'), {'text': st.k == 'dl' ? ActivityHelpers.eta(r.live.eta) : '—'}),
 			new Element('td.c-act').grab(self.actions(r, false))
 		);
 	},
@@ -358,7 +360,8 @@ Page.Activity = new Class({
 
 		var chain = [['✓ Wanted', 's'], ['✓ Snatched', 's']];
 		if(st.k == 'noimport') chain.push(['✓ Downloaded', 's']);
-		chain.push([st.k == 'dl' ? 'Downloading ' + st.pct + '%' : st.label, 's.now' + (st.blocked ? '.blk' : '')]);
+		var now_label = {'dl': 'Downloading ' + st.pct + '%', 'wait': 'Waiting for the downloader'}[st.k] || st.label;
+		chain.push([now_label, 's.now' + (st.blocked ? '.blk' : '')]);
 		if(!st.blocked) chain.push(['In library', 's.next']);
 		chain.each(function(c, nr){
 			if(nr) steps.grab(new Element('span.ln'));
